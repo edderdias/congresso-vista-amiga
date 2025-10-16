@@ -41,7 +41,7 @@ export default function Territories() {
     name: "",
     description: "",
     status: "available",
-    assigned_to: "",
+    assigned_to: "none", // Inicializa com "none"
   });
 
   useEffect(() => {
@@ -72,8 +72,8 @@ export default function Territories() {
 
     const dataToInsert = {
       ...formData,
-      assigned_to: formData.assigned_to || null,
-      assigned_date: formData.assigned_to ? new Date().toISOString() : null,
+      assigned_to: formData.assigned_to === "none" ? null : formData.assigned_to, // Converte "none" para null
+      assigned_date: formData.assigned_to === "none" ? null : new Date().toISOString(), // Define assigned_date se houver atribuição
     };
 
     const { error } = await supabase.from("territories").insert([dataToInsert]);
@@ -84,7 +84,7 @@ export default function Territories() {
       toast({ title: "Território salvo com sucesso!" });
       setOpen(false);
       loadTerritories();
-      setFormData({ number: "", name: "", description: "", status: "available", assigned_to: "" });
+      setFormData({ number: "", name: "", description: "", status: "available", assigned_to: "none" }); // Reseta para "none"
     }
   };
 
@@ -165,6 +165,7 @@ export default function Territories() {
                       <SelectValue placeholder="Selecione (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
                       {profiles.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.full_name}

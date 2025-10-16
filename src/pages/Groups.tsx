@@ -33,8 +33,8 @@ interface Profile {
 
 const formSchema = z.object({
   group_number: z.coerce.number().min(1, "O número do grupo é obrigatório e deve ser maior que 0."),
-  overseer_id: z.string().uuid().nullable().optional(),
-  assistant_id: z.string().uuid().nullable().optional(),
+  overseer_id: z.string().nullable().optional(), // Permite string ou null
+  assistant_id: z.string().nullable().optional(), // Permite string ou null
   field_service_meeting: z.string().nullable().optional(),
   publisher_count: z.coerce.number().min(0, "O número de publicadores não pode ser negativo.").optional(),
 });
@@ -49,8 +49,8 @@ export default function Groups() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       group_number: 1,
-      overseer_id: "",
-      assistant_id: "",
+      overseer_id: "none", // Inicializa com "none"
+      assistant_id: "none", // Inicializa com "none"
       field_service_meeting: "",
       publisher_count: 0,
     },
@@ -83,8 +83,8 @@ export default function Groups() {
     setEditingGroupId(group.id);
     form.reset({
       group_number: group.group_number,
-      overseer_id: group.overseer_id || "",
-      assistant_id: group.assistant_id || "",
+      overseer_id: group.overseer_id || "none", // Define como "none" se for null
+      assistant_id: group.assistant_id || "none", // Define como "none" se for null
       field_service_meeting: group.field_service_meeting || "",
       publisher_count: group.publisher_count,
     });
@@ -102,8 +102,8 @@ export default function Groups() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const dataToSave = {
       group_number: values.group_number,
-      overseer_id: values.overseer_id || null,
-      assistant_id: values.assistant_id || null,
+      overseer_id: values.overseer_id === "none" ? null : values.overseer_id, // Converte "none" para null
+      assistant_id: values.assistant_id === "none" ? null : values.assistant_id, // Converte "none" para null
       field_service_meeting: values.field_service_meeting || null,
       publisher_count: values.publisher_count || 0,
     };
@@ -178,13 +178,14 @@ export default function Groups() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Superintendente</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select onValueChange={field.onChange} value={field.value || "none"}> {/* Garante que o valor é "none" se for null/undefined */}
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um superintendente (opcional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
                             {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
                                 {profile.full_name}
@@ -202,13 +203,14 @@ export default function Groups() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Ajudante</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select onValueChange={field.onChange} value={field.value || "none"}> {/* Garante que o valor é "none" se for null/undefined */}
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um ajudante (opcional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
                             {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
                                 {profile.full_name}

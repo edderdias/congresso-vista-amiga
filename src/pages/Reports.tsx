@@ -45,7 +45,7 @@ export default function Reports() {
 
   // Estados para os filtros
   const [filterName, setFilterName] = useState("");
-  const [filterGroup, setFilterGroup] = useState("");
+  const [filterGroup, setFilterGroup] = useState("all"); // Inicializa com "all" para o filtro de grupo
 
   const monthOptions = [
     { value: "1", label: "Janeiro" },
@@ -88,7 +88,7 @@ export default function Reports() {
       query = query.ilike("reporter_name", `%${filterName}%`);
     }
 
-    if (filterGroup) {
+    if (filterGroup !== "all") { // Verifica se o filtro não é "all"
       query = query.eq("group_id", parseInt(filterGroup));
     }
 
@@ -335,7 +335,7 @@ export default function Reports() {
                   <SelectValue placeholder="Todos os grupos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os grupos</SelectItem>
+                  <SelectItem value="all">Todos os grupos</SelectItem> {/* Alterado para "all" */}
                   {groupOptions.map((group) => (
                     <SelectItem key={group.value} value={group.value}>
                       {group.label}
