@@ -23,25 +23,18 @@ interface Report {
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
-  user_id: string; // Added user_id to interface
-  group_id: number | null; // Added group_id to interface
-  profiles: { full_name: string };
-}
-
-interface Profile {
-  id: string;
-  full_name: string;
+  reporter_name: string; // Changed from user_id
+  group_id: number | null;
 }
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]); // State to store profiles
   const [open, setOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     id: "",
-    user_id: "", // Added user_id to form data
-    group_id: "", // Added group_id to form data (as string for select)
+    reporter_name: "", // Changed from user_id
+    group_id: "",
     month: (new Date().getMonth() + 1).toString(),
     year: new Date().getFullYear(),
     hours: 0,
@@ -78,13 +71,12 @@ export default function Reports() {
 
   useEffect(() => {
     loadReports();
-    loadProfiles(); // Load profiles when component mounts
   }, []);
 
   const loadReports = async () => {
     const { data, error } = await supabase
       .from("preaching_reports")
-      .select("*, profiles(full_name)")
+      .select("id, month, year, hours, placements, videos, return_visits, bible_studies, notes, pioneer_status, reporter_name, group_id") // Select reporter_name
       .order("year", { ascending: false })
       .order("month", { ascending: false });
 
@@ -95,17 +87,12 @@ export default function Reports() {
     }
   };
 
-  const loadProfiles = async () => {
-    const { data } = await supabase.from("profiles").select("id, full_name").order("full_name");
-    setProfiles(data || []);
-  };
-
   const handleEdit = (report: Report) => {
     setEditingReportId(report.id);
     setFormData({
       id: report.id,
-      user_id: report.user_id, // Set user_id for editing
-      group_id: report.group_id ? report.group_id.toString() : "", // Set group_id for editing
+      reporter_name: report.reporter_name, // Set reporter_name for editing
+      group_id: report.group_id ? report.group_id.toString() : "",
       month: report.month.toString(),
       year: report.year,
       hours: report.hours,
@@ -121,7 +108,7 @@ export default function Reports() {
     setEditingReportId(null);
     setFormData({
       id: "",
-      user_id: "",
+      reporter_name: "",
       group_id: "",
       month: (new Date().getMonth() + 1).toString(),
       year: new Date().getFullYear(),
@@ -135,14 +122,14 @@ export default function Reports() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.user_id) {
-      toast({ title: "Erro", description: "Por favor, selecione um membro.", variant: "destructive" });
+    if (!formData.reporter_name) {
+      toast({ title: "Erro", description: "Por favor, insira o nome do membro.", variant: "destructive" });
       return;
     }
 
     const reportData = {
-      user_id: formData.user_id,
-      group_id: formData.group_id ? parseInt(formData.group_id) : null, // Convert group_id to number or null
+      reporter_name: formData.reporter_name, // Use reporter_name
+      group_id: formData.group_id ? parseInt(formData.group_id) : null,
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
@@ -194,19 +181,15 @@ export default function Reports() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user">Membro</Label>
-                  <Select value={formData.user_id} onValueChange={(value) => setFormData({ ...formData, user_id: value })}>
-                    <SelectTrigger id="user">
-                      <SelectValue placeholder="Selecione um membro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="reporter_name">Nome</Label> {/* Changed label */}
+                  <Input
+                    id="reporter_name"
+                    type="text"
+                    placeholder="Nome do membro"
+                    value={formData.reporter_name}
+                    onChange={(e) => setFormData({ ...formData, reporter_name: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="group">Grupo</Label>
@@ -323,8 +306,8 @@ export default function Reports() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Grupo</TableHead> {/* New column */}
+                <TableHead>Nome</TableHead> {/* Changed to Nome */}
+                <TableHead>Grupo</TableHead>
                 <TableHead>Mês</TableHead>
                 <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
@@ -337,8 +320,8 @@ export default function Reports() {
             <TableBody>
               {reports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="font-medium">{report.profiles?.full_name}</TableCell>
-                  <TableCell>{report.group_id || "-"}</TableCell> {/* Display group_id */}
+                  <TableCell className="font-medium">{report.reporter_name}</TableCell> {/* Display reporter_name */}
+                  <TableCell>{report.group_id || "-"}</TableCell>
                   <TableCell>{report.month}</TableCell>
                   <TableCell>{report.year}</TableCell>
                   <TableCell>{report.hours}</TableCell>
