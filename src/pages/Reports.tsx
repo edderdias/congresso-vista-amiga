@@ -213,24 +213,22 @@ export default function Reports() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Período</TableHead>
+                <TableHead>Mês</TableHead>
+                <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
-                <TableHead>Publicações</TableHead>
-                <TableHead>Vídeos</TableHead>
-                <TableHead>Revisitas</TableHead>
                 <TableHead>Estudos</TableHead>
+                <TableHead>Participou</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reports.map((report) => (
                 <TableRow key={report.id}>
                   <TableCell className="font-medium">{report.profiles?.full_name}</TableCell>
-                  <TableCell>{`${report.month}/${report.year}`}</TableCell>
+                  <TableCell>{report.month}</TableCell>
+                  <TableCell>{report.year}</TableCell>
                   <TableCell>{report.hours}</TableCell>
-                  <TableCell>{report.placements}</TableCell>
-                  <TableCell>{report.videos}</TableCell>
-                  <TableCell>{report.return_visits}</TableCell>
                   <TableCell>{report.bible_studies}</TableCell>
+                  <TableCell>{report.hours > 0 ? "Sim" : "Não"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
