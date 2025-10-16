@@ -43,6 +43,10 @@ export default function Reports() {
     pioneer_status: "publicador" as "publicador" | "pioneiro_auxiliar" | "pioneiro_regular",
   });
 
+  // Estados para os filtros
+  const [filterName, setFilterName] = useState("");
+  const [filterGroup, setFilterGroup] = useState("");
+
   const monthOptions = [
     { value: "1", label: "Janeiro" },
     { value: "2", label: "Fevereiro" },
@@ -71,14 +75,24 @@ export default function Reports() {
 
   useEffect(() => {
     loadReports();
-  }, []);
+  }, [filterName, filterGroup]); // Recarrega relatórios quando os filtros mudam
 
   const loadReports = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("preaching_reports")
       .select("id, month, year, hours, placements, videos, return_visits, bible_studies, notes, pioneer_status, reporter_name, group_id")
       .order("year", { ascending: false })
       .order("month", { ascending: false });
+
+    if (filterName) {
+      query = query.ilike("reporter_name", `%${filterName}%`);
+    }
+
+    if (filterGroup) {
+      query = query.eq("group_id", parseInt(filterGroup));
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast({ title: "Erro ao carregar relatórios", description: error.message, variant: "destructive" });
@@ -303,6 +317,34 @@ export default function Reports() {
           <CardDescription>Visualize todos os relatórios submetidos</CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="filter-name">Filtrar por Nome</Label>
+              <Input
+                id="filter-name"
+                type="text"
+                placeholder="Nome do membro"
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="filter-group">Filtrar por Grupo</Label>
+              <Select value={filterGroup} onValueChange={setFilterGroup}>
+                <SelectTrigger id="filter-group">
+                  <SelectValue placeholder="Todos os grupos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os grupos</SelectItem>
+                  {groupOptions.map((group) => (
+                    <SelectItem key={group.value} value={group.value}>
+                      {group.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
