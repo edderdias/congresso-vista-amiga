@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -19,9 +19,12 @@ import { toast } from "@/hooks/use-toast";
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Relatórios", url: "/reports", icon: FileText },
-  { title: "Designações", url: "/designations", icon: Users },
+  { title: "Grupos", url: "/groups", icon: Users },
+  { title: "Limpeza", url: "/cleaning", icon: Brush },
+  { title: "Designações", url: "/designations", icon: Award },
+  { title: "Escola", url: "/school", icon: BookOpen },
   { title: "Territórios", url: "/territories", icon: MapPin },
-  { title: "Usuários", url: "/users", icon: Settings },
+  { title: "Gerenciar Usuários", url: "/users", icon: Settings },
 ];
 
 export function AppSidebar() {
