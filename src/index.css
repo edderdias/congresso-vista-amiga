@@ -45,11 +45,11 @@ All colors MUST be HSL.
     --chart-5: 27 87% 67%;
 
     --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
+    --sidebar-foreground: 0 0% 100%; /* Alterado para branco */
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 91% 70%;
-    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-accent-foreground: 0 0% 100%; /* Alterado para branco */
     --sidebar-border: 217 32% 17%;
     --sidebar-ring: 217 91% 60%;
   }
@@ -90,11 +90,11 @@ All colors MUST be HSL.
     --chart-5: 27 87% 67%;
 
     --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
+    --sidebar-foreground: 0 0% 100%; /* Alterado para branco */
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 91% 70%;
-    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-accent-foreground: 0 0% 100%; /* Alterado para branco */
     --sidebar-border: 217 32% 17%;
     --sidebar-ring: 217 91% 60%;
   }
