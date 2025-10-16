@@ -52,6 +52,54 @@ export type Database = {
           },
         ]
       }
+      groups: {
+        Row: {
+          assistant_id: string | null
+          created_at: string | null
+          field_service_meeting: string | null
+          group_number: number
+          id: string
+          overseer_id: string | null
+          publisher_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          assistant_id?: string | null
+          created_at?: string | null
+          field_service_meeting?: string | null
+          group_number: number
+          id?: string
+          overseer_id?: string | null
+          publisher_count?: number
+          updated_at?: string | null
+        }
+        Update: {
+          assistant_id?: string | null
+          created_at?: string | null
+          field_service_meeting?: string | null
+          group_number?: number
+          id?: string
+          overseer_id?: string | null
+          publisher_count?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_assistant_id_fkey"
+            columns: ["assistant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_overseer_id_fkey"
+            columns: ["overseer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       preaching_reports: {
         Row: {
           bible_studies: number | null
@@ -62,10 +110,12 @@ export type Database = {
           notes: string | null
           placements: number | null
           return_visits: number | null
+          reporter_name: string | null
           updated_at: string | null
-          user_id: string
           videos: number | null
           year: number
+          group_id: number | null
+          pioneer_status: Database["public"]["Enums"]["pioneer_status"] | null
         }
         Insert: {
           bible_studies?: number | null
@@ -76,10 +126,12 @@ export type Database = {
           notes?: string | null
           placements?: number | null
           return_visits?: number | null
+          reporter_name?: string | null
           updated_at?: string | null
-          user_id: string
           videos?: number | null
           year: number
+          group_id?: number | null
+          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
         }
         Update: {
           bible_studies?: number | null
@@ -90,20 +142,14 @@ export type Database = {
           notes?: string | null
           placements?: number | null
           return_visits?: number | null
+          reporter_name?: string | null
           updated_at?: string | null
-          user_id?: string
           videos?: number | null
           year?: number
+          group_id?: number | null
+          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "preaching_reports_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -193,6 +239,7 @@ export type Database = {
         | "literature"
         | "cleaning"
         | "security"
+      pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular"
       territory_status: "available" | "assigned" | "completed"
     }
     CompositeTypes: {
@@ -328,6 +375,7 @@ export const Constants = {
         "cleaning",
         "security",
       ],
+      pioneer_status: ["publicador", "pioneiro_auxiliar", "pioneiro_regular"],
       territory_status: ["available", "assigned", "completed"],
     },
   },

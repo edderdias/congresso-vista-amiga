@@ -23,7 +23,7 @@ interface Report {
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
-  reporter_name: string; // Changed from user_id
+  reporter_name: string;
   group_id: number | null;
 }
 
@@ -33,7 +33,7 @@ export default function Reports() {
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     id: "",
-    reporter_name: "", // Changed from user_id
+    reporter_name: "",
     group_id: "",
     month: (new Date().getMonth() + 1).toString(),
     year: new Date().getFullYear(),
@@ -76,7 +76,7 @@ export default function Reports() {
   const loadReports = async () => {
     const { data, error } = await supabase
       .from("preaching_reports")
-      .select("id, month, year, hours, placements, videos, return_visits, bible_studies, notes, pioneer_status, reporter_name, group_id") // Select reporter_name
+      .select("id, month, year, hours, placements, videos, return_visits, bible_studies, notes, pioneer_status, reporter_name, group_id")
       .order("year", { ascending: false })
       .order("month", { ascending: false });
 
@@ -91,7 +91,7 @@ export default function Reports() {
     setEditingReportId(report.id);
     setFormData({
       id: report.id,
-      reporter_name: report.reporter_name, // Set reporter_name for editing
+      reporter_name: report.reporter_name,
       group_id: report.group_id ? report.group_id.toString() : "",
       month: report.month.toString(),
       year: report.year,
@@ -128,7 +128,7 @@ export default function Reports() {
     }
 
     const reportData = {
-      reporter_name: formData.reporter_name, // Use reporter_name
+      reporter_name: formData.reporter_name,
       group_id: formData.group_id ? parseInt(formData.group_id) : null,
       month: parseInt(formData.month),
       year: formData.year,
@@ -213,7 +213,7 @@ export default function Reports() {
                       <SelectTrigger id="month">
                         <SelectValue placeholder="Selecione o mês" />
                       </SelectTrigger>
-                    <SelectContent>
+                      <SelectContent>
                         {monthOptions.map((month) => (
                           <SelectItem key={month.value} value={month.value}>
                             {month.label}
@@ -312,7 +312,7 @@ export default function Reports() {
                 <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Estudos</TableHead>
-                <TableHead>Status</TableHead> {/* Changed label here */}
+                <TableHead>Status</TableHead>
                 <TableHead>Participou</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
