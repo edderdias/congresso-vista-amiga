@@ -9,17 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Report {
   id: string;
   month: number;
   year: number;
   hours: number;
-  placements: number;
-  videos: number;
-  return_visits: number;
+  placements: number | null;
+  videos: number | null;
+  return_visits: number | null;
   bible_studies: number;
   notes: string | null;
+  pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
   profiles: { full_name: string };
 }
 
@@ -27,15 +30,28 @@ export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
-    month: new Date().getMonth() + 1,
+    month: (new Date().getMonth() + 1).toString(), // Convert to string for Select component
     year: new Date().getFullYear(),
     hours: 0,
-    placements: 0,
-    videos: 0,
-    return_visits: 0,
     bible_studies: 0,
     notes: "",
+    pioneer_status: "publicador" as "publicador" | "pioneiro_auxiliar" | "pioneiro_regular",
   });
+
+  const monthOptions = [
+    { value: "1", label: "Janeiro" },
+    { value: "2", label: "Fevereiro" },
+    { value: "3", label: "Março" },
+    { value: "4", label: "Abril" },
+    { value: "5", label: "Maio" },
+    { value: "6", label: "Junho" },
+    { value: "7", label: "Julho" },
+    { value: "8", label: "Agosto" },
+    { value: "9", label: "Setembro" },
+    { value: "10", label: "Outubro" },
+    { value: "11", label: "Novembro" },
+    { value: "12", label: "Dezembro" },
+  ];
 
   useEffect(() => {
     loadReports();
@@ -63,7 +79,13 @@ export default function Reports() {
 
     const { error } = await supabase.from("preaching_reports").insert({
       user_id: user.id,
-      ...formData,
+      month: parseInt(formData.month), // Convert back to number for Supabase
+      year: formData.year,
+      hours: formData.hours,
+      bible_studies: formData.bible_studies,
+      notes: formData.notes,
+      pioneer_status: formData.pioneer_status,
+      // placements, videos, return_visits are no longer collected
     });
 
     if (error) {
@@ -73,14 +95,12 @@ export default function Reports() {
       setOpen(false);
       loadReports();
       setFormData({
-        month: new Date().getMonth() + 1,
+        month: (new Date().getMonth() + 1).toString(),
         year: new Date().getFullYear(),
         hours: 0,
-        placements: 0,
-        videos: 0,
-        return_visits: 0,
         bible_studies: 0,
         notes: "",
+        pioneer_status: "publicador",
       });
     }
   };
@@ -109,15 +129,18 @@ export default function Reports() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="month">Mês</Label>
-                    <Input
-                      id="month"
-                      type="number"
-                      min="1"
-                      max="12"
-                      value={formData.month}
-                      onChange={(e) => setFormData({ ...formData, month: parseInt(e.target.value) })}
-                      required
-                    />
+                    <Select value={formData.month} onValueChange={(value) => setFormData({ ...formData, month: value })}>
+                      <SelectTrigger id="month">
+                        <SelectValue placeholder="Selecione o mês" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="year">Ano</Label>
@@ -132,47 +155,15 @@ export default function Reports() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hours">Horas</Label>
-                  <Input
-                    id="hours"
-                    type="number"
-                    min="0"
-                    value={formData.hours}
-                    onChange={(e) => setFormData({ ...formData, hours: parseInt(e.target.value) })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4"> {/* Grouping Hours and Bible Studies */}
                   <div className="space-y-2">
-                    <Label htmlFor="placements">Publicações</Label>
+                    <Label htmlFor="hours">Horas</Label>
                     <Input
-                      id="placements"
+                      id="hours"
                       type="number"
                       min="0"
-                      value={formData.placements}
-                      onChange={(e) => setFormData({ ...formData, placements: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="videos">Vídeos</Label>
-                    <Input
-                      id="videos"
-                      type="number"
-                      min="0"
-                      value={formData.videos}
-                      onChange={(e) => setFormData({ ...formData, videos: parseInt(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="return_visits">Revisitas</Label>
-                    <Input
-                      id="return_visits"
-                      type="number"
-                      min="0"
-                      value={formData.return_visits}
-                      onChange={(e) => setFormData({ ...formData, return_visits: parseInt(e.target.value) })}
+                      value={formData.hours}
+                      onChange={(e) => setFormData({ ...formData, hours: parseInt(e.target.value) })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -186,6 +177,29 @@ export default function Reports() {
                     />
                   </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>Status de Pioneiro</Label>
+                  <RadioGroup
+                    value={formData.pioneer_status}
+                    onValueChange={(value: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular") => setFormData({ ...formData, pioneer_status: value })}
+                    className="flex flex-col space-y-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="publicador" id="publicador" />
+                      <Label htmlFor="publicador">Publicador</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="pioneiro_auxiliar" id="pioneiro_auxiliar" />
+                      <Label htmlFor="pioneiro_auxiliar">Pioneiro Auxiliar</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="pioneiro_regular" id="pioneiro_regular" />
+                      <Label htmlFor="pioneiro_regular">Pioneiro Regular</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Observações</Label>
                   <Textarea
