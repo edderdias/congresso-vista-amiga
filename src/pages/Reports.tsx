@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,9 @@ interface Report {
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [open, setOpen] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    id: "", // Added for editing
     month: (new Date().getMonth() + 1).toString(), // Convert to string for Select component
     year: new Date().getFullYear(),
     hours: 0,
@@ -53,6 +55,12 @@ export default function Reports() {
     { value: "12", label: "Dezembro" },
   ];
 
+  const pioneerStatusLabels = {
+    publicador: "Publicador",
+    pioneiro_auxiliar: "Pioneiro Auxiliar",
+    pioneiro_regular: "Pioneiro Regular",
+  };
+
   useEffect(() => {
     loadReports();
   }, []);
@@ -71,37 +79,68 @@ export default function Reports() {
     }
   };
 
+  const handleEdit = (report: Report) => {
+    setEditingReportId(report.id);
+    setFormData({
+      id: report.id,
+      month: report.month.toString(),
+      year: report.year,
+      hours: report.hours,
+      bible_studies: report.bible_studies,
+      notes: report.notes || "",
+      pioneer_status: report.pioneer_status,
+    });
+    setOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditingReportId(null);
+    setFormData({
+      id: "",
+      month: (new Date().getMonth() + 1).toString(),
+      year: new Date().getFullYear(),
+      hours: 0,
+      bible_studies: 0,
+      notes: "",
+      pioneer_status: "publicador",
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase.from("preaching_reports").insert({
+    const reportData = {
       user_id: user.id,
-      month: parseInt(formData.month), // Convert back to number for Supabase
+      month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
       bible_studies: formData.bible_studies,
       notes: formData.notes,
       pioneer_status: formData.pioneer_status,
-      // placements, videos, return_visits are no longer collected
-    });
+    };
+
+    let error = null;
+    if (editingReportId) {
+      const { error: updateError } = await supabase
+        .from("preaching_reports")
+        .update(reportData)
+        .eq("id", editingReportId);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase.from("preaching_reports").insert([reportData]);
+      error = insertError;
+    }
 
     if (error) {
       toast({ title: "Erro ao salvar relatório", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Relatório salvo com sucesso!" });
-      setOpen(false);
+      handleCloseDialog();
       loadReports();
-      setFormData({
-        month: (new Date().getMonth() + 1).toString(),
-        year: new Date().getFullYear(),
-        hours: 0,
-        bible_studies: 0,
-        notes: "",
-        pioneer_status: "publicador",
-      });
     }
   };
 
@@ -114,7 +153,7 @@ export default function Reports() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={handleCloseDialog}> {/* Reset form when opening new */}
               <Plus className="h-4 w-4 mr-2" />
               Novo Relatório
             </Button>
@@ -122,7 +161,7 @@ export default function Reports() {
           <DialogContent className="sm:max-w-[525px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Adicionar Relatório</DialogTitle>
+                <DialogTitle>{editingReportId ? "Editar Relatório" : "Adicionar Relatório"}</DialogTitle>
                 <DialogDescription>Preencha os dados do seu relatório mensal</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -210,7 +249,7 @@ export default function Reports() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Salvar</Button>
+                <Button type="submit">{editingReportId ? "Salvar Alterações" : "Salvar"}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -231,7 +270,9 @@ export default function Reports() {
                 <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Estudos</TableHead>
+                <TableHead>Status Pioneiro</TableHead> {/* New column */}
                 <TableHead>Participou</TableHead>
+                <TableHead className="text-right">Ações</TableHead> {/* New column for actions */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -242,7 +283,13 @@ export default function Reports() {
                   <TableCell>{report.year}</TableCell>
                   <TableCell>{report.hours}</TableCell>
                   <TableCell>{report.bible_studies}</TableCell>
+                  <TableCell>{pioneerStatusLabels[report.pioneer_status]}</TableCell> {/* Display pioneer status */}
                   <TableCell>{report.hours > 0 ? "Sim" : "Não"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(report)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
