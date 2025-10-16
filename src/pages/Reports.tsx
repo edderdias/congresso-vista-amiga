@@ -181,7 +181,7 @@ export default function Reports() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="reporter_name">Nome</Label> {/* Changed label */}
+                  <Label htmlFor="reporter_name">Nome</Label>
                   <Input
                     id="reporter_name"
                     type="text"
@@ -213,7 +213,7 @@ export default function Reports() {
                       <SelectTrigger id="month">
                         <SelectValue placeholder="Selecione o mês" />
                       </SelectTrigger>
-                      <SelectContent>
+                    <SelectContent>
                         {monthOptions.map((month) => (
                           <SelectItem key={month.value} value={month.value}>
                             {month.label}
@@ -306,13 +306,13 @@ export default function Reports() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead> {/* Changed to Nome */}
+                <TableHead>Nome</TableHead>
                 <TableHead>Grupo</TableHead>
                 <TableHead>Mês</TableHead>
                 <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Estudos</TableHead>
-                <TableHead>Status Pioneiro</TableHead>
+                <TableHead>Status</TableHead> {/* Changed label here */}
                 <TableHead>Participou</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -320,7 +320,7 @@ export default function Reports() {
             <TableBody>
               {reports.map((report) => (
                 <TableRow key={report.id}>
-                  <TableCell className="font-medium">{report.reporter_name}</TableCell> {/* Display reporter_name */}
+                  <TableCell className="font-medium">{report.reporter_name}</TableCell>
                   <TableCell>{report.group_id || "-"}</TableCell>
                   <TableCell>{report.month}</TableCell>
                   <TableCell>{report.year}</TableCell>
