@@ -23,16 +23,26 @@ interface Report {
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
+  user_id: string; // Added user_id to interface
+  group_id: number | null; // Added group_id to interface
   profiles: { full_name: string };
+}
+
+interface Profile {
+  id: string;
+  full_name: string;
 }
 
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]); // State to store profiles
   const [open, setOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    id: "", // Added for editing
-    month: (new Date().getMonth() + 1).toString(), // Convert to string for Select component
+    id: "",
+    user_id: "", // Added user_id to form data
+    group_id: "", // Added group_id to form data (as string for select)
+    month: (new Date().getMonth() + 1).toString(),
     year: new Date().getFullYear(),
     hours: 0,
     bible_studies: 0,
@@ -55,6 +65,11 @@ export default function Reports() {
     { value: "12", label: "Dezembro" },
   ];
 
+  const groupOptions = Array.from({ length: 10 }, (_, i) => ({
+    value: (i + 1).toString(),
+    label: `Grupo ${i + 1}`,
+  }));
+
   const pioneerStatusLabels = {
     publicador: "Publicador",
     pioneiro_auxiliar: "Pioneiro Auxiliar",
@@ -63,6 +78,7 @@ export default function Reports() {
 
   useEffect(() => {
     loadReports();
+    loadProfiles(); // Load profiles when component mounts
   }, []);
 
   const loadReports = async () => {
@@ -79,10 +95,17 @@ export default function Reports() {
     }
   };
 
+  const loadProfiles = async () => {
+    const { data } = await supabase.from("profiles").select("id, full_name").order("full_name");
+    setProfiles(data || []);
+  };
+
   const handleEdit = (report: Report) => {
     setEditingReportId(report.id);
     setFormData({
       id: report.id,
+      user_id: report.user_id, // Set user_id for editing
+      group_id: report.group_id ? report.group_id.toString() : "", // Set group_id for editing
       month: report.month.toString(),
       year: report.year,
       hours: report.hours,
@@ -98,6 +121,8 @@ export default function Reports() {
     setEditingReportId(null);
     setFormData({
       id: "",
+      user_id: "",
+      group_id: "",
       month: (new Date().getMonth() + 1).toString(),
       year: new Date().getFullYear(),
       hours: 0,
@@ -110,11 +135,14 @@ export default function Reports() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!formData.user_id) {
+      toast({ title: "Erro", description: "Por favor, selecione um membro.", variant: "destructive" });
+      return;
+    }
 
     const reportData = {
-      user_id: user.id,
+      user_id: formData.user_id,
+      group_id: formData.group_id ? parseInt(formData.group_id) : null, // Convert group_id to number or null
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
@@ -153,7 +181,7 @@ export default function Reports() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleCloseDialog}> {/* Reset form when opening new */}
+            <Button onClick={handleCloseDialog}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Relatório
             </Button>
@@ -165,6 +193,36 @@ export default function Reports() {
                 <DialogDescription>Preencha os dados do seu relatório mensal</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="user">Membro</Label>
+                  <Select value={formData.user_id} onValueChange={(value) => setFormData({ ...formData, user_id: value })}>
+                    <SelectTrigger id="user">
+                      <SelectValue placeholder="Selecione um membro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          {profile.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="group">Grupo</Label>
+                  <Select value={formData.group_id} onValueChange={(value) => setFormData({ ...formData, group_id: value })}>
+                    <SelectTrigger id="group">
+                      <SelectValue placeholder="Selecione o grupo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groupOptions.map((group) => (
+                        <SelectItem key={group.value} value={group.value}>
+                          {group.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="month">Mês</Label>
@@ -194,7 +252,7 @@ export default function Reports() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4"> {/* Grouping Hours and Bible Studies */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="hours">Horas</Label>
                     <Input
@@ -266,24 +324,26 @@ export default function Reports() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Grupo</TableHead> {/* New column */}
                 <TableHead>Mês</TableHead>
                 <TableHead>Ano</TableHead>
                 <TableHead>Horas</TableHead>
                 <TableHead>Estudos</TableHead>
-                <TableHead>Status Pioneiro</TableHead> {/* New column */}
+                <TableHead>Status Pioneiro</TableHead>
                 <TableHead>Participou</TableHead>
-                <TableHead className="text-right">Ações</TableHead> {/* New column for actions */}
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reports.map((report) => (
                 <TableRow key={report.id}>
                   <TableCell className="font-medium">{report.profiles?.full_name}</TableCell>
+                  <TableCell>{report.group_id || "-"}</TableCell> {/* Display group_id */}
                   <TableCell>{report.month}</TableCell>
                   <TableCell>{report.year}</TableCell>
                   <TableCell>{report.hours}</TableCell>
                   <TableCell>{report.bible_studies}</TableCell>
-                  <TableCell>{pioneerStatusLabels[report.pioneer_status]}</TableCell> {/* Display pioneer status */}
+                  <TableCell>{pioneerStatusLabels[report.pioneer_status]}</TableCell>
                   <TableCell>{report.hours > 0 ? "Sim" : "Não"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(report)}>
