@@ -9,9 +9,10 @@ import Reports from "./pages/Reports";
 import Designations from "./pages/Designations";
 import Territories from "./pages/Territories";
 import Users from "./pages/Users";
-import Groups from "./pages/Groups"; // New import
-import Cleaning from "./pages/Cleaning"; // New import
-import School from "./pages/School"; // New import
+import Groups from "./pages/Groups";
+import Cleaning from "./pages/Cleaning";
+import School from "./pages/School";
+import Publishers from "./pages/Publishers"; // Novo import
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -27,10 +28,11 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
-          <Route path="/groups" element={<Layout><Groups /></Layout>} /> {/* New route */}
-          <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} /> {/* New route */}
+          <Route path="/groups" element={<Layout><Groups /></Layout>} />
+          <Route path="/publishers" element={<Layout><Publishers /></Layout>} /> {/* Nova rota */}
+          <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} />
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
-          <Route path="/school" element={<Layout><School /></Layout>} /> {/* New route */}
+          <Route path="/school" element={<Layout><School /></Layout>} />
           <Route path="/territories" element={<Layout><Territories /></Layout>} />
           <Route path="/users" element={<Layout><Users /></Layout>} />
           <Route path="*" element={<NotFound />} />
