@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -91,130 +93,118 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100">
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="flex w-full max-w-5xl bg-white rounded-xl shadow-2xl overflow-hidden min-h-[600px]">
-          {/* Lado Esquerdo: Formulário (Verde) */}
-          <div className="w-full lg:w-[35%] bg-[#2e7d32] p-8 lg:p-12 text-white flex flex-col items-center justify-center">
-            <div className="mb-8">
-               <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center p-2">
-                 <img src="/sistema da congregação.png" alt="Logo" className="w-full h-full object-contain brightness-0 invert" />
-               </div>
-            </div>
-            
-            <h2 className="text-2xl font-bold mb-10 text-center">
-              {isLogin ? "Bem-vindo ao Sistema" : "Crie sua conta"}
-            </h2>
-
-            {isLogin ? (
-              <form onSubmit={handleLogin} className="w-full space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email" className="text-white/90 text-sm font-medium">Seu e-mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="Digite seu e-mail"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-11 focus-visible:ring-offset-0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password" className="text-white/90 text-sm font-medium">Sua senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Digite sua senha"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-11 focus-visible:ring-offset-0"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-11 bg-white text-[#2e7d32] hover:bg-white/90 font-bold text-base transition-colors" disabled={loading}>
-                  {loading ? "Entrando..." : "Entrar"}
-                </Button>
-                <div className="text-center space-y-3 pt-4">
-                  <button type="button" className="text-sm text-white/80 hover:text-white transition-colors block w-full">
-                    Esqueceu sua senha?
-                  </button>
-                  <button type="button" onClick={() => setIsLogin(false)} className="text-sm text-white/80 hover:text-white transition-colors block w-full">
-                    Não tem uma conta? Registre-se
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleSignup} className="w-full space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="signup-name" className="text-white/90 text-sm">Nome Completo</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    value={signupData.fullName}
-                    onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-10"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signup-email" className="text-white/90 text-sm">E-mail</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-10"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signup-password" className="text-white/90 text-sm">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-10"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="signup-confirm" className="text-white/90 text-sm">Confirmar Senha</Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                    required
-                    className="bg-white text-black border-none h-10"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-11 bg-white text-[#2e7d32] hover:bg-white/90 font-bold text-base mt-4" disabled={loading}>
-                  {loading ? "Cadastrando..." : "Cadastrar"}
-                </Button>
-                <div className="text-center pt-2">
-                  <button type="button" onClick={() => setIsLogin(true)} className="text-sm text-white/80 hover:text-white">
-                    Já tem uma conta? Faça login
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-          
-          {/* Lado Direito: Imagem (Branco) */}
-          <div className="hidden lg:flex lg:w-[65%] items-center justify-center p-16 bg-white">
-            <div className="max-w-lg w-full text-center">
-              <img 
-                src="/sistema da congregação.png" 
-                alt="Sistema da Congregação" 
-                className="w-full h-auto object-contain"
-              />
-            </div>
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Lado Esquerdo: Formulário Original */}
+        <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
+          <Card className="w-full max-w-md shadow-xl border-none bg-white">
+            <CardHeader className="text-center space-y-2">
+              <CardTitle className="text-3xl font-bold text-primary">
+                Sistema de Congregação
+              </CardTitle>
+              <CardDescription>Gerencie sua congregação de forma eficiente</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login">Entrar</TabsTrigger>
+                  <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Senha</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
+                      {loading ? "Entrando..." : "Entrar"}
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Nome Completo</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Seu nome completo"
+                        value={signupData.fullName}
+                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={signupData.email}
+                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Senha</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={signupData.password}
+                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-confirm">Confirmar Senha</Label>
+                      <Input
+                        id="signup-confirm"
+                        type="password"
+                        placeholder="••••••••"
+                        value={signupData.confirmPassword}
+                        onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
+                      {loading ? "Cadastrando..." : "Cadastrar"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Lado Direito: Imagem */}
+        <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-white p-8">
+          <div className="max-w-xl w-full">
+            <img 
+              src="/sistema da congregação.png" 
+              alt="Sistema da Congregação" 
+              className="w-full h-auto object-contain"
+            />
           </div>
         </div>
       </div>
