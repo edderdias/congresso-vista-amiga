@@ -9,6 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          full_name: string
+          email: string
+          phone: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id: string
+          full_name: string
+          email: string
+          phone?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string
+          phone?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      groups: {
+        Row: {
+          id: string
+          group_number: number
+          overseer_id: string | null
+          assistant_id: string | null
+          field_service_meeting: string | null
+          publisher_count: number
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          group_number: number
+          overseer_id?: string | null
+          assistant_id?: string | null
+          field_service_meeting?: string | null
+          publisher_count?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          group_number?: number
+          overseer_id?: string | null
+          assistant_id?: string | null
+          field_service_meeting?: string | null
+          publisher_count?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_overseer_id_fkey"
+            columns: ["overseer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_assistant_id_fkey"
+            columns: ["assistant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       publishers: {
         Row: {
           id: string
@@ -62,205 +137,92 @@ export type Database = {
           }
         ]
       }
-      designations: {
-        Row: {
-          created_at: string | null
-          designation_type: Database["public"]["Enums"]["designation_type"]
-          id: string
-          meeting_date: string
-          notes: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          designation_type: Database["public"]["Enums"]["designation_type"]
-          id?: string
-          meeting_date: string
-          notes?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          designation_type?: Database["public"]["Enums"]["designation_type"]
-          id?: string
-          meeting_date?: string
-          notes?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "designations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      groups: {
-        Row: {
-          assistant_id: string | null
-          created_at: string | null
-          field_service_meeting: string | null
-          group_number: number
-          id: string
-          overseer_id: string | null
-          publisher_count: number
-          updated_at: string | null
-        }
-        Insert: {
-          assistant_id?: string | null
-          created_at?: string | null
-          field_service_meeting?: string | null
-          group_number: number
-          id?: string
-          overseer_id?: string | null
-          publisher_count?: number
-          updated_at?: string | null
-        }
-        Update: {
-          assistant_id?: string | null
-          created_at?: string | null
-          field_service_meeting?: string | null
-          group_number?: number
-          id?: string
-          overseer_id?: string | null
-          publisher_count?: number
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "groups_assistant_id_fkey"
-            columns: ["assistant_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "groups_overseer_id_fkey"
-            columns: ["overseer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       preaching_reports: {
         Row: {
-          bible_studies: number | null
-          created_at: string | null
-          hours: number | null
           id: string
-          month: number
-          notes: string | null
-          placements: number | null
-          return_visits: number | null
           reporter_name: string | null
-          updated_at: string | null
-          videos: number | null
-          year: number
           group_id: number | null
-          pioneer_status: Database["public"]["Enums"]["pioneer_status"] | null
-        }
-        Insert: {
-          bible_studies?: number | null
-          created_at?: string | null
-          hours?: number | null
-          id?: string
           month: number
-          notes?: string | null
-          placements?: number | null
-          return_visits?: number | null
-          reporter_name?: string | null
-          updated_at?: string | null
-          videos?: number | null
           year: number
-          group_id?: number | null
-          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
-        }
-        Update: {
-          bible_studies?: number | null
-          created_at?: string | null
-          hours?: number | null
-          id?: string
-          month?: number
-          notes?: string | null
-          placements?: number | null
-          return_visits?: number | null
-          reporter_name?: string | null
-          updated_at?: string | null
-          videos?: number | null
-          year?: number
-          group_id?: number | null
-          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
+          hours: number | null
+          placements: number | null
+          videos: number | null
+          return_visits: number | null
+          bible_studies: number | null
+          notes: string | null
+          pioneer_status: Database["public"]["Enums"]["pioneer_status"] | null
           created_at: string | null
-          email: string
-          full_name: string
-          id: string
-          phone: string | null
           updated_at: string | null
         }
         Insert: {
+          id?: string
+          reporter_name?: string | null
+          group_id?: number | null
+          month: number
+          year: number
+          hours?: number | null
+          placements?: number | null
+          videos?: number | null
+          return_visits?: number | null
+          bible_studies?: number | null
+          notes?: string | null
+          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
           created_at?: string | null
-          email: string
-          full_name: string
-          id: string
-          phone?: string | null
           updated_at?: string | null
         }
         Update: {
-          created_at?: string | null
-          email?: string
-          full_name?: string
           id?: string
-          phone?: string | null
+          reporter_name?: string | null
+          group_id?: number | null
+          month?: number
+          year?: number
+          hours?: number | null
+          placements?: number | null
+          videos?: number | null
+          return_visits?: number | null
+          bible_studies?: number | null
+          notes?: string | null
+          pioneer_status?: Database["public"]["Enums"]["pioneer_status"] | null
+          created_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
       }
       territories: {
         Row: {
-          assigned_date: string | null
+          id: string
+          number: string
+          name: string
+          description: string | null
+          status: Database["public"]["Enums"]["territory_status"] | null
           assigned_to: string | null
+          assigned_date: string | null
           completed_date: string | null
           created_at: string | null
-          description: string | null
-          id: string
-          name: string
-          number: string
-          status: Database["public"]["Enums"]["territory_status"] | null
           updated_at: string | null
         }
         Insert: {
-          assigned_date?: string | null
+          id?: string
+          number: string
+          name: string
+          description?: string | null
+          status?: Database["public"]["Enums"]["territory_status"] | null
           assigned_to?: string | null
+          assigned_date?: string | null
           completed_date?: string | null
           created_at?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          number: string
-          status?: Database["public"]["Enums"]["territory_status"] | null
           updated_at?: string | null
         }
         Update: {
-          assigned_date?: string | null
+          id?: string
+          number?: string
+          name?: string
+          description?: string | null
+          status?: Database["public"]["Enums"]["territory_status"] | null
           assigned_to?: string | null
+          assigned_date?: string | null
           completed_date?: string | null
           created_at?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          number?: string
-          status?: Database["public"]["Enums"]["territory_status"] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -270,7 +232,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
+          }
+        ]
+      }
+      designations: {
+        Row: {
+          id: string
+          user_id: string
+          designation_type: Database["public"]["Enums"]["designation_type"]
+          meeting_date: string
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          designation_type: Database["public"]["Enums"]["designation_type"]
+          meeting_date: string
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          designation_type?: Database["public"]["Enums"]["designation_type"]
+          meeting_date?: string
+          notes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "designations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }
@@ -281,12 +281,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      designation_type:
-        | "sound"
-        | "attendant"
-        | "literature"
-        | "cleaning"
-        | "security"
+      designation_type: "sound" | "attendant" | "literature" | "cleaning" | "security"
       pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular"
       territory_status: "available" | "assigned" | "completed"
     }
@@ -295,19 +290,3 @@ export type Database = {
     }
   }
 }
-
-export type Tables<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Row']
-
-export type TablesInsert<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Insert']
-
-export type TablesUpdate<
-  T extends keyof Database['public']['Tables']
-> = Database['public']['Tables'][T]['Update']
-
-export type Enums<
-  T extends keyof Database['public']['Enums']
-> = Database['public']['Enums'][T]
