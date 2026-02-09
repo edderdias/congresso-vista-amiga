@@ -1,4 +1,36 @@
--- 1. Criar Tipos Enumerados (Enums)
+-- 1. Criar tabela de Perfis (Profiles) primeiro
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. Função e Gatilho para criar perfil automaticamente no cadastro (Auth)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE PLPGSQL
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, full_name, email)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data ->> 'full_name', 'Usuário'),
+    new.email
+  );
+  RETURN new;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 3. Criar Tipos Enumerados (Enums)
 DO $$ BEGIN
     CREATE TYPE public.designation_type AS ENUM ('sound', 'attendant', 'literature', 'cleaning', 'security');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
@@ -11,7 +43,7 @@ DO $$ BEGIN
     CREATE TYPE public.territory_status AS ENUM ('available', 'assigned', 'completed');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- 2. Tabela de Grupos (Groups)
+-- 4. Tabela de Grupos (Groups)
 CREATE TABLE IF NOT EXISTS public.groups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   group_number INTEGER NOT NULL,
@@ -23,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.groups (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 3. Tabela de Publicadores (Publishers)
+-- 5. Tabela de Publicadores (Publishers)
 CREATE TABLE IF NOT EXISTS public.publishers (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   full_name TEXT NOT NULL,
@@ -39,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.publishers (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Tabela de Relatórios (Preaching Reports)
+-- 6. Tabela de Relatórios (Preaching Reports)
 CREATE TABLE IF NOT EXISTS public.preaching_reports (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   reporter_name TEXT,
@@ -57,7 +89,7 @@ CREATE TABLE IF NOT EXISTS public.preaching_reports (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Tabela de Territórios (Territories)
+-- 7. Tabela de Territórios (Territories)
 CREATE TABLE IF NOT EXISTS public.territories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   number TEXT NOT NULL,
@@ -71,7 +103,7 @@ CREATE TABLE IF NOT EXISTS public.territories (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 6. Tabela de Designações (Designations)
+-- 8. Tabela de Designações (Designations)
 CREATE TABLE IF NOT EXISTS public.designations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -82,20 +114,22 @@ CREATE TABLE IF NOT EXISTS public.designations (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 7. Habilitar RLS e Criar Políticas
+-- 9. Habilitar RLS em todas as tabelas
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.publishers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preaching_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.territories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.designations ENABLE ROW LEVEL SECURITY;
 
+-- 10. Criar políticas de acesso (Permitir tudo para usuários autenticados)
 DO $$ 
 DECLARE
     t text;
 BEGIN
     FOR t IN SELECT table_name FROM information_schema.tables 
              WHERE table_schema = 'public' 
-             AND table_name IN ('groups', 'publishers', 'preaching_reports', 'territories', 'designations')
+             AND table_name IN ('profiles', 'groups', 'publishers', 'preaching_reports', 'territories', 'designations')
     LOOP
         EXECUTE format('DROP POLICY IF EXISTS "Allow all for authenticated" ON public.%I', t);
         EXECUTE format('CREATE POLICY "Allow all for authenticated" ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);
