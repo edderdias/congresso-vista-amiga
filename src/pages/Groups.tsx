@@ -27,7 +27,7 @@ interface Group {
   publishers: { count: number }[];
 }
 
-interface Profile {
+interface EligiblePublisher {
   id: string;
   full_name: string;
 }
@@ -43,7 +43,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [eligiblePublishers, setEligiblePublishers] = useState<EligiblePublisher[]>([]);
   const [open, setOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,16 +60,17 @@ export default function Groups() {
 
   useEffect(() => {
     loadGroups();
-    loadProfiles();
+    loadEligiblePublishers();
   }, []);
 
   const loadGroups = async () => {
+    // Buscamos os grupos e os nomes dos responsáveis da tabela de publicadores
     const { data, error } = await supabase
       .from("groups")
       .select(`
         *, 
-        overseer:profiles!groups_overseer_id_fkey(full_name), 
-        assistant:profiles!groups_assistant_id_fkey(full_name),
+        overseer:publishers!groups_overseer_id_fkey(full_name), 
+        assistant:publishers!groups_assistant_id_fkey(full_name),
         publishers(count)
       `)
       .order("group_number", { ascending: true });
@@ -81,17 +82,20 @@ export default function Groups() {
     }
   };
 
-  const loadProfiles = async () => {
-    // Buscamos da tabela 'profiles' para satisfazer a restrição do banco de dados
+  const loadEligiblePublishers = async () => {
+    // Busca publicadores que são Anciãos ou Servos Ministeriais
     const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name")
+      .from("publishers")
+      .select("id, full_name, privileges")
       .order("full_name");
     
     if (error) {
-      toast({ title: "Erro ao carregar perfis", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao carregar publicadores", description: error.message, variant: "destructive" });
     } else {
-      setProfiles(data || []);
+      const filtered = data?.filter(p => 
+        p.privileges?.includes("Ancião") || p.privileges?.includes("Servo Ministerial")
+      ) || [];
+      setEligiblePublishers(filtered.map(p => ({ id: p.id, full_name: p.full_name })));
     }
   };
 
@@ -197,18 +201,18 @@ export default function Groups() {
                     name="overseer_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Superintendente</FormLabel>
+                        <FormLabel>Superintendente (Ancião/Servo)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || "none"}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione um superintendente (opcional)" />
+                              <SelectValue placeholder="Selecione um responsável" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">Nenhum</SelectItem>
-                            {profiles.map((profile) => (
-                              <SelectItem key={profile.id} value={profile.id}>
-                                {profile.full_name}
+                            {eligiblePublishers.map((pub) => (
+                              <SelectItem key={pub.id} value={pub.id}>
+                                {pub.full_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -222,18 +226,18 @@ export default function Groups() {
                     name="assistant_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ajudante</FormLabel>
+                        <FormLabel>Ajudante (Ancião/Servo)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || "none"}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione um ajudante (opcional)" />
+                              <SelectValue placeholder="Selecione um ajudante" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">Nenhum</SelectItem>
-                            {profiles.map((profile) => (
-                              <SelectItem key={profile.id} value={profile.id}>
-                                {profile.full_name}
+                            {eligiblePublishers.map((pub) => (
+                              <SelectItem key={pub.id} value={pub.id}>
+                                {pub.full_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
