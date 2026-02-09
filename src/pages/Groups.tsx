@@ -64,7 +64,6 @@ export default function Groups() {
   }, []);
 
   const loadGroups = async () => {
-    // Buscamos os grupos e contamos os publicadores vinculados a cada um
     const { data, error } = await supabase
       .from("groups")
       .select(`
@@ -83,16 +82,17 @@ export default function Groups() {
   };
 
   const loadProfiles = async () => {
-    const { data } = await supabase
-      .from("publishers")
-      .select("id, full_name, privileges")
+    // Buscamos da tabela 'profiles' para satisfazer a restrição do banco de dados
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name")
       .order("full_name");
     
-    const filtered = data?.filter(p => 
-      p.privileges.includes("Ancião") || p.privileges.includes("Servo Ministerial")
-    ) || [];
-    
-    setProfiles(filtered.map(p => ({ id: p.id, full_name: p.full_name })));
+    if (error) {
+      toast({ title: "Erro ao carregar perfis", description: error.message, variant: "destructive" });
+    } else {
+      setProfiles(data || []);
+    }
   };
 
   const handleEdit = (group: Group) => {
