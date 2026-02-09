@@ -41,26 +41,26 @@ const PRIVILEGE_OPTIONS = [
 ];
 
 const DESIGNATION_OPTIONS = [
-  "Presidência vida e ministério",
-  "oração",
+  "Presidência vida e Ministério",
+  "Oração",
   "Tesouro",
   "Encontre Joias",
   "Leitura da Biblia",
   "Considerações",
-  "demostrações",
-  "discurso de estudante",
+  "Demostrações",
+  "Discurso de Estudante",
   "Nossa Vida Cristã",
   "Necessidade Locais",
   "Dirigente Est. de Livro",
   "Leitura do Livro",
   "Presidência final de semana",
   "Leitura A Sentinela",
-  "indicador",
-  "Microfone volante",
+  "Indicador",
+  "Microfone Volante",
   "Audio e Video",
   "Limpeza",
   "Manutenção",
-  "tpl"
+  "TPL"
 ];
 
 const ITEMS_PER_PAGE = 10;
