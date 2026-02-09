@@ -1,7 +1,4 @@
--- 1. Criar extensões necessárias
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 2. Criar Tipos Enumerados (Enums)
+-- 1. Criar Tipos Enumerados (Enums)
 DO $$ BEGIN
     CREATE TYPE public.designation_type AS ENUM ('sound', 'attendant', 'literature', 'cleaning', 'security');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
@@ -14,17 +11,7 @@ DO $$ BEGIN
     CREATE TYPE public.territory_status AS ENUM ('available', 'assigned', 'completed');
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- 3. Tabela de Perfis (Profiles)
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  full_name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  phone TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 4. Tabela de Grupos (Groups)
+-- 2. Tabela de Grupos (Groups)
 CREATE TABLE IF NOT EXISTS public.groups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   group_number INTEGER NOT NULL,
@@ -36,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.groups (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. Tabela de Publicadores (Publishers)
+-- 3. Tabela de Publicadores (Publishers)
 CREATE TABLE IF NOT EXISTS public.publishers (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   full_name TEXT NOT NULL,
@@ -52,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.publishers (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 6. Tabela de Relatórios (Preaching Reports)
+-- 4. Tabela de Relatórios (Preaching Reports)
 CREATE TABLE IF NOT EXISTS public.preaching_reports (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   reporter_name TEXT,
@@ -70,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.preaching_reports (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 7. Tabela de Territórios (Territories)
+-- 5. Tabela de Territórios (Territories)
 CREATE TABLE IF NOT EXISTS public.territories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   number TEXT NOT NULL,
@@ -84,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.territories (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 8. Tabela de Designações (Designations)
+-- 6. Tabela de Designações (Designations)
 CREATE TABLE IF NOT EXISTS public.designations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -95,22 +82,20 @@ CREATE TABLE IF NOT EXISTS public.designations (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 9. Habilitar RLS em todas as tabelas
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- 7. Habilitar RLS e Criar Políticas
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.publishers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preaching_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.territories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.designations ENABLE ROW LEVEL SECURITY;
 
--- 10. Criar políticas de acesso para usuários autenticados
 DO $$ 
 DECLARE
     t text;
 BEGIN
     FOR t IN SELECT table_name FROM information_schema.tables 
              WHERE table_schema = 'public' 
-             AND table_name IN ('profiles', 'groups', 'publishers', 'preaching_reports', 'territories', 'designations')
+             AND table_name IN ('groups', 'publishers', 'preaching_reports', 'territories', 'designations')
     LOOP
         EXECUTE format('DROP POLICY IF EXISTS "Allow all for authenticated" ON public.%I', t);
         EXECUTE format('CREATE POLICY "Allow all for authenticated" ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);
