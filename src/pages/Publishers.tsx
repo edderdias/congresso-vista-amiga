@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,13 +32,26 @@ interface Publisher {
 }
 
 const PRIVILEGE_OPTIONS = [
-  "Publicador não batizado",
-  "Publicador batizado",
-  "Pioneiro regular",
-  "Pioneiro auxiliar",
-  "Pioneiro especial",
-  "Servo ministerial",
-  "Ancião"
+  "Presidência vida e ministério",
+  "oração",
+  "Tesouro",
+  "Encontre Joias",
+  "Leitura da Biblia",
+  "Considerações",
+  "demostrações",
+  "discurso de estudante",
+  "Nossa Vida Cristã",
+  "Necessidade Locais",
+  "Dirigente Est. de Livro",
+  "Leitura do Livro",
+  "Presidência final de semana",
+  "Leitura A Sentinela",
+  "indicador",
+  "Microfone volante",
+  "Audio e Video",
+  "Limpeza",
+  "Manutenção",
+  "tpl"
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -280,8 +295,8 @@ export default function Publishers() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Privilégios (pode marcar mais de um)</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <Label>Privilégios e Designações (múltipla escolha)</Label>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
                     {PRIVILEGE_OPTIONS.map(priv => (
                       <div key={priv} className="flex items-center space-x-2">
                         <Checkbox 
@@ -289,7 +304,7 @@ export default function Publishers() {
                           checked={formData.privileges.includes(priv)} 
                           onCheckedChange={(checked) => handlePrivilegeChange(priv, !!checked)}
                         />
-                        <Label htmlFor={priv} className="text-sm font-normal">{priv}</Label>
+                        <Label htmlFor={priv} className="text-sm font-normal cursor-pointer">{priv}</Label>
                       </div>
                     ))}
                   </div>
