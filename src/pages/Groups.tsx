@@ -22,9 +22,9 @@ interface Group {
   overseer_id: string | null;
   assistant_id: string | null;
   field_service_meeting: string | null;
-  publisher_count: number;
   overseer: { full_name: string } | null;
   assistant: { full_name: string } | null;
+  publishers: { count: number }[];
 }
 
 interface Profile {
@@ -37,7 +37,6 @@ const formSchema = z.object({
   overseer_id: z.string().nullable().optional(),
   assistant_id: z.string().nullable().optional(),
   field_service_meeting: z.string().nullable().optional(),
-  publisher_count: z.coerce.number().min(0, "O número de publicadores não pode ser negativo.").optional(),
 });
 
 const ITEMS_PER_PAGE = 10;
@@ -56,7 +55,6 @@ export default function Groups() {
       overseer_id: "none",
       assistant_id: "none",
       field_service_meeting: "",
-      publisher_count: 0,
     },
   });
 
@@ -66,26 +64,30 @@ export default function Groups() {
   }, []);
 
   const loadGroups = async () => {
+    // Buscamos os grupos e contamos os publicadores vinculados a cada um
     const { data, error } = await supabase
       .from("groups")
-      .select("*, overseer:profiles!groups_overseer_id_fkey(full_name), assistant:profiles!groups_assistant_id_fkey(full_name)")
+      .select(`
+        *, 
+        overseer:profiles!groups_overseer_id_fkey(full_name), 
+        assistant:profiles!groups_assistant_id_fkey(full_name),
+        publishers(count)
+      `)
       .order("group_number", { ascending: true });
 
     if (error) {
       toast({ title: "Erro ao carregar grupos", description: error.message, variant: "destructive" });
     } else {
-      setGroups(data || []);
+      setGroups(data as any || []);
     }
   };
 
   const loadProfiles = async () => {
-    // Buscamos da tabela de publicadores para filtrar por privilégios
     const { data } = await supabase
       .from("publishers")
       .select("id, full_name, privileges")
       .order("full_name");
     
-    // Filtramos apenas Anciãos e Servos Ministeriais
     const filtered = data?.filter(p => 
       p.privileges.includes("Ancião") || p.privileges.includes("Servo Ministerial")
     ) || [];
@@ -100,15 +102,15 @@ export default function Groups() {
       overseer_id: group.overseer_id || "none",
       assistant_id: group.assistant_id || "none",
       field_service_meeting: group.field_service_meeting || "",
-      publisher_count: group.publisher_count,
     });
     setOpen(true);
   };
 
   const handleView = (group: Group) => {
+    const count = group.publishers?.[0]?.count || 0;
     toast({
       title: `Detalhes do Grupo ${group.group_number}`,
-      description: `Superintendente: ${group.overseer?.full_name || 'N/A'}, Ajudante: ${group.assistant?.full_name || 'N/A'}`,
+      description: `Superintendente: ${group.overseer?.full_name || 'N/A'}, Ajudante: ${group.assistant?.full_name || 'N/A'}. Total de ${count} publicadores.`,
     });
   };
 
@@ -118,7 +120,6 @@ export default function Groups() {
       overseer_id: values.overseer_id === "none" ? null : values.overseer_id,
       assistant_id: values.assistant_id === "none" ? null : values.assistant_id,
       field_service_meeting: values.field_service_meeting || null,
-      publisher_count: values.publisher_count || 0,
     };
 
     let error = null;
@@ -243,19 +244,6 @@ export default function Groups() {
                   />
                   <FormField
                     control={form.control}
-                    name="publisher_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Publicadores</FormLabel>
-                        <FormControl>
-                          <Input type="number" min="0" placeholder="Ex: 10" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
                     name="field_service_meeting"
                     render={({ field }) => (
                       <FormItem>
@@ -300,7 +288,7 @@ export default function Groups() {
                   <TableCell className="font-medium">{group.group_number}</TableCell>
                   <TableCell>{group.overseer?.full_name || "-"}</TableCell>
                   <TableCell>{group.assistant?.full_name || "-"}</TableCell>
-                  <TableCell>{group.publisher_count}</TableCell>
+                  <TableCell>{group.publishers?.[0]?.count || 0}</TableCell>
                   <TableCell>{group.field_service_meeting || "-"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleView(group)} className="mr-2">
