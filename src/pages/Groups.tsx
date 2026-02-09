@@ -22,9 +22,9 @@ interface Group {
   overseer_id: string | null;
   assistant_id: string | null;
   field_service_meeting: string | null;
-  overseer: { full_name: string } | null;
-  assistant: { full_name: string } | null;
-  publishers: { count: number }[];
+  overseer_name?: string;
+  assistant_name?: string;
+  publisher_count?: number;
 }
 
 interface EligiblePublisher {
@@ -59,43 +59,49 @@ export default function Groups() {
   });
 
   useEffect(() => {
-    loadGroups();
-    loadEligiblePublishers();
+    loadData();
   }, []);
 
-  const loadGroups = async () => {
-    // Buscamos os grupos e os nomes dos responsáveis da tabela de publicadores
-    const { data, error } = await supabase
-      .from("groups")
-      .select(`
-        *, 
-        overseer:publishers!groups_overseer_id_fkey(full_name), 
-        assistant:publishers!groups_assistant_id_fkey(full_name),
-        publishers(count)
-      `)
-      .order("group_number", { ascending: true });
+  const loadData = async () => {
+    try {
+      // 1. Buscar todos os grupos
+      const { data: groupsData, error: groupsError } = await supabase
+        .from("groups")
+        .select("*")
+        .order("group_number", { ascending: true });
 
-    if (error) {
-      toast({ title: "Erro ao carregar grupos", description: error.message, variant: "destructive" });
-    } else {
-      setGroups(data as any || []);
-    }
-  };
+      if (groupsError) throw groupsError;
 
-  const loadEligiblePublishers = async () => {
-    // Busca publicadores que são Anciãos ou Servos Ministeriais
-    const { data, error } = await supabase
-      .from("publishers")
-      .select("id, full_name, privileges")
-      .order("full_name");
-    
-    if (error) {
-      toast({ title: "Erro ao carregar publicadores", description: error.message, variant: "destructive" });
-    } else {
-      const filtered = data?.filter(p => 
+      // 2. Buscar todos os publicadores para mapear nomes e contar por grupo
+      const { data: pubsData, error: pubsError } = await supabase
+        .from("publishers")
+        .select("id, full_name, group_id, privileges");
+
+      if (pubsError) throw pubsError;
+
+      // 3. Filtrar publicadores elegíveis (Anciãos/Servos)
+      const eligible = pubsData?.filter(p => 
         p.privileges?.includes("Ancião") || p.privileges?.includes("Servo Ministerial")
       ) || [];
-      setEligiblePublishers(filtered.map(p => ({ id: p.id, full_name: p.full_name })));
+      setEligiblePublishers(eligible.map(p => ({ id: p.id, full_name: p.full_name })));
+
+      // 4. Combinar os dados no frontend
+      const formattedGroups = groupsData.map(group => {
+        const overseer = pubsData.find(p => p.id === group.overseer_id);
+        const assistant = pubsData.find(p => p.id === group.assistant_id);
+        const count = pubsData.filter(p => p.group_id === group.id).length;
+
+        return {
+          ...group,
+          overseer_name: overseer?.full_name || "-",
+          assistant_name: assistant?.full_name || "-",
+          publisher_count: count
+        };
+      });
+
+      setGroups(formattedGroups);
+    } catch (error: any) {
+      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
     }
   };
 
@@ -111,10 +117,9 @@ export default function Groups() {
   };
 
   const handleView = (group: Group) => {
-    const count = group.publishers?.[0]?.count || 0;
     toast({
       title: `Detalhes do Grupo ${group.group_number}`,
-      description: `Superintendente: ${group.overseer?.full_name || 'N/A'}, Ajudante: ${group.assistant?.full_name || 'N/A'}. Total de ${count} publicadores.`,
+      description: `Superintendente: ${group.overseer_name}, Ajudante: ${group.assistant_name}. Total de ${group.publisher_count} publicadores.`,
     });
   };
 
@@ -145,7 +150,7 @@ export default function Groups() {
       setOpen(false);
       form.reset();
       setEditingGroupId(null);
-      loadGroups();
+      loadData();
     }
   };
 
@@ -290,9 +295,9 @@ export default function Groups() {
               {paginatedGroups.map((group) => (
                 <TableRow key={group.id}>
                   <TableCell className="font-medium">{group.group_number}</TableCell>
-                  <TableCell>{group.overseer?.full_name || "-"}</TableCell>
-                  <TableCell>{group.assistant?.full_name || "-"}</TableCell>
-                  <TableCell>{group.publishers?.[0]?.count || 0}</TableCell>
+                  <TableCell>{group.overseer_name}</TableCell>
+                  <TableCell>{group.assistant_name}</TableCell>
+                  <TableCell>{group.publisher_count}</TableCell>
                   <TableCell>{group.field_service_meeting || "-"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleView(group)} className="mr-2">
