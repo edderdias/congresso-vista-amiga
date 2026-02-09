@@ -28,7 +28,7 @@ interface Publisher {
   hope: 'anointed' | 'other_sheep' | null;
   status: 'active' | 'inactive' | 'repreendido';
   group_id: string | null;
-  groups?: { group_number: number } | null;
+  group_number?: number;
 }
 
 const PRIVILEGE_OPTIONS = [
@@ -41,26 +41,26 @@ const PRIVILEGE_OPTIONS = [
 ];
 
 const DESIGNATION_OPTIONS = [
-  "Presidência vida e Ministério",
-  "Oração",
+  "Presidência vida e ministério",
+  "oração",
   "Tesouro",
   "Encontre Joias",
   "Leitura da Biblia",
   "Considerações",
-  "Demostrações",
-  "Discurso de Estudante",
+  "demostrações",
+  "discurso de estudante",
   "Nossa Vida Cristã",
   "Necessidade Locais",
   "Dirigente Est. de Livro",
   "Leitura do Livro",
   "Presidência final de semana",
   "Leitura A Sentinela",
-  "Indicador",
-  "Microfone Volante",
+  "indicador",
+  "Microfone volante",
   "Audio e Video",
   "Limpeza",
   "Manutenção",
-  "TPL"
+  "tpl"
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -92,26 +92,30 @@ export default function Publishers() {
   });
 
   useEffect(() => {
-    loadPublishers();
-    loadGroups();
+    loadData();
   }, []);
 
-  const loadPublishers = async () => {
-    const { data, error } = await supabase
-      .from("publishers")
-      .select("*, groups(group_number)")
-      .order("full_name");
+  const loadData = async () => {
+    try {
+      const { data: groupsData } = await supabase.from("groups").select("id, group_number").order("group_number");
+      setGroups(groupsData || []);
 
-    if (error) {
+      const { data: pubsData, error } = await supabase
+        .from("publishers")
+        .select("*")
+        .order("full_name");
+
+      if (error) throw error;
+
+      const formatted = pubsData.map(pub => ({
+        ...pub,
+        group_number: groupsData?.find(g => g.id === pub.group_id)?.group_number
+      }));
+
+      setPublishers(formatted);
+    } catch (error: any) {
       toast({ title: "Erro ao carregar", description: error.message, variant: "destructive" });
-    } else {
-      setPublishers(data || []);
     }
-  };
-
-  const loadGroups = async () => {
-    const { data } = await supabase.from("groups").select("id, group_number").order("group_number");
-    setGroups(data || []);
   };
 
   const calculateAge = (dateStr: string) => {
@@ -159,7 +163,7 @@ export default function Publishers() {
       toast({ title: "Sucesso!", description: "Publicador salvo com sucesso." });
       setOpen(false);
       resetForm();
-      loadPublishers();
+      loadData();
     }
   };
 
@@ -187,7 +191,7 @@ export default function Publishers() {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Excluído", description: "Publicador removido com sucesso." });
-      loadPublishers();
+      loadData();
     }
   };
 
@@ -460,7 +464,7 @@ export default function Publishers() {
                     <TableRow key={pub.id}>
                       <TableCell className="font-medium">{pub.full_name}</TableCell>
                       <TableCell>{pub.phone || "-"}</TableCell>
-                      <TableCell>{pub.groups ? `Grupo ${pub.groups.group_number}` : "-"}</TableCell>
+                      <TableCell>{pub.group_number ? `Grupo ${pub.group_number}` : "-"}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1 max-w-[300px]">
                           {pub.privileges
