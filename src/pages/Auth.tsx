@@ -93,18 +93,21 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Lado Esquerdo: Formulário Original */}
-        <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
-          <Card className="w-full max-w-md shadow-xl border-none bg-white">
-            <CardHeader className="text-center space-y-2">
-              <CardTitle className="text-3xl font-bold text-primary">
-                Sistema de Congregação
-              </CardTitle>
-              <CardDescription>Gerencie sua congregação de forma eficiente</CardDescription>
-            </CardHeader>
-            <CardContent>
+    <div className="min-h-screen flex flex-col bg-slate-100">
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
+        {/* Card Centralizado Unificando as duas partes */}
+        <Card className="w-full max-w-6xl flex flex-col lg:flex-row overflow-hidden border-none shadow-2xl bg-white">
+          
+          {/* Lado Esquerdo: Formulário */}
+          <div className="flex-1 p-8 lg:p-12 flex flex-col justify-center bg-white">
+            <div className="max-w-md mx-auto w-full">
+              <CardHeader className="text-center space-y-2 p-0 mb-8">
+                <CardTitle className="text-3xl font-bold text-primary">
+                  Sistema de Congregação
+                </CardTitle>
+                <CardDescription>Gerencie sua congregação de forma eficiente</CardDescription>
+              </CardHeader>
+              
               <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Entrar</TabsTrigger>
@@ -193,20 +196,20 @@ export default function Auth() {
                   </form>
                 </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Lado Direito: Imagem */}
-        <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-white p-8">
-          <div className="max-w-xl w-full">
-            <img 
-              src="/sistema da congregação.png" 
-              alt="Sistema da Congregação" 
-              className="w-full h-auto object-contain"
-            />
+            </div>
           </div>
-        </div>
+          
+          {/* Lado Direito: Imagem */}
+          <div className="hidden lg:flex flex-1 items-center justify-center bg-white p-8 border-l border-slate-100">
+            <div className="max-w-xl w-full">
+              <img 
+                src="/sistema da congregação.png" 
+                alt="Sistema da Congregação" 
+                className="w-full h-auto object-contain"
+              />
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Rodapé */}
