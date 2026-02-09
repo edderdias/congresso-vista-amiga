@@ -32,6 +32,15 @@ interface Publisher {
 }
 
 const PRIVILEGE_OPTIONS = [
+  "Ancião",
+  "Servo Ministerial",
+  "Pioneiro Regular",
+  "Pioneiro Auxiliar",
+  "Publicador Batizado",
+  "Publicador não Batizado"
+];
+
+const DESIGNATION_OPTIONS = [
   "Presidência vida e ministério",
   "oração",
   "Tesouro",
@@ -112,12 +121,12 @@ export default function Publishers() {
     return differenceInYears(new Date(), date);
   };
 
-  const handlePrivilegeChange = (privilege: string, checked: boolean) => {
+  const handleItemToggle = (item: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       privileges: checked 
-        ? [...prev.privileges, privilege]
-        : prev.privileges.filter(p => p !== privilege)
+        ? [...prev.privileges, item]
+        : prev.privileges.filter(p => p !== item)
     }));
   };
 
@@ -229,7 +238,7 @@ export default function Publishers() {
               Novo Publicador
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>{editingId ? "Editar Publicador" : "Cadastrar Novo Publicador"}</DialogTitle>
@@ -294,19 +303,37 @@ export default function Publishers() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label>Privilégios e Designações (múltipla escolha)</Label>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
-                    {PRIVILEGE_OPTIONS.map(priv => (
-                      <div key={priv} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={priv} 
-                          checked={formData.privileges.includes(priv)} 
-                          onCheckedChange={(checked) => handlePrivilegeChange(priv, !!checked)}
-                        />
-                        <Label htmlFor={priv} className="text-sm font-normal cursor-pointer">{priv}</Label>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-base font-bold text-primary">Privilégios</Label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
+                      {PRIVILEGE_OPTIONS.map(priv => (
+                        <div key={priv} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`priv-${priv}`} 
+                            checked={formData.privileges.includes(priv)} 
+                            onCheckedChange={(checked) => handleItemToggle(priv, !!checked)}
+                          />
+                          <Label htmlFor={`priv-${priv}`} className="text-sm font-normal cursor-pointer">{priv}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-base font-bold text-primary">Designações</Label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
+                      {DESIGNATION_OPTIONS.map(desig => (
+                        <div key={desig} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`desig-${desig}`} 
+                            checked={formData.privileges.includes(desig)} 
+                            onCheckedChange={(checked) => handleItemToggle(desig, !!checked)}
+                          />
+                          <Label htmlFor={`desig-${desig}`} className="text-sm font-normal cursor-pointer">{desig}</Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -391,13 +418,20 @@ export default function Publishers() {
             </Select>
             <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Privilégio" />
+                <SelectValue placeholder="Privilégio/Desig." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos Privilégios</SelectItem>
-                {PRIVILEGE_OPTIONS.map(p => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
-                ))}
+                <SelectItem value="all">Todos</SelectItem>
+                <optgroup label="Privilégios">
+                  {PRIVILEGE_OPTIONS.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </optgroup>
+                <optgroup label="Designações">
+                  {DESIGNATION_OPTIONS.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </optgroup>
               </SelectContent>
             </Select>
           </div>
@@ -409,7 +443,7 @@ export default function Publishers() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Grupo</TableHead>
-                  <TableHead>Privilégios</TableHead>
+                  <TableHead>Privilégios/Designações</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -428,7 +462,7 @@ export default function Publishers() {
                       <TableCell>{pub.phone || "-"}</TableCell>
                       <TableCell>{pub.groups ? `Grupo ${pub.groups.group_number}` : "-"}</TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 max-w-[300px]">
                           {pub.privileges.map(p => (
                             <Badge key={p} variant="secondary" className="text-[10px]">{p}</Badge>
                           ))}
