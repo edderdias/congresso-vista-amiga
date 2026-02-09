@@ -17,7 +17,7 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 2. Garantir que a tabela profiles existe (base para outras tabelas)
+-- 2. Garantir que a tabela profiles existe
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT NOT NULL,
@@ -39,7 +39,23 @@ CREATE TABLE IF NOT EXISTS public.groups (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Criar/Atualizar tabela preaching_reports
+-- 4. Criar tabela publishers (CORRETO: publishers)
+CREATE TABLE IF NOT EXISTS public.publishers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  phone TEXT,
+  birth_date DATE,
+  baptism_date DATE,
+  gender TEXT CHECK (gender IN ('M', 'F')),
+  privileges TEXT[] DEFAULT '{}',
+  hope TEXT CHECK (hope IN ('anointed', 'other_sheep')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  group_id UUID REFERENCES public.groups(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Criar/Atualizar tabela preaching_reports
 CREATE TABLE IF NOT EXISTS public.preaching_reports (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   reporter_name TEXT,
@@ -57,36 +73,13 @@ CREATE TABLE IF NOT EXISTS public.preaching_reports (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Adicionar coluna pioneer_status se não existir (caso a tabela já exista)
-DO $$ BEGIN
-    ALTER TABLE public.preaching_reports ADD COLUMN pioneer_status public.pioneer_status DEFAULT 'publicador';
-EXCEPTION
-    WHEN duplicate_column THEN null;
-END $$;
-
--- 5. Criar tabela publishers
-CREATE TABLE IF NOT EXISTS public.publishers (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  full_name TEXT NOT NULL,
-  phone TEXT,
-  birth_date DATE,
-  baptism_date DATE,
-  gender TEXT CHECK (gender IN ('M', 'F')),
-  privileges TEXT[] DEFAULT '{}',
-  hope TEXT CHECK (hope IN ('anointed', 'other_sheep')),
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-  group_id UUID REFERENCES public.groups(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 6. Habilitar RLS em todas as tabelas
+-- 6. Habilitar RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preaching_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.publishers ENABLE ROW LEVEL SECURITY;
 
--- 7. Criar políticas de acesso simplificadas para usuários autenticados
+-- 7. Políticas de acesso
 DO $$ 
 DECLARE
     t text;

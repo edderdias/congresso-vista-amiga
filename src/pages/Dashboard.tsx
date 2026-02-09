@@ -20,15 +20,15 @@ export default function Dashboard() {
   }, []);
 
   const loadStats = async () => {
-    const [members, reports, territories, designations] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
+    const [publishers, reports, territories, designations] = await Promise.all([
+      supabase.from("publishers").select("*", { count: "exact", head: true }),
       supabase.from("preaching_reports").select("*", { count: "exact", head: true }),
       supabase.from("territories").select("*", { count: "exact", head: true }),
       supabase.from("designations").select("*", { count: "exact", head: true }),
     ]);
 
     setStats({
-      totalMembers: members.count || 0,
+      totalMembers: publishers.count || 0,
       totalReports: reports.count || 0,
       totalTerritories: territories.count || 0,
       activeDesignations: designations.count || 0,
@@ -53,7 +53,7 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { title: "Membros", value: stats.totalMembers, icon: Users, color: "text-primary" },
+    { title: "Publicadores", value: stats.totalMembers, icon: Users, color: "text-primary" },
     { title: "Relatórios", value: stats.totalReports, icon: FileText, color: "text-secondary" },
     { title: "Territórios", value: stats.totalTerritories, icon: MapPin, color: "text-accent" },
     { title: "Designações", value: stats.activeDesignations, icon: TrendingUp, color: "text-primary" },
