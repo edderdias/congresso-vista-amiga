@@ -95,17 +95,17 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
       <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-        {/* Card Centralizado Unificando as duas partes */}
-        <Card className="w-full max-w-6xl flex flex-col lg:flex-row overflow-hidden border-none shadow-2xl bg-white">
+        {/* Card Centralizado com proporções 30/70 */}
+        <Card className="w-full max-w-7xl flex flex-col lg:flex-row overflow-hidden border-none shadow-2xl bg-white">
           
-          {/* Lado Esquerdo: Formulário */}
-          <div className="flex-1 p-8 lg:p-12 flex flex-col justify-center bg-white">
-            <div className="max-w-md mx-auto w-full">
+          {/* Lado Esquerdo: Formulário (30%) */}
+          <div className="w-full lg:w-[30%] p-8 lg:p-10 flex flex-col justify-center bg-white">
+            <div className="w-full">
               <CardHeader className="text-center space-y-2 p-0 mb-8">
-                <CardTitle className="text-3xl font-bold text-primary">
+                <CardTitle className="text-2xl font-bold text-primary">
                   Sistema de Congregação
                 </CardTitle>
-                <CardDescription>Gerencie sua congregação de forma eficiente</CardDescription>
+                <CardDescription>Gerencie sua congregação</CardDescription>
               </CardHeader>
               
               <Tabs value={isLogin ? "login" : "signup"} onValueChange={(v) => setIsLogin(v === "login")}>
@@ -151,7 +151,7 @@ export default function Auth() {
                       <Input
                         id="signup-name"
                         type="text"
-                        placeholder="Seu nome completo"
+                        placeholder="Seu nome"
                         value={signupData.fullName}
                         onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
                         required
@@ -180,7 +180,7 @@ export default function Auth() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-confirm">Confirmar Senha</Label>
+                      <Label htmlFor="signup-confirm">Confirmar</Label>
                       <Input
                         id="signup-confirm"
                         type="password"
@@ -199,13 +199,13 @@ export default function Auth() {
             </div>
           </div>
           
-          {/* Lado Direito: Imagem */}
-          <div className="hidden lg:flex flex-1 items-center justify-center bg-white p-8 border-l border-slate-100">
-            <div className="max-w-xl w-full">
+          {/* Lado Direito: Imagem (70%) */}
+          <div className="hidden lg:flex lg:w-[70%] items-center justify-center bg-white p-8 border-l border-slate-100">
+            <div className="w-full h-full flex items-center justify-center">
               <img 
                 src="/sistema da congregação.png" 
                 alt="Sistema da Congregação" 
-                className="w-full h-auto object-contain"
+                className="max-w-full max-h-[80vh] object-contain"
               />
             </div>
           </div>
