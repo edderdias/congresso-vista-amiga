@@ -42,25 +42,25 @@ const PRIVILEGE_OPTIONS = [
 
 const DESIGNATION_OPTIONS = [
   "Presidência vida e ministério",
-  "Oração",
+  "oração",
   "Tesouro",
   "Encontre Joias",
   "Leitura da Biblia",
   "Considerações",
-  "Demostrações",
-  "Discurso de Estudante",
+  "demostrações",
+  "discurso de estudante",
   "Nossa Vida Cristã",
   "Necessidade Locais",
   "Dirigente Est. de Livro",
   "Leitura do Livro",
   "Presidência final de semana",
   "Leitura A Sentinela",
-  "Indicador",
-  "Microfone Volante",
+  "indicador",
+  "Microfone volante",
   "Audio e Video",
   "Limpeza",
   "Manutenção",
-  "TPL"
+  "tpl"
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -443,7 +443,7 @@ export default function Publishers() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Grupo</TableHead>
-                  <TableHead>Privilégios/Designações</TableHead>
+                  <TableHead>Privilégios</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -463,9 +463,12 @@ export default function Publishers() {
                       <TableCell>{pub.groups ? `Grupo ${pub.groups.group_number}` : "-"}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1 max-w-[300px]">
-                          {pub.privileges.map(p => (
-                            <Badge key={p} variant="secondary" className="text-[10px]">{p}</Badge>
-                          ))}
+                          {pub.privileges
+                            .filter(p => PRIVILEGE_OPTIONS.includes(p))
+                            .map(p => (
+                              <Badge key={p} variant="secondary" className="text-[10px]">{p}</Badge>
+                            ))
+                          }
                         </div>
                       </TableCell>
                       <TableCell>

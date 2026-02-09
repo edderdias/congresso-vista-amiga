@@ -79,8 +79,18 @@ export default function Groups() {
   };
 
   const loadProfiles = async () => {
-    const { data } = await supabase.from("profiles").select("id, full_name").order("full_name");
-    setProfiles(data || []);
+    // Buscamos da tabela de publicadores para filtrar por privilégios
+    const { data } = await supabase
+      .from("publishers")
+      .select("id, full_name, privileges")
+      .order("full_name");
+    
+    // Filtramos apenas Anciãos e Servos Ministeriais
+    const filtered = data?.filter(p => 
+      p.privileges.includes("Ancião") || p.privileges.includes("Servo Ministerial")
+    ) || [];
+    
+    setProfiles(filtered.map(p => ({ id: p.id, full_name: p.full_name })));
   };
 
   const handleEdit = (group: Group) => {
