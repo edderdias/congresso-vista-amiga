@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Report {
   id: string;
@@ -27,10 +28,13 @@ interface Report {
   group_id: number | null;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [open, setOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     id: "",
     reporter_name: "",
@@ -45,7 +49,7 @@ export default function Reports() {
 
   // Estados para os filtros
   const [filterName, setFilterName] = useState("");
-  const [filterGroup, setFilterGroup] = useState("all"); // Inicializa com "all" para o filtro de grupo
+  const [filterGroup, setFilterGroup] = useState("all");
 
   const monthOptions = [
     { value: "1", label: "Janeiro" },
@@ -75,7 +79,7 @@ export default function Reports() {
 
   useEffect(() => {
     loadReports();
-  }, [filterName, filterGroup]); // Recarrega relatórios quando os filtros mudam
+  }, [filterName, filterGroup]);
 
   const loadReports = async () => {
     let query = supabase
@@ -88,7 +92,7 @@ export default function Reports() {
       query = query.ilike("reporter_name", `%${filterName}%`);
     }
 
-    if (filterGroup !== "all") { // Verifica se o filtro não é "all"
+    if (filterGroup !== "all") {
       query = query.eq("group_id", parseInt(filterGroup));
     }
 
@@ -109,10 +113,10 @@ export default function Reports() {
       group_id: report.group_id ? report.group_id.toString() : "",
       month: report.month.toString(),
       year: report.year,
-      hours: report.hours,
-      bible_studies: report.bible_studies,
+      hours: report.hours || 0,
+      bible_studies: report.bible_studies || 0,
       notes: report.notes || "",
-      pioneer_status: report.pioneer_status,
+      pioneer_status: report.pioneer_status || "publicador",
     });
     setOpen(true);
   };
@@ -172,6 +176,16 @@ export default function Reports() {
       loadReports();
     }
   };
+
+  const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
+  const paginatedReports = reports.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterName, filterGroup]);
 
   return (
     <div className="space-y-6">
@@ -335,7 +349,7 @@ export default function Reports() {
                   <SelectValue placeholder="Todos os grupos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os grupos</SelectItem> {/* Alterado para "all" */}
+                  <SelectItem value="all">Todos os grupos</SelectItem>
                   {groupOptions.map((group) => (
                     <SelectItem key={group.value} value={group.value}>
                       {group.label}
@@ -360,7 +374,7 @@ export default function Reports() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {reports.map((report) => (
+              {paginatedReports.map((report) => (
                 <TableRow key={report.id}>
                   <TableCell className="font-medium">{report.reporter_name}</TableCell>
                   <TableCell>{report.group_id || "-"}</TableCell>
@@ -369,7 +383,7 @@ export default function Reports() {
                   <TableCell>{report.hours}</TableCell>
                   <TableCell>{report.bible_studies}</TableCell>
                   <TableCell>{pioneerStatusLabels[report.pioneer_status]}</TableCell>
-                  <TableCell>{report.hours > 0 ? "Sim" : "Não"}</TableCell>
+                  <TableCell>{(report.hours || 0) > 0 ? "Sim" : "Não"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(report)}>
                       <Pencil className="h-4 w-4" />
@@ -379,6 +393,11 @@ export default function Reports() {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </CardContent>
       </Card>
     </div>

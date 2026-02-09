@@ -94,7 +94,7 @@ export type Database = {
           gender: 'M' | 'F' | null
           privileges: string[]
           hope: 'anointed' | 'other_sheep' | null
-          status: 'active' | 'inactive'
+          status: 'active' | 'inactive' | 'repreendido'
           group_id: string | null
           created_at: string | null
           updated_at: string | null
@@ -108,7 +108,7 @@ export type Database = {
           gender?: 'M' | 'F' | null
           privileges?: string[]
           hope?: 'anointed' | 'other_sheep' | null
-          status?: 'active' | 'inactive'
+          status?: 'active' | 'inactive' | 'repreendido'
           group_id?: string | null
           created_at?: string | null
           updated_at?: string | null
@@ -122,7 +122,7 @@ export type Database = {
           gender?: 'M' | 'F' | null
           privileges?: string[]
           hope?: 'anointed' | 'other_sheep' | null
-          status?: 'active' | 'inactive'
+          status?: 'active' | 'inactive' | 'repreendido'
           group_id?: string | null
           created_at?: string | null
           updated_at?: string | null

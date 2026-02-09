@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Territory {
   id: string;
@@ -26,10 +27,13 @@ interface Profile {
   full_name: string;
 }
 
+const ITEMS_PER_PAGE = 6;
+
 export default function Territories() {
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<{
     number: string;
     name: string;
@@ -41,7 +45,7 @@ export default function Territories() {
     name: "",
     description: "",
     status: "available",
-    assigned_to: "none", // Inicializa com "none"
+    assigned_to: "none",
   });
 
   useEffect(() => {
@@ -72,8 +76,8 @@ export default function Territories() {
 
     const dataToInsert = {
       ...formData,
-      assigned_to: formData.assigned_to === "none" ? null : formData.assigned_to, // Converte "none" para null
-      assigned_date: formData.assigned_to === "none" ? null : new Date().toISOString(), // Define assigned_date se houver atribuição
+      assigned_to: formData.assigned_to === "none" ? null : formData.assigned_to,
+      assigned_date: formData.assigned_to === "none" ? null : new Date().toISOString(),
     };
 
     const { error } = await supabase.from("territories").insert([dataToInsert]);
@@ -84,7 +88,7 @@ export default function Territories() {
       toast({ title: "Território salvo com sucesso!" });
       setOpen(false);
       loadTerritories();
-      setFormData({ number: "", name: "", description: "", status: "available", assigned_to: "none" }); // Reseta para "none"
+      setFormData({ number: "", name: "", description: "", status: "available", assigned_to: "none" });
     }
   };
 
@@ -97,6 +101,12 @@ export default function Territories() {
     const config = variants[status] || variants.available;
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
+
+  const totalPages = Math.ceil(territories.length / ITEMS_PER_PAGE);
+  const paginatedTerritories = territories.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="space-y-6">
@@ -165,7 +175,7 @@ export default function Territories() {
                       <SelectValue placeholder="Selecione (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {profiles.map((profile) => (
                         <SelectItem key={profile.id} value={profile.id}>
                           {profile.full_name}
@@ -184,7 +194,7 @@ export default function Territories() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {territories.map((territory) => (
+        {paginatedTerritories.map((territory) => (
           <Card key={territory.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -206,6 +216,11 @@ export default function Territories() {
           </Card>
         ))}
       </div>
+      <PaginationControls 
+        currentPage={currentPage} 
+        totalPages={totalPages} 
+        onPageChange={setCurrentPage} 
+      />
     </div>
   );
 }

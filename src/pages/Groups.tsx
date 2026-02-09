@@ -14,6 +14,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Group {
   id: string;
@@ -33,24 +34,27 @@ interface Profile {
 
 const formSchema = z.object({
   group_number: z.coerce.number().min(1, "O número do grupo é obrigatório e deve ser maior que 0."),
-  overseer_id: z.string().nullable().optional(), // Permite string ou null
-  assistant_id: z.string().nullable().optional(), // Permite string ou null
+  overseer_id: z.string().nullable().optional(),
+  assistant_id: z.string().nullable().optional(),
   field_service_meeting: z.string().nullable().optional(),
   publisher_count: z.coerce.number().min(0, "O número de publicadores não pode ser negativo.").optional(),
 });
+
+const ITEMS_PER_PAGE = 10;
 
 export default function Groups() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       group_number: 1,
-      overseer_id: "none", // Inicializa com "none"
-      assistant_id: "none", // Inicializa com "none"
+      overseer_id: "none",
+      assistant_id: "none",
       field_service_meeting: "",
       publisher_count: 0,
     },
@@ -83,8 +87,8 @@ export default function Groups() {
     setEditingGroupId(group.id);
     form.reset({
       group_number: group.group_number,
-      overseer_id: group.overseer_id || "none", // Define como "none" se for null
-      assistant_id: group.assistant_id || "none", // Define como "none" se for null
+      overseer_id: group.overseer_id || "none",
+      assistant_id: group.assistant_id || "none",
       field_service_meeting: group.field_service_meeting || "",
       publisher_count: group.publisher_count,
     });
@@ -96,14 +100,13 @@ export default function Groups() {
       title: `Detalhes do Grupo ${group.group_number}`,
       description: `Superintendente: ${group.overseer?.full_name || 'N/A'}, Ajudante: ${group.assistant?.full_name || 'N/A'}`,
     });
-    // In a real app, this would navigate to a detailed view page
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const dataToSave = {
       group_number: values.group_number,
-      overseer_id: values.overseer_id === "none" ? null : values.overseer_id, // Converte "none" para null
-      assistant_id: values.assistant_id === "none" ? null : values.assistant_id, // Converte "none" para null
+      overseer_id: values.overseer_id === "none" ? null : values.overseer_id,
+      assistant_id: values.assistant_id === "none" ? null : values.assistant_id,
       field_service_meeting: values.field_service_meeting || null,
       publisher_count: values.publisher_count || 0,
     };
@@ -136,6 +139,12 @@ export default function Groups() {
     form.reset();
     setEditingGroupId(null);
   };
+
+  const totalPages = Math.ceil(groups.length / ITEMS_PER_PAGE);
+  const paginatedGroups = groups.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="space-y-6">
@@ -178,14 +187,14 @@ export default function Groups() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Superintendente</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "none"}> {/* Garante que o valor é "none" se for null/undefined */}
+                        <Select onValueChange={field.onChange} value={field.value || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um superintendente (opcional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
+                            <SelectItem value="none">Nenhum</SelectItem>
                             {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
                                 {profile.full_name}
@@ -203,14 +212,14 @@ export default function Groups() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Ajudante</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "none"}> {/* Garante que o valor é "none" se for null/undefined */}
+                        <Select onValueChange={field.onChange} value={field.value || "none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione um ajudante (opcional)" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">Nenhum</SelectItem> {/* Adicionado item "Nenhum" */}
+                            <SelectItem value="none">Nenhum</SelectItem>
                             {profiles.map((profile) => (
                               <SelectItem key={profile.id} value={profile.id}>
                                 {profile.full_name}
@@ -276,7 +285,7 @@ export default function Groups() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {groups.map((group) => (
+              {paginatedGroups.map((group) => (
                 <TableRow key={group.id}>
                   <TableCell className="font-medium">{group.group_number}</TableCell>
                   <TableCell>{group.overseer?.full_name || "-"}</TableCell>
@@ -295,6 +304,11 @@ export default function Groups() {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </CardContent>
       </Card>
     </div>

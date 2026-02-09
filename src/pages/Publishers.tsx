@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { differenceInYears, parseISO, isValid } from "date-fns";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Publisher {
   id: string;
@@ -23,7 +24,7 @@ interface Publisher {
   gender: 'M' | 'F' | null;
   privileges: string[];
   hope: 'anointed' | 'other_sheep' | null;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'repreendido';
   group_id: string | null;
   groups?: { group_number: number } | null;
 }
@@ -38,12 +39,15 @@ const PRIVILEGE_OPTIONS = [
   "Ancião"
 ];
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Publishers() {
   const [publishers, setPublishers] = useState<Publisher[]>([]);
   const [groups, setGroups] = useState<{ id: string, group_number: number }[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,7 +63,7 @@ export default function Publishers() {
     gender: "" as 'M' | 'F' | "",
     privileges: [] as string[],
     hope: "" as 'anointed' | 'other_sheep' | "",
-    status: "active" as 'active' | 'inactive',
+    status: "active" as 'active' | 'inactive' | 'repreendido',
     group_id: "none"
   });
 
@@ -186,6 +190,16 @@ export default function Publishers() {
     return matchesSearch && matchesGroup && matchesStatus && matchesPrivilege;
   });
 
+  const totalPages = Math.ceil(filteredPublishers.length / ITEMS_PER_PAGE);
+  const paginatedPublishers = filteredPublishers.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterGroup, filterStatus, filterPrivilege]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -298,13 +312,14 @@ export default function Publishers() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={formData.status} onValueChange={(val: 'active' | 'inactive') => setFormData({...formData, status: val})}>
+                    <Select value={formData.status} onValueChange={(val: 'active' | 'inactive' | 'repreendido') => setFormData({...formData, status: val})}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="active">Ativo</SelectItem>
                         <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="repreendido">Repreendido</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -356,6 +371,7 @@ export default function Publishers() {
                 <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="active">Ativos</SelectItem>
                 <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectItem value="repreendido">Repreendidos</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
@@ -384,14 +400,14 @@ export default function Publishers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPublishers.length === 0 ? (
+                {paginatedPublishers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum publicador encontrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPublishers.map((pub) => (
+                  paginatedPublishers.map((pub) => (
                     <TableRow key={pub.id}>
                       <TableCell className="font-medium">{pub.full_name}</TableCell>
                       <TableCell>{pub.phone || "-"}</TableCell>
@@ -404,8 +420,8 @@ export default function Publishers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={pub.status === 'active' ? 'default' : 'destructive'}>
-                          {pub.status === 'active' ? 'Ativo' : 'Inativo'}
+                        <Badge variant={pub.status === 'active' ? 'default' : pub.status === 'repreendido' ? 'outline' : 'destructive'}>
+                          {pub.status === 'active' ? 'Ativo' : pub.status === 'repreendido' ? 'Repreendido' : 'Inativo'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -424,6 +440,11 @@ export default function Publishers() {
               </TableBody>
             </Table>
           </div>
+          <PaginationControls 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </CardContent>
       </Card>
     </div>

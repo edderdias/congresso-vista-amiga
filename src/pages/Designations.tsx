@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Designation {
   id: string;
@@ -25,10 +26,13 @@ interface Profile {
   full_name: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Designations() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState<{
     user_id: string;
     designation_type: "sound" | "attendant" | "literature" | "cleaning" | "security";
@@ -90,6 +94,12 @@ export default function Designations() {
   const getTypeLabel = (type: string) => {
     return designationTypes.find(t => t.value === type)?.label || type;
   };
+
+  const totalPages = Math.ceil(designations.length / ITEMS_PER_PAGE);
+  const paginatedDesignations = designations.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="space-y-6">
@@ -185,7 +195,7 @@ export default function Designations() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {designations.map((designation) => (
+              {paginatedDesignations.map((designation) => (
                 <TableRow key={designation.id}>
                   <TableCell className="font-medium">{designation.profiles?.full_name}</TableCell>
                   <TableCell>
@@ -197,6 +207,11 @@ export default function Designations() {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </CardContent>
       </Card>
     </div>

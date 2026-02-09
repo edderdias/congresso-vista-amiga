@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Profile {
   id: string;
@@ -13,8 +14,11 @@ interface Profile {
   created_at: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function Users() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     loadProfiles();
@@ -42,6 +46,12 @@ export default function Users() {
       .slice(0, 2);
   };
 
+  const totalPages = Math.ceil(profiles.length / ITEMS_PER_PAGE);
+  const paginatedProfiles = profiles.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -65,7 +75,7 @@ export default function Users() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {profiles.map((profile) => (
+              {paginatedProfiles.map((profile) => (
                 <TableRow key={profile.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -84,6 +94,11 @@ export default function Users() {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            onPageChange={setCurrentPage} 
+          />
         </CardContent>
       </Card>
     </div>
