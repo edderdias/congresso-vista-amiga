@@ -31,6 +31,8 @@ const PAGES = [
   { id: "reports", name: "Relatórios" },
   { id: "groups", name: "Grupos" },
   { id: "publishers", name: "Publicadores" },
+  { id: "meetings", name: "Reuniões" },
+  { id: "audio-video", name: "Áudio e Vídeo" },
   { id: "cleaning", name: "Limpeza" },
   { id: "designations", name: "Designações" },
   { id: "school", name: "Escola" },
@@ -112,11 +114,6 @@ export default function Users() {
       toast.error("Erro ao atualizar perfil: " + profileError.message);
       setLoading(false);
       return;
-    }
-
-    // Se houver senha, atualizar via Edge Function ou Admin API (Simulado aqui via toast pois requer Service Role)
-    if (editData.password) {
-      toast.info("A alteração de senha requer permissão administrativa de sistema.");
     }
 
     toast.success("Usuário atualizado com sucesso!");

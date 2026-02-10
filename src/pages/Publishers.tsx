@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Filter, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { differenceInYears, parseISO, isValid } from "date-fns";
 import { PaginationControls } from "@/components/PaginationControls";
+import { cn } from "@/lib/utils";
 
 interface Publisher {
   id: string;
@@ -26,7 +27,7 @@ interface Publisher {
   gender: 'M' | 'F' | null;
   privileges: string[];
   hope: 'anointed' | 'other_sheep' | null;
-  status: 'active' | 'inactive' | 'repreendido';
+  status: 'active' | 'inactive' | 'repreendido' | 'removido' | 'mudou';
   group_id: string | null;
   group_number?: number;
 }
@@ -76,7 +77,7 @@ export default function Publishers() {
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("default"); // 'default' mostrará ativos e repreendidos
   const [filterPrivilege, setFilterPrivilege] = useState("all");
 
   const [formData, setFormData] = useState({
@@ -87,7 +88,7 @@ export default function Publishers() {
     gender: "" as 'M' | 'F' | "",
     privileges: [] as string[],
     hope: "" as 'anointed' | 'other_sheep' | "",
-    status: "active" as 'active' | 'inactive' | 'repreendido',
+    status: "active" as any,
     group_id: "none"
   });
 
@@ -183,6 +184,16 @@ export default function Publishers() {
     setOpen(true);
   };
 
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    const { error } = await supabase.from("publishers").update({ status: newStatus }).eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Status atualizado" });
+      loadData();
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este publicador?")) return;
     
@@ -213,8 +224,18 @@ export default function Publishers() {
   const filteredPublishers = publishers.filter(pub => {
     const matchesSearch = pub.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || pub.group_id === filterGroup;
-    const matchesStatus = filterStatus === "all" || pub.status === filterStatus;
+    
+    let matchesStatus = false;
+    if (filterStatus === "default") {
+      matchesStatus = pub.status === "active" || pub.status === "repreendido";
+    } else if (filterStatus === "all") {
+      matchesStatus = true;
+    } else {
+      matchesStatus = pub.status === filterStatus;
+    }
+
     const matchesPrivilege = filterPrivilege === "all" || pub.privileges.includes(filterPrivilege);
+    
     return matchesSearch && matchesGroup && matchesStatus && matchesPrivilege;
   });
 
@@ -309,32 +330,16 @@ export default function Publishers() {
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-base font-bold text-primary">Privilégios</Label>
+                    <Label className="text-base font-bold text-primary">Privilégios e Designações</Label>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
-                      {PRIVILEGE_OPTIONS.map(priv => (
-                        <div key={priv} className="flex items-center space-x-2">
+                      {[...PRIVILEGE_OPTIONS, ...DESIGNATION_OPTIONS].map(item => (
+                        <div key={item} className="flex items-center space-x-2">
                           <Checkbox 
-                            id={`priv-${priv}`} 
-                            checked={formData.privileges.includes(priv)} 
-                            onCheckedChange={(checked) => handleItemToggle(priv, !!checked)}
+                            id={`item-${item}`} 
+                            checked={formData.privileges.includes(item)} 
+                            onCheckedChange={(checked) => handleItemToggle(item, !!checked)}
                           />
-                          <Label htmlFor={`priv-${priv}`} className="text-sm font-normal cursor-pointer">{priv}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-base font-bold text-primary">Designações</Label>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
-                      {DESIGNATION_OPTIONS.map(desig => (
-                        <div key={desig} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`desig-${desig}`} 
-                            checked={formData.privileges.includes(desig)} 
-                            onCheckedChange={(checked) => handleItemToggle(desig, !!checked)}
-                          />
-                          <Label htmlFor={`desig-${desig}`} className="text-sm font-normal cursor-pointer">{desig}</Label>
+                          <Label htmlFor={`item-${item}`} className="text-sm font-normal cursor-pointer">{item}</Label>
                         </div>
                       ))}
                     </div>
@@ -358,7 +363,7 @@ export default function Publishers() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={formData.status} onValueChange={(val: 'active' | 'inactive' | 'repreendido') => setFormData({...formData, status: val})}>
+                    <Select value={formData.status} onValueChange={(val: any) => setFormData({...formData, status: val})}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -366,6 +371,8 @@ export default function Publishers() {
                         <SelectItem value="active">Ativo</SelectItem>
                         <SelectItem value="inactive">Inativo</SelectItem>
                         <SelectItem value="repreendido">Repreendido</SelectItem>
+                        <SelectItem value="removido">Removido</SelectItem>
+                        <SelectItem value="mudou">Mudou</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -414,28 +421,24 @@ export default function Publishers() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="default">Ativos/Repreendidos</SelectItem>
                 <SelectItem value="all">Todos Status</SelectItem>
                 <SelectItem value="active">Ativos</SelectItem>
                 <SelectItem value="inactive">Inativos</SelectItem>
                 <SelectItem value="repreendido">Repreendidos</SelectItem>
+                <SelectItem value="removido">Removidos</SelectItem>
+                <SelectItem value="mudou">Mudou</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Privilégio/Desig." />
+                <SelectValue placeholder="Privilégios" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <optgroup label="Privilégios">
-                  {PRIVILEGE_OPTIONS.map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </optgroup>
-                <optgroup label="Designações">
-                  {DESIGNATION_OPTIONS.map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </optgroup>
+                <SelectItem value="all">Todos Privilégios</SelectItem>
+                {PRIVILEGE_OPTIONS.map(p => (
+                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -461,7 +464,7 @@ export default function Publishers() {
                   </TableRow>
                 ) : (
                   paginatedPublishers.map((pub) => (
-                    <TableRow key={pub.id}>
+                    <TableRow key={pub.id} className={cn(pub.status === 'removido' && "bg-red-50 text-red-600 hover:bg-red-100")}>
                       <TableCell className="font-medium">{pub.full_name}</TableCell>
                       <TableCell>{pub.phone || "-"}</TableCell>
                       <TableCell>{pub.group_number ? `Grupo ${pub.group_number}` : "-"}</TableCell>
@@ -476,12 +479,23 @@ export default function Publishers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={pub.status === 'active' ? 'default' : pub.status === 'repreendido' ? 'outline' : 'destructive'}>
-                          {pub.status === 'active' ? 'Ativo' : pub.status === 'repreendido' ? 'Repreendido' : 'Inativo'}
+                        <Badge variant={
+                          pub.status === 'active' ? 'default' : 
+                          pub.status === 'repreendido' ? 'outline' : 
+                          pub.status === 'removido' ? 'destructive' : 
+                          'secondary'
+                        }>
+                          {pub.status === 'active' ? 'Ativo' : 
+                           pub.status === 'repreendido' ? 'Repreendido' : 
+                           pub.status === 'removido' ? 'Removido' : 
+                           pub.status === 'mudou' ? 'Mudou' : 'Inativo'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" title="Mudou" onClick={() => handleStatusChange(pub.id, 'mudou')}>
+                            <MapPin className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(pub)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
