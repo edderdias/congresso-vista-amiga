@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +11,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
 
 export default function PublicReport() {
+  const { groupNumber } = useParams();
   const [groups, setGroups] = useState<{ id: string; group_number: number }[]>([]);
   const [publishers, setPublishers] = useState<{ id: string; full_name: string; privileges: string[] }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [selectedPublisherId, setSelectedPublisherId] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const [formData, setFormData] = useState({
     month: "",
@@ -30,12 +33,23 @@ export default function PublicReport() {
   });
 
   useEffect(() => {
-    // Lógica de data solicitada
+    checkAuth();
+    calculateDefaultDate();
+    loadGroups();
+  }, [groupNumber]);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsLoggedIn(!!session);
+  };
+
+  const calculateDefaultDate = () => {
     const now = new Date();
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
 
-    if (now.getDate() >= 20) {
+    // Regra: se for após o dia 20, mostrar o mês seguinte
+    if (now.getDate() > 20) {
       month += 1;
       if (month > 12) {
         month = 1;
@@ -44,12 +58,21 @@ export default function PublicReport() {
     }
 
     setFormData(prev => ({ ...prev, month: month.toString(), year }));
-    loadGroups();
-  }, []);
+  };
 
   const loadGroups = async () => {
     const { data } = await supabase.from("groups").select("id, group_number").order("group_number");
-    setGroups(data || []);
+    const allGroups = data || [];
+    setGroups(allGroups);
+
+    // Se houver um número de grupo na URL, seleciona ele automaticamente
+    if (groupNumber) {
+      const targetGroup = allGroups.find(g => g.group_number.toString() === groupNumber);
+      if (targetGroup) {
+        setSelectedGroupId(targetGroup.id);
+        loadPublishers(targetGroup.id);
+      }
+    }
   };
 
   const loadPublishers = async (groupId: string) => {
@@ -78,7 +101,6 @@ export default function PublicReport() {
     const publisher = publishers.find(p => p.id === selectedPublisherId);
     const group = groups.find(g => g.id === selectedGroupId);
 
-    // Determinar status de pioneiro baseado nos privilégios
     let pioneerStatus: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular" = "publicador";
     if (publisher?.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
     else if (publisher?.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
@@ -144,21 +166,23 @@ export default function PublicReport() {
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Grupo</Label>
-                <Select onValueChange={handleGroupChange} value={selectedGroupId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu grupo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map(g => (
-                      <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!groupNumber && (
+                <div className="space-y-2">
+                  <Label>Grupo</Label>
+                  <Select onValueChange={handleGroupChange} value={selectedGroupId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione seu grupo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groups.map(g => (
+                        <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-              <div className="space-y-2">
+              <div className={groupNumber ? "col-span-2 space-y-2" : "space-y-2"}>
                 <Label>Publicador</Label>
                 <Select 
                   onValueChange={setSelectedPublisherId} 
@@ -179,10 +203,13 @@ export default function PublicReport() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Mês</Label>
+                <Label className="flex items-center gap-2">
+                  Mês {!isLoggedIn && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
                 <Select 
                   value={formData.month} 
                   onValueChange={(val) => setFormData({...formData, month: val})}
+                  disabled={!isLoggedIn}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -195,11 +222,14 @@ export default function PublicReport() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Ano</Label>
+                <Label className="flex items-center gap-2">
+                  Ano {!isLoggedIn && <Lock className="h-3 w-3 text-muted-foreground" />}
+                </Label>
                 <Input 
                   type="number" 
                   value={formData.year} 
                   onChange={e => setFormData({...formData, year: parseInt(e.target.value)})}
+                  disabled={!isLoggedIn}
                 />
               </div>
             </div>

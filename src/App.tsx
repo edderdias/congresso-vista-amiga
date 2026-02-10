@@ -28,6 +28,7 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/relatorio-publico" element={<PublicReport />} />
+          <Route path="/relatorio-publico/:groupNumber" element={<PublicReport />} />
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />
