@@ -9,26 +9,29 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
-const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Relatórios", url: "/reports", icon: FileText },
-  { title: "Grupos", url: "/groups", icon: Users },
-  { title: "Publicadores", url: "/publishers", icon: User }, // Novo item de menu
-  { title: "Limpeza", url: "/cleaning", icon: Brush },
-  { title: "Designações", url: "/designations", icon: Award },
-  { title: "Escola", url: "/school", icon: BookOpen },
-  { title: "Territórios", url: "/territories", icon: MapPin },
-  { title: "Gerenciar Usuários", url: "/users", icon: Settings },
+const allItems = [
+  { id: "dashboard", title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { id: "reports", title: "Relatórios", url: "/reports", icon: FileText },
+  { id: "groups", title: "Grupos", url: "/groups", icon: Users },
+  { id: "publishers", title: "Publicadores", url: "/publishers", icon: User },
+  { id: "cleaning", title: "Limpeza", url: "/cleaning", icon: Brush },
+  { id: "designations", title: "Designações", url: "/designations", icon: Award },
+  { id: "school", title: "Escola", url: "/school", icon: BookOpen },
+  { id: "territories", title: "Territórios", url: "/territories", icon: MapPin },
+  { id: "users", title: "Gerenciar Usuários", url: "/users", icon: Settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  userProfile?: any;
+}
+
+export function AppSidebar({ userProfile }: AppSidebarProps) {
   const { state } = useSidebar();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
@@ -36,11 +39,17 @@ export function AppSidebar() {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast({ title: "Erro ao sair", description: error.message, variant: "destructive" });
+      toast.error("Erro ao sair: " + error.message);
     } else {
       navigate("/auth");
     }
   };
+
+  // Filtrar itens com base nas permissões
+  const filteredItems = allItems.filter(item => {
+    if (userProfile?.role === 'admin') return true;
+    return userProfile?.permissions?.[item.id];
+  });
 
   return (
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
@@ -55,7 +64,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
