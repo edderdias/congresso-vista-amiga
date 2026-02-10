@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,12 +18,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 interface CleaningSchedule {
   id: string;
-  group_id: string;
+  group_id: string | null;
   start_date: string;
   end_date: string;
   cleaning_type: 'weekly' | 'post_meeting';
   notes: string | null;
-  groups?: { group_number: number };
+  groups?: { group_number: number } | null;
 }
 
 interface Group {
@@ -41,7 +42,8 @@ export default function Cleaning() {
     group_id: "",
     date: undefined as Date | undefined,
     cleaning_type: "weekly" as 'weekly' | 'post_meeting',
-    notes: ""
+    notes: "",
+    isSolNascente: false
   });
 
   useEffect(() => {
@@ -68,20 +70,24 @@ export default function Cleaning() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.group_id || !formData.date) {
-      toast.error("Preencha o grupo e a data da semana.");
+    if (!formData.isSolNascente && !formData.group_id) {
+      toast.error("Selecione um grupo ou marque Sol Nascente.");
+      return;
+    }
+    if (!formData.date) {
+      toast.error("Selecione a data da semana.");
       return;
     }
 
     setLoading(true);
-    const weekStart = startOfWeek(formData.date, { weekStartsOn: 1 }); // Segunda
-    const weekEnd = endOfWeek(formData.date, { weekStartsOn: 1 }); // Domingo
+    const weekStart = startOfWeek(formData.date, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(formData.date, { weekStartsOn: 1 });
 
     const { error } = await supabase.from("cleaning_schedules").insert([{
-      group_id: formData.group_id,
+      group_id: formData.isSolNascente ? null : formData.group_id,
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
-      cleaning_type: formData.cleaning_type,
+      cleaning_type: formData.isSolNascente ? 'weekly' : formData.cleaning_type,
       notes: formData.notes
     }]);
 
@@ -91,12 +97,11 @@ export default function Cleaning() {
     } else {
       toast.success("Designação salva!");
       setOpen(false);
-      setFormData({ group_id: "", date: undefined, cleaning_type: "weekly", notes: "" });
+      setFormData({ group_id: "", date: undefined, cleaning_type: "weekly", notes: "", isSolNascente: false });
       loadData();
     }
   };
 
-  // Gerar dias do calendário
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -132,22 +137,33 @@ export default function Cleaning() {
                 <DialogDescription>Selecione a semana e o grupo responsável.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Grupo Responsável</Label>
-                  <Select value={formData.group_id} onValueChange={val => setFormData({...formData, group_id: val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o grupo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups.map(g => (
-                        <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center space-x-2 p-2 bg-slate-50 rounded-md border">
+                  <Checkbox 
+                    id="sol-nascente" 
+                    checked={formData.isSolNascente}
+                    onCheckedChange={(val) => setFormData({...formData, isSolNascente: !!val})}
+                  />
+                  <Label htmlFor="sol-nascente" className="font-bold text-red-600 cursor-pointer">Sol Nascente</Label>
                 </div>
 
+                {!formData.isSolNascente && (
+                  <div className="space-y-2">
+                    <Label>Grupo Responsável</Label>
+                    <Select value={formData.group_id} onValueChange={val => setFormData({...formData, group_id: val})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o grupo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map(g => (
+                          <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label>Escolha a Semana (Qualquer dia da semana)</Label>
+                  <Label>Escolha a Semana</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formData.date && "text-muted-foreground")}>
@@ -169,18 +185,20 @@ export default function Cleaning() {
                   </Popover>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tipo de Limpeza</Label>
-                  <Select value={formData.cleaning_type} onValueChange={(val: any) => setFormData({...formData, cleaning_type: val})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Semanal (Geral)</SelectItem>
-                      <SelectItem value="post_meeting">Pós Reunião</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!formData.isSolNascente && (
+                  <div className="space-y-2">
+                    <Label>Tipo de Limpeza</Label>
+                    <Select value={formData.cleaning_type} onValueChange={(val: any) => setFormData({...formData, cleaning_type: val})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Semanal (Geral)</SelectItem>
+                        <SelectItem value="post_meeting">Pós Reunião</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
@@ -233,14 +251,16 @@ export default function Cleaning() {
                       <div 
                         key={s.id} 
                         className={cn(
-                          "text-[10px] p-1 rounded border leading-tight",
-                          s.cleaning_type === 'weekly' 
-                            ? "bg-blue-50 border-blue-200 text-blue-700" 
-                            : "bg-green-50 border-green-200 text-green-700"
+                          "text-[10px] p-1 rounded border leading-tight font-bold",
+                          !s.group_id 
+                            ? "bg-red-50 border-red-200 text-red-700" 
+                            : s.cleaning_type === 'weekly' 
+                              ? "bg-blue-50 border-blue-200 text-blue-700" 
+                              : "bg-green-50 border-green-200 text-green-700"
                         )}
                       >
-                        <div className="font-bold">Grupo {s.groups?.group_number}</div>
-                        <div>{s.cleaning_type === 'weekly' ? 'Semanal' : 'Pós Reunião'}</div>
+                        <div>{!s.group_id ? 'Sol Nascente' : `Grupo ${s.groups?.group_number}`}</div>
+                        <div className="font-normal opacity-80">{s.cleaning_type === 'weekly' ? 'Semanal' : 'Pós Reunião'}</div>
                       </div>
                     ))}
                   </div>
