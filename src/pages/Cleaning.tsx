@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ export default function Cleaning() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     group_id: "",
@@ -68,6 +69,30 @@ export default function Cleaning() {
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
+  const handleEdit = (schedule: CleaningSchedule) => {
+    setEditingId(schedule.id);
+    setFormData({
+      group_id: schedule.group_id || "",
+      date: parseISO(schedule.start_date),
+      cleaning_type: schedule.cleaning_type,
+      notes: schedule.notes || "",
+      isSolNascente: !schedule.group_id
+    });
+    setOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta designação?")) return;
+
+    const { error } = await supabase.from("cleaning_schedules").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+    } else {
+      toast.success("Designação excluída!");
+      loadData();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.isSolNascente && !formData.group_id) {
@@ -83,23 +108,37 @@ export default function Cleaning() {
     const weekStart = startOfWeek(formData.date, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(formData.date, { weekStartsOn: 1 });
 
-    const { error } = await supabase.from("cleaning_schedules").insert([{
+    const payload = {
       group_id: formData.isSolNascente ? null : formData.group_id,
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
       cleaning_type: formData.isSolNascente ? 'weekly' : formData.cleaning_type,
       notes: formData.notes
-    }]);
+    };
+
+    let error;
+    if (editingId) {
+      const { error: err } = await supabase.from("cleaning_schedules").update(payload).eq("id", editingId);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from("cleaning_schedules").insert([payload]);
+      error = err;
+    }
 
     setLoading(false);
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
     } else {
-      toast.success("Designação salva!");
-      setOpen(false);
-      setFormData({ group_id: "", date: undefined, cleaning_type: "weekly", notes: "", isSolNascente: false });
+      toast.success(editingId ? "Designação atualizada!" : "Designação salva!");
+      handleCloseDialog();
       loadData();
     }
+  };
+
+  const handleCloseDialog = () => {
+    setOpen(false);
+    setEditingId(null);
+    setFormData({ group_id: "", date: undefined, cleaning_type: "weekly", notes: "", isSolNascente: false });
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -123,9 +162,9 @@ export default function Cleaning() {
           <h1 className="text-3xl font-bold text-foreground">Escala de Limpeza</h1>
           <p className="text-muted-foreground">Organização semanal da limpeza do Salão do Reino</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(val) => { if (!val) handleCloseDialog(); else setOpen(true); }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => setEditingId(null)}>
               <Plus className="h-4 w-4 mr-2" />
               Lançar Designação
             </Button>
@@ -133,7 +172,7 @@ export default function Cleaning() {
           <DialogContent>
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Nova Designação de Limpeza</DialogTitle>
+                <DialogTitle>{editingId ? "Editar Designação" : "Nova Designação de Limpeza"}</DialogTitle>
                 <DialogDescription>Selecione a semana e o grupo responsável.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -235,7 +274,7 @@ export default function Cleaning() {
                 <div 
                   key={i} 
                   className={cn(
-                    "min-h-[120px] p-2 border-r border-b last:border-r-0 relative transition-colors hover:bg-slate-50/30",
+                    "min-h-[120px] p-2 border-r border-b last:border-r-0 relative transition-colors hover:bg-slate-50/30 group/day",
                     !isCurrentMonth && "bg-slate-50/50 text-muted-foreground/50"
                   )}
                 >
@@ -251,7 +290,7 @@ export default function Cleaning() {
                       <div 
                         key={s.id} 
                         className={cn(
-                          "text-[10px] p-1 rounded border leading-tight font-bold",
+                          "text-[10px] p-1 rounded border leading-tight font-bold group/item relative",
                           !s.group_id 
                             ? "bg-red-50 border-red-200 text-red-700" 
                             : s.cleaning_type === 'weekly' 
@@ -259,7 +298,13 @@ export default function Cleaning() {
                               : "bg-green-50 border-green-200 text-green-700"
                         )}
                       >
-                        <div>{!s.group_id ? 'Sol Nascente' : `Grupo ${s.groups?.group_number}`}</div>
+                        <div className="flex justify-between items-start">
+                          <span>{!s.group_id ? 'Sol Nascente' : `Grupo ${s.groups?.group_number}`}</span>
+                          <div className="hidden group-hover/item:flex gap-1 bg-white/80 rounded p-0.5 shadow-sm">
+                            <button onClick={() => handleEdit(s)} className="hover:text-primary"><Pencil size={10} /></button>
+                            <button onClick={() => handleDelete(s.id)} className="hover:text-destructive"><Trash2 size={10} /></button>
+                          </div>
+                        </div>
                         <div className="font-normal opacity-80">{s.cleaning_type === 'weekly' ? 'Semanal' : 'Pós Reunião'}</div>
                       </div>
                     ))}
