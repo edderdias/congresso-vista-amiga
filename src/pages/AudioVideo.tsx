@@ -30,15 +30,16 @@ export default function AudioVideo() {
   }, []);
 
   const loadData = async () => {
+    // Carregar publicadores primeiro para garantir que o mapeamento de nomes funcione
+    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges");
+    setPublishers(pubsData || []);
+
     const { data: meetingsData } = await supabase
       .from("meetings")
       .select("*, av_designations(*)")
       .order("date", { ascending: false });
     
-    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges");
-    
     setMeetings(meetingsData || []);
-    setPublishers(pubsData || []);
   };
 
   const handleDesignate = (meeting: any) => {
@@ -81,7 +82,8 @@ export default function AudioVideo() {
 
   const getPubName = (id: string) => {
     if (!id || id === "none") return "-";
-    return publishers.find(p => p.id === id)?.full_name || "-";
+    const pub = publishers.find(p => p.id === id);
+    return pub ? pub.full_name : "-";
   };
 
   // Filtros de publicadores por privilégio/designação
@@ -106,8 +108,8 @@ export default function AudioVideo() {
               <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead className="w-[180px]">Reunião</TableHead>
-                  <TableHead>Áudio</TableHead>
-                  <TableHead>Vídeo</TableHead>
+                  <TableHead>Operador de Áudio</TableHead>
+                  <TableHead>Operador de Vídeo</TableHead>
                   <TableHead>Microfone 1</TableHead>
                   <TableHead>Microfone 2</TableHead>
                   <TableHead>Palco</TableHead>
