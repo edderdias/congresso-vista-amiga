@@ -196,6 +196,8 @@ export type Database = {
           description: string | null
           status: Database["public"]["Enums"]["territory_status"] | null
           assigned_to: string | null
+          image_url: string | null
+          map_url: string | null
           assigned_date: string | null
           completed_date: string | null
           created_at: string | null
@@ -208,6 +210,8 @@ export type Database = {
           description?: string | null
           status?: Database["public"]["Enums"]["territory_status"] | null
           assigned_to?: string | null
+          image_url?: string | null
+          map_url?: string | null
           assigned_date?: string | null
           completed_date?: string | null
           created_at?: string | null
@@ -220,6 +224,8 @@ export type Database = {
           description?: string | null
           status?: Database["public"]["Enums"]["territory_status"] | null
           assigned_to?: string | null
+          image_url?: string | null
+          map_url?: string | null
           assigned_date?: string | null
           completed_date?: string | null
           created_at?: string | null
