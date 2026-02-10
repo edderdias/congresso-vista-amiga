@@ -17,6 +17,7 @@ export default function AudioVideo() {
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
   const [formData, setFormData] = useState({
     operator_id: "none",
+    video_operator_id: "none",
     mic_1_id: "none",
     mic_2_id: "none",
     stage_id: "none"
@@ -43,6 +44,7 @@ export default function AudioVideo() {
     const desig = meeting.av_designations?.[0];
     setFormData({
       operator_id: desig?.operator_id || "none",
+      video_operator_id: desig?.video_operator_id || "none",
       mic_1_id: desig?.mic_1_id || "none",
       mic_2_id: desig?.mic_2_id || "none",
       stage_id: desig?.stage_id || "none"
@@ -55,6 +57,7 @@ export default function AudioVideo() {
     const payload = {
       meeting_id: selectedMeeting.id,
       operator_id: formData.operator_id === "none" ? null : formData.operator_id,
+      video_operator_id: formData.video_operator_id === "none" ? null : formData.video_operator_id,
       mic_1_id: formData.mic_1_id === "none" ? null : formData.mic_1_id,
       mic_2_id: formData.mic_2_id === "none" ? null : formData.mic_2_id,
       stage_id: formData.stage_id === "none" ? null : formData.stage_id
@@ -73,9 +76,8 @@ export default function AudioVideo() {
   const getPubName = (id: string) => publishers.find(p => p.id === id)?.full_name || "-";
 
   // Filtros de publicadores por designação
-  const operators = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
-  const mics = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
-  const stage = publishers.filter(p => p.privileges?.includes("Microfone Volante")); // Assumindo que palco usa os mesmos do volante conforme solicitado
+  const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
+  const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
 
   return (
     <div className="space-y-6">
@@ -86,9 +88,10 @@ export default function AudioVideo() {
             <TableHeader>
               <TableRow>
                 <TableHead>Reunião</TableHead>
-                <TableHead>Operador</TableHead>
-                <TableHead>Volante 1</TableHead>
-                <TableHead>Volante 2</TableHead>
+                <TableHead>Operador de Áudio</TableHead>
+                <TableHead>Operador de Vídeo</TableHead>
+                <TableHead>Microfone 1</TableHead>
+                <TableHead>Microfone 2</TableHead>
                 <TableHead>Palco</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
@@ -102,6 +105,7 @@ export default function AudioVideo() {
                       {format(parseISO(m.date), "dd/MM")} - {m.type}
                     </TableCell>
                     <TableCell>{getPubName(d?.operator_id)}</TableCell>
+                    <TableCell>{getPubName(d?.video_operator_id)}</TableCell>
                     <TableCell>{getPubName(d?.mic_1_id)}</TableCell>
                     <TableCell>{getPubName(d?.mic_2_id)}</TableCell>
                     <TableCell>{getPubName(d?.stage_id)}</TableCell>
@@ -127,42 +131,52 @@ export default function AudioVideo() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label>Operador (Áudio e Vídeo)</Label>
+                <Label>Operador de Áudio</Label>
                 <Select value={formData.operator_id} onValueChange={v => setFormData({...formData, operator_id: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {operators.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Volante 1 (Microfone Volante)</Label>
+                <Label>Operador de Vídeo</Label>
+                <Select value={formData.video_operator_id} onValueChange={v => setFormData({...formData, video_operator_id: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Microfone 1</Label>
                 <Select value={formData.mic_1_id} onValueChange={v => setFormData({...formData, mic_1_id: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {mics.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Volante 2 (Microfone Volante)</Label>
+                <Label>Microfone 2</Label>
                 <Select value={formData.mic_2_id} onValueChange={v => setFormData({...formData, mic_2_id: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {mics.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Palco (Microfone Volante)</Label>
+                <Label>Palco</Label>
                 <Select value={formData.stage_id} onValueChange={v => setFormData({...formData, stage_id: v})}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {stage.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
