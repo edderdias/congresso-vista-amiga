@@ -48,7 +48,6 @@ export default function PublicReport() {
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
 
-    // Regra: se for após o dia 20, mostrar o mês seguinte
     if (now.getDate() > 20) {
       month += 1;
       if (month > 12) {
@@ -65,7 +64,6 @@ export default function PublicReport() {
     const allGroups = data || [];
     setGroups(allGroups);
 
-    // Se houver um número de grupo na URL, seleciona ele automaticamente
     if (groupNumber) {
       const targetGroup = allGroups.find(g => g.group_number.toString() === groupNumber);
       if (targetGroup) {
@@ -166,9 +164,13 @@ export default function PublicReport() {
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {!groupNumber && (
-                <div className="space-y-2">
-                  <Label>Grupo</Label>
+              <div className="space-y-2">
+                <Label>Grupo</Label>
+                {groupNumber ? (
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-slate-100 font-bold text-primary">
+                    Grupo {groupNumber}
+                  </div>
+                ) : (
                   <Select onValueChange={handleGroupChange} value={selectedGroupId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione seu grupo" />
@@ -179,10 +181,10 @@ export default function PublicReport() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className={groupNumber ? "col-span-2 space-y-2" : "space-y-2"}>
+              <div className="space-y-2">
                 <Label>Publicador</Label>
                 <Select 
                   onValueChange={setSelectedPublisherId} 
