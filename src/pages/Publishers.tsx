@@ -328,18 +328,34 @@ export default function Publishers() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-base font-bold text-primary">Privilégios e Designações</Label>
+                    <Label className="text-base font-bold text-primary">Privilégios</Label>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
-                      {[...PRIVILEGE_OPTIONS, ...DESIGNATION_OPTIONS].map(item => (
+                      {PRIVILEGE_OPTIONS.map(item => (
                         <div key={item} className="flex items-center space-x-2">
                           <Checkbox 
-                            id={`item-${item}`} 
+                            id={`priv-${item}`} 
                             checked={formData.privileges.includes(item)} 
                             onCheckedChange={(checked) => handleItemToggle(item, !!checked)}
                           />
-                          <Label htmlFor={`item-${item}`} className="text-sm font-normal cursor-pointer">{item}</Label>
+                          <Label htmlFor={`priv-${item}`} className="text-sm font-normal cursor-pointer">{item}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-base font-bold text-primary">Designações</Label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 border p-4 rounded-md bg-slate-50/50">
+                      {DESIGNATION_OPTIONS.map(item => (
+                        <div key={item} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`desig-${item}`} 
+                            checked={formData.privileges.includes(item)} 
+                            onCheckedChange={(checked) => handleItemToggle(item, !!checked)}
+                          />
+                          <Label htmlFor={`desig-${item}`} className="text-sm font-normal cursor-pointer">{item}</Label>
                         </div>
                       ))}
                     </div>
