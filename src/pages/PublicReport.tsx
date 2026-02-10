@@ -268,7 +268,7 @@ export default function PublicReport() {
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  se for pioneiro auxiliar, regular, especial ou missionario em campo
+                  Se for pioneiro auxiliar, regular, especial ou missionario em campo
                 </p>
               </div>
             </div>
