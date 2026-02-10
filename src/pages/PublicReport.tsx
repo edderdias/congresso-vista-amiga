@@ -254,7 +254,7 @@ export default function PublicReport() {
                   id="studies"
                   type="number" 
                   min="0"
-                  className="w-24"
+                  className="w-full"
                   value={formData.bible_studies}
                   onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})}
                 />
@@ -265,7 +265,7 @@ export default function PublicReport() {
                   id="hours"
                   type="number" 
                   min="0"
-                  className="w-24"
+                  className="w-full"
                   value={formData.hours}
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
