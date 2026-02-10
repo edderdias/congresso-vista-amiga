@@ -156,7 +156,9 @@ export default function PublicReport() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
-          <CardTitle className="text-2xl">Relatório de Serviço</CardTitle>
+          <CardTitle className="text-2xl">
+            Relatório de Serviço {groupNumber ? `- Grupo ${groupNumber}` : ""}
+          </CardTitle>
           <CardDescription className="text-primary-foreground/80">
             Envie seu relatório mensal de pregação
           </CardDescription>
@@ -164,13 +166,9 @@ export default function PublicReport() {
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Grupo</Label>
-                {groupNumber ? (
-                  <div className="h-10 flex items-center px-3 rounded-md border bg-slate-100 font-bold text-primary">
-                    Grupo {groupNumber}
-                  </div>
-                ) : (
+              {!groupNumber && (
+                <div className="space-y-2">
+                  <Label>Grupo</Label>
                   <Select onValueChange={handleGroupChange} value={selectedGroupId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione seu grupo" />
@@ -181,10 +179,10 @@ export default function PublicReport() {
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="space-y-2">
+              <div className={groupNumber ? "col-span-2 space-y-2" : "space-y-2"}>
                 <Label>Publicador</Label>
                 <Select 
                   onValueChange={setSelectedPublisherId} 
@@ -270,7 +268,7 @@ export default function PublicReport() {
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
                 <p className="text-[10px] text-muted-foreground leading-tight">
-                  (se for pioneiro auxiliar, regular, especial ou missionario em campo)
+                  se for pioneiro auxiliar, regular, especial ou missionario em campo
                 </p>
               </div>
             </div>
