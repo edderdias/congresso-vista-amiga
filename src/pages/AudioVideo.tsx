@@ -30,16 +30,18 @@ export default function AudioVideo() {
   }, []);
 
   const loadData = async () => {
-    // Carregar publicadores primeiro para garantir que o mapeamento de nomes funcione
-    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges");
-    setPublishers(pubsData || []);
+    try {
+      // Carregar publicadores e reuniões em paralelo
+      const [pubsResponse, meetingsResponse] = await Promise.all([
+        supabase.from("publishers").select("id, full_name, privileges"),
+        supabase.from("meetings").select("*, av_designations(*)").order("date", { ascending: false })
+      ]);
 
-    const { data: meetingsData } = await supabase
-      .from("meetings")
-      .select("*, av_designations(*)")
-      .order("date", { ascending: false });
-    
-    setMeetings(meetingsData || []);
+      if (pubsResponse.data) setPublishers(pubsResponse.data);
+      if (meetingsResponse.data) setMeetings(meetingsResponse.data);
+    } catch (error) {
+      console.error("[AudioVideo] Erro ao carregar dados", error);
+    }
   };
 
   const handleDesignate = (meeting: any) => {
@@ -59,7 +61,9 @@ export default function AudioVideo() {
     e.preventDefault();
     setLoading(true);
 
-    const payload = {
+    const existingDesig = selectedMeeting.av_designations?.[0];
+    
+    const payload: any = {
       meeting_id: selectedMeeting.id,
       operator_id: formData.operator_id === "none" ? null : formData.operator_id,
       video_operator_id: formData.video_operator_id === "none" ? null : formData.video_operator_id,
@@ -68,7 +72,12 @@ export default function AudioVideo() {
       stage_id: formData.stage_id === "none" ? null : formData.stage_id
     };
 
-    const { error } = await supabase.from("av_designations").upsert(payload, { onConflict: 'meeting_id' });
+    // Se já existe uma designação, incluímos o ID para garantir o update
+    if (existingDesig?.id) {
+      payload.id = existingDesig.id;
+    }
+
+    const { error } = await supabase.from("av_designations").upsert(payload);
     
     setLoading(false);
     if (error) {
@@ -86,7 +95,7 @@ export default function AudioVideo() {
     return pub ? pub.full_name : "-";
   };
 
-  // Filtros de publicadores por privilégio/designação
+  // Filtros de publicadores por privilégio/designação para os selects
   const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
   const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
 
@@ -171,7 +180,9 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Áudio</Label>
                   <Select value={formData.operator_id} onValueChange={v => setFormData({...formData, operator_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -181,7 +192,9 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Vídeo</Label>
                   <Select value={formData.video_operator_id} onValueChange={v => setFormData({...formData, video_operator_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -194,7 +207,9 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 1</Label>
                   <Select value={formData.mic_1_id} onValueChange={v => setFormData({...formData, mic_1_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -204,7 +219,9 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 2</Label>
                   <Select value={formData.mic_2_id} onValueChange={v => setFormData({...formData, mic_2_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -216,7 +233,9 @@ export default function AudioVideo() {
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Palco</Label>
                 <Select value={formData.stage_id} onValueChange={v => setFormData({...formData, stage_id: v})}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
                     {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
