@@ -31,15 +31,26 @@ export default function AudioVideo() {
 
   const loadData = async () => {
     try {
-      const [pubsResponse, meetingsResponse] = await Promise.all([
+      // Buscamos tudo separadamente para garantir a integridade dos dados na exibição
+      const [pubsResponse, meetingsResponse, avResponse] = await Promise.all([
         supabase.from("publishers").select("id, full_name, privileges"),
-        supabase.from("meetings").select("*, av_designations(*)").order("date", { ascending: false })
+        supabase.from("meetings").select("*").order("date", { ascending: false }),
+        supabase.from("av_designations").select("*")
       ]);
 
       if (pubsResponse.data) setPublishers(pubsResponse.data);
-      if (meetingsResponse.data) setMeetings(meetingsResponse.data);
+      
+      if (meetingsResponse.data) {
+        // Mapeamos as designações para suas respectivas reuniões manualmente
+        const meetingsWithAv = meetingsResponse.data.map(m => ({
+          ...m,
+          av_designations: avResponse.data ? avResponse.data.filter(av => av.meeting_id === m.id) : []
+        }));
+        setMeetings(meetingsWithAv);
+      }
     } catch (error) {
       console.error("[AudioVideo] Erro ao carregar dados", error);
+      toast.error("Erro ao carregar dados da página.");
     }
   };
 
@@ -69,7 +80,6 @@ export default function AudioVideo() {
       stage_id: formData.stage_id === "none" ? null : formData.stage_id
     };
 
-    // Usamos onConflict: 'meeting_id' para garantir que ele atualize se já existir
     const { error } = await supabase
       .from("av_designations")
       .upsert(payload, { onConflict: 'meeting_id' });
