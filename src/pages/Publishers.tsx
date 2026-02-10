@@ -33,7 +33,7 @@ interface Publisher {
 
 const PRIVILEGE_OPTIONS = [
   "Ancião",
-  "Servo Ministerial",
+  "Servo Ministérial",
   "Pioneiro Regular",
   "Pioneiro Auxiliar",
   "Publicador Batizado",
@@ -41,26 +41,26 @@ const PRIVILEGE_OPTIONS = [
 ];
 
 const DESIGNATION_OPTIONS = [
-  "Presidência vida e ministério",
-  "oração",
+  "Presidência Vida e Ministério",
+  "Oração",
   "Tesouro",
   "Encontre Joias",
   "Leitura da Biblia",
   "Considerações",
-  "demostrações",
-  "discurso de estudante",
+  "Demostrações",
+  "Discurso de Estudante",
   "Nossa Vida Cristã",
   "Necessidade Locais",
   "Dirigente Est. de Livro",
   "Leitura do Livro",
-  "Presidência final de semana",
+  "Presidência Final de Semana",
   "Leitura A Sentinela",
-  "indicador",
-  "Microfone volante",
-  "Audio e Video",
+  "Indicador",
+  "Microfone Volante",
+  "Áudio e Video",
   "Limpeza",
   "Manutenção",
-  "tpl"
+  "TPL"
 ];
 
 const ITEMS_PER_PAGE = 10;
