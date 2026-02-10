@@ -38,6 +38,13 @@ export default function PublicReport() {
     loadGroups();
   }, [groupNumber]);
 
+  // Lógica para marcar participação automaticamente
+  useEffect(() => {
+    if (formData.hours > 0 || formData.bible_studies > 0) {
+      setFormData(prev => ({ ...prev, participated: true }));
+    }
+  }, [formData.hours, formData.bible_studies]);
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     setIsLoggedIn(!!session);

@@ -15,6 +15,8 @@ import School from "./pages/School";
 import Publishers from "./pages/Publishers";
 import Auth from "./pages/Auth";
 import PublicReport from "./pages/PublicReport";
+import Meetings from "./pages/Meetings";
+import AudioVideo from "./pages/AudioVideo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />
           <Route path="/publishers" element={<Layout><Publishers /></Layout>} />
+          <Route path="/meetings" element={<Layout><Meetings /></Layout>} />
+          <Route path="/audio-video" element={<Layout><AudioVideo /></Layout>} />
           <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} />
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
           <Route path="/school" element={<Layout><School /></Layout>} />
