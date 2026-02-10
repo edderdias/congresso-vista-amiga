@@ -12,8 +12,9 @@ import Users from "./pages/Users";
 import Groups from "./pages/Groups";
 import Cleaning from "./pages/Cleaning";
 import School from "./pages/School";
-import Publishers from "./pages/Publishers"; // Novo import
+import Publishers from "./pages/Publishers";
 import Auth from "./pages/Auth";
+import PublicReport from "./pages/PublicReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,10 +27,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/relatorio-publico" element={<PublicReport />} />
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />
-          <Route path="/publishers" element={<Layout><Publishers /></Layout>} /> {/* Nova rota */}
+          <Route path="/publishers" element={<Layout><Publishers /></Layout>} />
           <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} />
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
           <Route path="/school" element={<Layout><School /></Layout>} />
