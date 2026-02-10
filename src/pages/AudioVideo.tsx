@@ -31,7 +31,6 @@ export default function AudioVideo() {
 
   const loadData = async () => {
     try {
-      // Carregar publicadores e reuniões em paralelo
       const [pubsResponse, meetingsResponse] = await Promise.all([
         supabase.from("publishers").select("id, full_name, privileges"),
         supabase.from("meetings").select("*, av_designations(*)").order("date", { ascending: false })
@@ -61,8 +60,6 @@ export default function AudioVideo() {
     e.preventDefault();
     setLoading(true);
 
-    const existingDesig = selectedMeeting.av_designations?.[0];
-    
     const payload: any = {
       meeting_id: selectedMeeting.id,
       operator_id: formData.operator_id === "none" ? null : formData.operator_id,
@@ -72,12 +69,10 @@ export default function AudioVideo() {
       stage_id: formData.stage_id === "none" ? null : formData.stage_id
     };
 
-    // Se já existe uma designação, incluímos o ID para garantir o update
-    if (existingDesig?.id) {
-      payload.id = existingDesig.id;
-    }
-
-    const { error } = await supabase.from("av_designations").upsert(payload);
+    // Usamos onConflict: 'meeting_id' para garantir que ele atualize se já existir
+    const { error } = await supabase
+      .from("av_designations")
+      .upsert(payload, { onConflict: 'meeting_id' });
     
     setLoading(false);
     if (error) {
@@ -95,7 +90,6 @@ export default function AudioVideo() {
     return pub ? pub.full_name : "-";
   };
 
-  // Filtros de publicadores por privilégio/designação para os selects
   const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
   const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
 
