@@ -36,6 +36,7 @@ export default function Publishers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterPrivilege, setFilterPrivilege] = useState("all");
 
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
@@ -53,7 +54,12 @@ export default function Publishers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...formData, group_id: formData.group_id === "none" ? null : formData.group_id };
+    const payload = { 
+      ...formData, 
+      group_id: formData.group_id === "none" ? null : formData.group_id,
+      birth_date: formData.birth_date || null,
+      baptism_date: formData.baptism_date || null
+    };
     const { error } = editingId 
       ? await supabase.from("publishers").update(payload).eq("id", editingId)
       : await supabase.from("publishers").insert([payload]);
@@ -86,7 +92,8 @@ export default function Publishers() {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
     const matchesStatus = filterStatus === "all" || p.status === filterStatus;
-    return matchesSearch && matchesGroup && matchesStatus;
+    const matchesPrivilege = filterPrivilege === "all" || p.privileges?.includes(filterPrivilege);
+    return matchesSearch && matchesGroup && matchesStatus && matchesPrivilege;
   });
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
@@ -106,6 +113,11 @@ export default function Publishers() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required /></div>
                 <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Ex: 11999999999" /></div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Data de Nascimento</Label><Input type="date" value={formData.birth_date || ""} onChange={e => setFormData({...formData, birth_date: e.target.value})} /></div>
+                <div className="space-y-2"><Label>Data de Batismo</Label><Input type="date" value={formData.baptism_date || ""} onChange={e => setFormData({...formData, baptism_date: e.target.value})} /></div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -190,7 +202,7 @@ export default function Publishers() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input 
@@ -226,6 +238,20 @@ export default function Publishers() {
                   <SelectItem value="inactive">Inativo</SelectItem>
                   <SelectItem value="mudou">Mudou</SelectItem>
                   <SelectItem value="removido">Removido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por Privilégio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Privilégios</SelectItem>
+                  {PRIVILEGES.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
