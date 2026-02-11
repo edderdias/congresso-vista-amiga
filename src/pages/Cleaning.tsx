@@ -84,7 +84,7 @@ export default function Cleaning() {
     setEditingId(s.id);
     setFormData({
       group_id: s.group_id || "",
-      date: parseISO(s.start_date),
+      date: s.start_date ? parseISO(s.start_date) : undefined,
       cleaning_type: s.cleaning_type || "Semanal",
       notes: s.notes || "",
       shared_name: s.group_id ? "none" : s.notes
@@ -167,7 +167,14 @@ export default function Cleaning() {
           </div>
           <div className="grid grid-cols-7">
             {calendarDays.map((day, i) => {
-              const dayScheds = schedules.filter(s => isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) }));
+              const dayScheds = schedules.filter(s => {
+                if (!s.start_date || !s.end_date) return false;
+                try {
+                  return isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) });
+                } catch (e) {
+                  return false;
+                }
+              });
               return (
                 <div key={i} className={cn("min-h-[120px] p-1 border-r border-b", !isSameMonth(day, currentMonth) && "bg-slate-50/50 opacity-50")}>
                   <span className="text-xs font-medium">{format(day, 'd')}</span>

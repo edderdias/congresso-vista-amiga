@@ -81,7 +81,14 @@ export default function PublicCalendar() {
                 calendarDays.map((day, i) => {
                   const dayStr = format(day, 'yyyy-MM-dd');
                   const dayMeets = meetings.filter(m => m.date === dayStr);
-                  const dayClean = cleaning.filter(s => isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) }));
+                  const dayClean = cleaning.filter(s => {
+                    if (!s.start_date || !s.end_date) return false;
+                    try {
+                      return isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) });
+                    } catch (e) {
+                      return false;
+                    }
+                  });
                   
                   return (
                     <div key={i} className={cn("min-h-[150px] p-2 border-r border-b bg-white", !format(day, 'MM').includes(format(currentMonth, 'MM')) && "bg-slate-50 opacity-40")}>
@@ -128,7 +135,7 @@ export default function PublicCalendar() {
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div><Label className="text-muted-foreground">Reunião</Label><p className="font-bold">{selectedEvent.data.type}</p></div>
-                        <div><Label className="text-muted-foreground">Data</Label><p className="font-bold">{format(parseISO(selectedEvent.data.date), "dd/MM/yyyy")}</p></div>
+                        <div><Label className="text-muted-foreground">Data</Label><p className="font-bold">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
                       </div>
                       {selectedEvent.av && (
                         <div className="space-y-2 border-t pt-4">
@@ -147,7 +154,7 @@ export default function PublicCalendar() {
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div><Label className="text-muted-foreground">Tipo</Label><p className="font-bold">Limpeza {selectedEvent?.data.cleaning_type}</p></div>
-                        <div><Label className="text-muted-foreground">Semana</Label><p className="font-bold">{format(parseISO(selectedEvent?.data.start_date), "dd/MM")} a {format(parseISO(selectedEvent?.data.end_date), "dd/MM")}</p></div>
+                        <div><Label className="text-muted-foreground">Semana</Label><p className="font-bold">{selectedEvent?.data.start_date ? format(parseISO(selectedEvent.data.start_date), "dd/MM") : "-"} a {selectedEvent?.data.end_date ? format(parseISO(selectedEvent.data.end_date), "dd/MM") : "-"}</p></div>
                       </div>
                       <div className="border-t pt-4">
                         <Label className="text-primary font-bold">Responsável</Label>
