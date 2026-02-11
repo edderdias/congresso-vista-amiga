@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, Award, Mic, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, Award, Mic, User, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -27,11 +27,12 @@ export default function PublicCalendar() {
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
     try {
-      // Buscamos todos os dados necessários para o período
+      console.log("[PublicCalendar] Carregando dados para o período:", { start, end });
+      
       const [pubs, meets, clean, avDesig, generalDesig] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
-        supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
+        supabase.from("cleaning_schedules").select("*, groups(group_number)").or(`start_date.lte.${end},end_date.gte.${start}`),
         supabase.from("av_designations").select("*"),
         supabase.from("designations").select("*, profiles(full_name)").gte("meeting_date", start).lte("meeting_date", end)
       ]);
@@ -41,6 +42,13 @@ export default function PublicCalendar() {
       setCleaning(clean.data || []);
       setAv(avDesig.data || []);
       setDesignations(generalDesig.data || []);
+      
+      console.log("[PublicCalendar] Dados carregados:", { 
+        reunioes: meets.data?.length, 
+        limpeza: clean.data?.length, 
+        av: avDesig.data?.length,
+        designacoes: generalDesig.data?.length 
+      });
     } catch (error) {
       console.error("[PublicCalendar] Erro ao carregar dados:", error);
     } finally {
@@ -102,7 +110,9 @@ export default function PublicCalendar() {
                   const dayClean = cleaning.filter(s => {
                     if (!s.start_date || !s.end_date) return false;
                     try {
-                      return isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) });
+                      const start = parseISO(s.start_date);
+                      const end = parseISO(s.end_date);
+                      return isWithinInterval(day, { start, end });
                     } catch (e) {
                       return false;
                     }
@@ -120,8 +130,9 @@ export default function PublicCalendar() {
                               <div className="text-[10px] font-bold text-blue-800 uppercase truncate">{m.type}</div>
                               {d && (
                                 <div className="text-[9px] text-blue-600 space-y-0.5">
-                                  {d.operator_id && <div className="flex items-center gap-1"><Monitor size={8} /> Áudio: {getPubName(d.operator_id)}</div>}
-                                  {d.video_operator_id && <div className="flex items-center gap-1"><Monitor size={8} /> Vídeo: {getPubName(d.video_operator_id)}</div>}
+                                  {(d.operator_id || d.video_operator_id) && (
+                                    <div className="flex items-center gap-1"><Monitor size={8} /> A/V Definido</div>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -158,76 +169,74 @@ export default function PublicCalendar() {
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Info className="h-6 w-6 text-primary" /> Detalhes da Programação
               </DialogTitle>
-              <DialogDescription asChild>
-                <div className="space-y-6 pt-4">
-                  {selectedEvent?.type === 'meeting' ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
-                        <div><Label className="text-muted-foreground text-xs">Reunião</Label><p className="font-bold text-blue-800">{selectedEvent.data.type}</p></div>
-                        <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
-                      </div>
-                      {selectedEvent.av ? (
-                        <div className="space-y-3 border-t pt-4">
-                          <Label className="text-primary font-bold flex items-center gap-2"><Monitor className="h-4 w-4" /> Designações de Áudio e Vídeo</Label>
-                          <div className="grid grid-cols-1 gap-3 text-sm">
-                            <div className="flex justify-between border-b pb-1">
-                              <span className="text-muted-foreground flex items-center gap-1"><Monitor size={14} /> Áudio:</span> 
-                              <span className="font-semibold">{getPubName(selectedEvent.av.operator_id)}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span className="text-muted-foreground flex items-center gap-1"><Monitor size={14} /> Vídeo:</span> 
-                              <span className="font-semibold">{getPubName(selectedEvent.av.video_operator_id)}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span className="text-muted-foreground flex items-center gap-1"><Mic size={14} /> Microfone 1:</span> 
-                              <span className="font-semibold">{getPubName(selectedEvent.av.mic_1_id)}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span className="text-muted-foreground flex items-center gap-1"><Mic size={14} /> Microfone 2:</span> 
-                              <span className="font-semibold">{getPubName(selectedEvent.av.mic_2_id)}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-1">
-                              <span className="text-muted-foreground flex items-center gap-1"><User size={14} /> Palco:</span> 
-                              <span className="font-semibold">{getPubName(selectedEvent.av.stage_id)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">Nenhuma designação de A/V registrada para esta reunião.</p>
-                      )}
-                    </>
-                  ) : selectedEvent?.type === 'designation' ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
-                        <div><Label className="text-muted-foreground text-xs">Tipo</Label><p className="font-bold text-purple-800">{getDesignationLabel(selectedEvent.data.designation_type)}</p></div>
-                        <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold">{selectedEvent.data.meeting_date ? format(parseISO(selectedEvent.data.meeting_date), "dd/MM/yyyy") : "-"}</p></div>
-                      </div>
-                      <div className="border-t pt-4">
-                        <Label className="text-primary font-bold flex items-center gap-2"><Award className="h-4 w-4" /> Designado</Label>
-                        <p className="text-xl font-bold mt-1">{selectedEvent.data.profiles?.full_name}</p>
-                      </div>
-                      {selectedEvent.data.notes && (
-                        <div className="border-t pt-4">
-                          <Label className="text-muted-foreground text-xs">Observações</Label>
-                          <p className="text-sm bg-slate-50 p-2 rounded mt-1">{selectedEvent.data.notes}</p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
-                        <div><Label className="text-muted-foreground text-xs">Tipo de Limpeza</Label><p className="font-bold text-green-800">{selectedEvent?.data.cleaning_type}</p></div>
-                        <div><Label className="text-muted-foreground text-xs">Semana</Label><p className="font-bold">{selectedEvent?.data.start_date ? format(parseISO(selectedEvent.data.start_date), "dd/MM") : "-"} a {selectedEvent?.data.end_date ? format(parseISO(selectedEvent.data.end_date), "dd/MM") : "-"}</p></div>
-                      </div>
-                      <div className="border-t pt-4">
-                        <Label className="text-primary font-bold flex items-center gap-2"><Brush className="h-4 w-4" /> Responsável</Label>
-                        <p className="text-xl font-bold mt-1">{selectedEvent?.data.group_id ? `Grupo ${selectedEvent.data.groups?.group_number}` : selectedEvent?.data.notes}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </DialogDescription>
             </DialogHeader>
+            <div className="space-y-6 pt-4">
+              {selectedEvent?.type === 'meeting' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+                    <div><Label className="text-muted-foreground text-xs">Reunião</Label><p className="font-bold text-blue-800">{selectedEvent.data.type}</p></div>
+                    <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
+                  </div>
+                  {selectedEvent.av ? (
+                    <div className="space-y-3 border-t pt-4">
+                      <Label className="text-primary font-bold flex items-center gap-2"><Monitor className="h-4 w-4" /> Designações de Áudio e Vídeo</Label>
+                      <div className="grid grid-cols-1 gap-3 text-sm">
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground flex items-center gap-1"><Mic size={14} /> Áudio:</span> 
+                          <span className="font-semibold">{getPubName(selectedEvent.av.operator_id)}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground flex items-center gap-1"><Video size={14} /> Vídeo:</span> 
+                          <span className="font-semibold">{getPubName(selectedEvent.av.video_operator_id)}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground flex items-center gap-1"><Mic size={14} /> Microfone 1:</span> 
+                          <span className="font-semibold">{getPubName(selectedEvent.av.mic_1_id)}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground flex items-center gap-1"><Mic size={14} /> Microfone 2:</span> 
+                          <span className="font-semibold">{getPubName(selectedEvent.av.mic_2_id)}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-1">
+                          <span className="text-muted-foreground flex items-center gap-1"><User size={14} /> Palco:</span> 
+                          <span className="font-semibold">{getPubName(selectedEvent.av.stage_id)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Nenhuma designação de A/V registrada para esta reunião.</p>
+                  )}
+                </>
+              ) : selectedEvent?.type === 'designation' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+                    <div><Label className="text-muted-foreground text-xs">Tipo</Label><p className="font-bold text-purple-800">{getDesignationLabel(selectedEvent.data.designation_type)}</p></div>
+                    <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold">{selectedEvent.data.meeting_date ? format(parseISO(selectedEvent.data.meeting_date), "dd/MM/yyyy") : "-"}</p></div>
+                  </div>
+                  <div className="border-t pt-4">
+                    <Label className="text-primary font-bold flex items-center gap-2"><Award className="h-4 w-4" /> Designado</Label>
+                    <p className="text-xl font-bold mt-1">{selectedEvent.data.profiles?.full_name}</p>
+                  </div>
+                  {selectedEvent.data.notes && (
+                    <div className="border-t pt-4">
+                      <Label className="text-muted-foreground text-xs">Observações</Label>
+                      <p className="text-sm bg-slate-50 p-2 rounded mt-1">{selectedEvent.data.notes}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+                    <div><Label className="text-muted-foreground text-xs">Tipo de Limpeza</Label><p className="font-bold text-green-800">{selectedEvent?.data.cleaning_type}</p></div>
+                    <div><Label className="text-muted-foreground text-xs">Semana</Label><p className="font-bold">{selectedEvent?.data.start_date ? format(parseISO(selectedEvent.data.start_date), "dd/MM") : "-"} a {selectedEvent?.data.end_date ? format(parseISO(selectedEvent.data.end_date), "dd/MM") : "-"}</p></div>
+                  </div>
+                  <div className="border-t pt-4">
+                    <Label className="text-primary font-bold flex items-center gap-2"><Brush className="h-4 w-4" /> Responsável</Label>
+                    <p className="text-xl font-bold mt-1">{selectedEvent?.data.group_id ? `Grupo ${selectedEvent.data.groups?.group_number}` : selectedEvent?.data.notes}</p>
+                  </div>
+                </>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
