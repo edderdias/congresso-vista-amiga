@@ -38,6 +38,7 @@ const PAGES = [
   { id: "school", name: "Escola" },
   { id: "territories", name: "Territórios" },
   { id: "users", name: "Gerenciar Usuários" },
+  { id: "settings", name: "Configurações" },
 ];
 
 const ITEMS_PER_PAGE = 10;
