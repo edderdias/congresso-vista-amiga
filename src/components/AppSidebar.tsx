@@ -17,7 +17,7 @@ import { toast } from "sonner";
 
 const allItems = [
   { id: "dashboard", title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { id: "calendario", title: "Calendário", url: "/calendario", icon: Calendar },
+  // { id: "calendario", title: "Calendário", url: "/calendario", icon: Calendar },
   { id: "reports", title: "Relatórios", url: "/reports", icon: FileText },
   { id: "groups", title: "Grupos", url: "/groups", icon: Users },
   { id: "publishers", title: "Publicadores", url: "/publishers", icon: User },
