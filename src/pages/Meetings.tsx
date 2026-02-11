@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Meeting {
   id: string;
@@ -53,10 +54,12 @@ export default function Meetings() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Excluir reunião?")) return;
     const { error } = await supabase.from("meetings").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir");
-    else loadMeetings();
+    else {
+      toast.success("Reunião excluída");
+      loadMeetings();
+    }
   };
 
   const handleEdit = (m: Meeting) => {
@@ -67,15 +70,15 @@ export default function Meetings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Reuniões</h1>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) setEditingId(null); }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setFormData({ date: "", type: "Meio de Semana" })}>
+            <Button className="w-full sm:w-auto" onClick={() => setFormData({ date: "", type: "Meio de Semana" })}>
               <Plus className="h-4 w-4 mr-2" /> Nova Reunião
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>{editingId ? "Editar" : "Adicionar"} Reunião</DialogTitle>
@@ -100,7 +103,7 @@ export default function Meetings() {
                   </Select>
                 </div>
               </div>
-              <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full sm:w-auto">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -108,27 +111,43 @@ export default function Meetings() {
 
       <Card>
         <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {meetings.map(m => (
-                <TableRow key={m.id}>
-                  <TableCell>{format(parseISO(m.date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
-                  <TableCell>{m.type}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {meetings.map(m => (
+                  <TableRow key={m.id}>
+                    <TableCell className="whitespace-nowrap">{format(parseISO(m.date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
+                    <TableCell className="whitespace-nowrap">{m.type}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(m)}><Pencil className="h-4 w-4" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Reunião?</AlertDialogTitle>
+                            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(m.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

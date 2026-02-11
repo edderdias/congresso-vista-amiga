@@ -48,12 +48,10 @@ export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Estados para Modais
   const [editOpen, setEditOpen] = useState(false);
   const [permOpen, setPermOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
 
-  // Estados de formulário
   const [editData, setEditData] = useState({ full_name: "", role: "user", password: "" });
   const [permData, setPermData] = useState<Record<string, boolean>>({});
 
@@ -173,91 +171,92 @@ export default function Users() {
           <CardDescription>Total de {profiles.length} membros</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Membro</TableHead>
-                <TableHead>Perfil</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedProfiles.map((profile) => (
-                <TableRow key={profile.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getInitials(profile.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-bold">{profile.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{profile.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
-                      {profile.role === 'admin' ? 'Administrador' : 'Usuário'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={profile.status === 'active' ? 'secondary' : profile.status === 'pending' ? 'outline' : 'destructive'}>
-                      {profile.status === 'active' ? 'Ativo' : profile.status === 'pending' ? 'Pendente' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {profile.status === 'pending' && (
-                        <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleStatusChange(profile, 'active')}>
-                          <UserCheck className="h-4 w-4 mr-1" /> Aprovar
-                        </Button>
-                      )}
-                      
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(profile)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-
-                      <Button size="sm" variant="ghost" onClick={() => openPerm(profile)}>
-                        <ShieldCheck className="h-4 w-4" />
-                      </Button>
-
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="ghost" className={profile.status === 'active' ? "text-destructive" : "text-green-600"}>
-                            {profile.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar alteração?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Deseja realmente {profile.status === 'active' ? 'desativar' : 'ativar'} o acesso de {profile.full_name}?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Não</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleStatusChange(profile, profile.status === 'active' ? 'inactive' : 'active')}>
-                              Sim, confirmar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Membro</TableHead>
+                  <TableHead>Perfil</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedProfiles.map((profile) => (
+                  <TableRow key={profile.id}>
+                    <TableCell className="font-medium whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {getInitials(profile.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-bold">{profile.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{profile.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
+                        {profile.role === 'admin' ? 'Administrador' : 'Usuário'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant={profile.status === 'active' ? 'secondary' : profile.status === 'pending' ? 'outline' : 'destructive'}>
+                        {profile.status === 'active' ? 'Ativo' : profile.status === 'pending' ? 'Pendente' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-2">
+                        {profile.status === 'pending' && (
+                          <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleStatusChange(profile, 'active')}>
+                            <UserCheck className="h-4 w-4 mr-1" /> Aprovar
+                          </Button>
+                        )}
+                        
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(profile)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button size="sm" variant="ghost" onClick={() => openPerm(profile)}>
+                          <ShieldCheck className="h-4 w-4" />
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className={profile.status === 'active' ? "text-destructive" : "text-green-600"}>
+                              {profile.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar alteração?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Deseja realmente {profile.status === 'active' ? 'desativar' : 'ativar'} o acesso de {profile.full_name}?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Não</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleStatusChange(profile, profile.status === 'active' ? 'inactive' : 'active')}>
+                                Sim, confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 
-      {/* Modal de Edição */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
               <DialogTitle>Editar Usuário</DialogTitle>
@@ -290,15 +289,14 @@ export default function Users() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={loading}>Salvar Alterações</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={loading}>Salvar Alterações</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Permissões */}
       <Dialog open={permOpen} onOpenChange={setPermOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Permissões de Acesso</DialogTitle>
             <DialogDescription>Selecione as páginas que {selectedUser?.full_name} pode acessar.</DialogDescription>
@@ -316,7 +314,7 @@ export default function Users() {
             ))}
           </div>
           <DialogFooter>
-            <Button onClick={handlePermSubmit} disabled={loading}>Salvar Permissões</Button>
+            <Button onClick={handlePermSubmit} className="w-full sm:w-auto" disabled={loading}>Salvar Permissões</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

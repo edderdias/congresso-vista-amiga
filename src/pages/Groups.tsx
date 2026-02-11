@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Groups() {
@@ -17,7 +16,6 @@ export default function Groups() {
   const [publishers, setPublishers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   
   const [formData, setFormData] = useState({
     group_number: 1,
@@ -76,15 +74,15 @@ export default function Groups() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Grupos</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingId(null); setFormData({group_number: 1, overseer_id: "none", assistant_id: "none", meeting_time: "", meeting_location: ""}); }}>
+            <Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({group_number: 1, overseer_id: "none", assistant_id: "none", meeting_time: "", meeting_location: ""}); }}>
               <Plus className="h-4 w-4 mr-2" /> Novo Grupo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleSubmit} className="space-y-4">
               <DialogHeader><DialogTitle>Configurar Grupo</DialogTitle></DialogHeader>
               <div className="space-y-2">
@@ -111,7 +109,7 @@ export default function Groups() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Horário da Saída</Label>
                   <Input type="time" value={formData.meeting_time} onChange={e => setFormData({...formData, meeting_time: e.target.value})} />
@@ -121,7 +119,7 @@ export default function Groups() {
                   <Input placeholder="Ex: Salão do Reino" value={formData.meeting_location} onChange={e => setFormData({...formData, meeting_location: e.target.value})} />
                 </div>
               </div>
-              <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full sm:w-auto">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -129,42 +127,44 @@ export default function Groups() {
 
       <Card>
         <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Grupo</TableHead>
-                <TableHead>Superintendente</TableHead>
-                <TableHead>Ajudante</TableHead>
-                <TableHead>Saída de Campo</TableHead>
-                <TableHead>Publicadores</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groups.map(g => (
-                <TableRow key={g.id}>
-                  <TableCell className="font-bold">{g.group_number}</TableCell>
-                  <TableCell>{g.overseer_name}</TableCell>
-                  <TableCell>{g.assistant_name}</TableCell>
-                  <TableCell>{g.field_service_meeting || "-"}</TableCell>
-                  <TableCell>{g.count}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Excluir Grupo?</AlertDialogTitle></AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Não</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(g.id)}>Sim</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Grupo</TableHead>
+                  <TableHead>Superintendente</TableHead>
+                  <TableHead>Ajudante</TableHead>
+                  <TableHead>Saída de Campo</TableHead>
+                  <TableHead>Publicadores</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {groups.map(g => (
+                  <TableRow key={g.id}>
+                    <TableCell className="font-bold whitespace-nowrap">{g.group_number}</TableCell>
+                    <TableCell className="whitespace-nowrap">{g.overseer_name}</TableCell>
+                    <TableCell className="whitespace-nowrap">{g.assistant_name}</TableCell>
+                    <TableCell className="whitespace-nowrap">{g.field_service_meeting || "-"}</TableCell>
+                    <TableCell>{g.count}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader><AlertDialogTitle>Excluir Grupo?</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir o grupo {g.group_number}?</AlertDialogDescription></AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Não</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(g.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

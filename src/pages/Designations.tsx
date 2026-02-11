@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/PaginationControls";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Designation {
   id: string;
@@ -68,6 +69,16 @@ export default function Designations() {
     setProfiles(data || []);
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("designations").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Designação excluída" });
+      loadDesignations();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -103,19 +114,19 @@ export default function Designations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Designações</h1>
           <p className="text-muted-foreground">Gerencie as atribuições da congregação</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Nova Designação
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[425px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
                 <DialogTitle>Adicionar Designação</DialogTitle>
@@ -172,7 +183,7 @@ export default function Designations() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit">Salvar</Button>
+                <Button type="submit" className="w-full sm:w-auto">Salvar</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -185,28 +196,48 @@ export default function Designations() {
           <CardDescription>Lista completa de atribuições</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Data da Reunião</TableHead>
-                <TableHead>Observações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedDesignations.map((designation) => (
-                <TableRow key={designation.id}>
-                  <TableCell className="font-medium">{designation.profiles?.full_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{getTypeLabel(designation.designation_type)}</Badge>
-                  </TableCell>
-                  <TableCell>{new Date(designation.meeting_date).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{designation.notes || "-"}</TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Observações</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedDesignations.map((designation) => (
+                  <TableRow key={designation.id}>
+                    <TableCell className="font-medium whitespace-nowrap">{designation.profiles?.full_name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="secondary">{getTypeLabel(designation.designation_type)}</Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{new Date(designation.meeting_date).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{designation.notes || "-"}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Designação?</AlertDialogTitle>
+                            <AlertDialogDescription>Deseja remover esta atribuição?</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(designation.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <PaginationControls 
             currentPage={currentPage} 
             totalPages={totalPages} 

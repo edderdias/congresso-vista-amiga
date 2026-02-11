@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, Filter, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -84,19 +82,19 @@ export default function Publishers() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Publicadores</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button onClick={() => setEditingId(null)}><Plus className="h-4 w-4 mr-2" /> Novo</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => setEditingId(null)}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
               <DialogHeader><DialogTitle>Dados do Publicador</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required /></div>
                 <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Ex: 11999999999" /></div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Grupo</Label>
                   <Select value={formData.group_id} onValueChange={v => setFormData({...formData, group_id: v})}>
@@ -123,7 +121,7 @@ export default function Publishers() {
               
               <div className="space-y-4">
                 <Label className="font-bold text-primary">Privilégios</Label>
-                <div className="grid grid-cols-3 gap-2 border p-3 rounded bg-slate-50">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border p-3 rounded bg-slate-50">
                   {PRIVILEGES.map(p => (
                     <div key={p} className="flex items-center space-x-2">
                       <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
@@ -135,7 +133,7 @@ export default function Publishers() {
 
               <div className="space-y-4">
                 <Label className="font-bold text-primary">Designações - Reunião</Label>
-                <div className="grid grid-cols-3 gap-2 border p-3 rounded bg-slate-50">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border p-3 rounded bg-slate-50">
                   {SECTIONS.reuniao.map(p => (
                     <div key={p} className="flex items-center space-x-2">
                       <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
@@ -145,7 +143,7 @@ export default function Publishers() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <Label className="font-bold text-primary">Atividades Mecânicas</Label>
                   <div className="space-y-2 border p-3 rounded bg-slate-50">
@@ -170,7 +168,7 @@ export default function Publishers() {
                 </div>
               </div>
 
-              <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full sm:w-auto">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -179,48 +177,50 @@ export default function Publishers() {
       <Card>
         <CardContent className="pt-6">
           <div className="mb-4"><Input placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead>Grupo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-bold">{p.full_name}</TableCell>
-                  <TableCell>
-                    {p.phone ? (
-                      <a href={`https://wa.me/55${p.phone.replace(/\D/g, '')}`} target="_blank" className="text-green-600 hover:underline font-medium">
-                        {p.phone}
-                      </a>
-                    ) : "-"}
-                  </TableCell>
-                  <TableCell>{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Mudou"><MapPin className="h-4 w-4" /></Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Confirmar Mudança?</AlertDialogTitle><AlertDialogDescription>Deseja marcar {p.full_name} como 'Mudou'?</AlertDialogDescription></AlertDialogHeader>
-                        <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleStatusChange(p.id, 'mudou')}>Sim</AlertDialogAction></AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader><AlertDialogTitle>Excluir Publicador?</AlertDialogTitle></AlertDialogHeader>
-                        <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)}>Sim</AlertDialogAction></AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>WhatsApp</TableHead>
+                  <TableHead>Grupo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginated.map(p => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-bold whitespace-nowrap">{p.full_name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {p.phone ? (
+                        <a href={`https://wa.me/55${p.phone.replace(/\D/g, '')}`} target="_blank" className="text-green-600 hover:underline font-medium">
+                          {p.phone}
+                        </a>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Mudou"><MapPin className="h-4 w-4" /></Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader><AlertDialogTitle>Confirmar Mudança?</AlertDialogTitle><AlertDialogDescription>Deseja marcar {p.full_name} como 'Mudou'?</AlertDialogDescription></AlertDialogHeader>
+                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleStatusChange(p.id, 'mudou')}>Sim</AlertDialogAction></AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader><AlertDialogTitle>Excluir Publicador?</AlertDialogTitle><AlertDialogDescription>Deseja remover {p.full_name} do sistema?</AlertDialogDescription></AlertDialogHeader>
+                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction></AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <PaginationControls currentPage={currentPage} totalPages={Math.ceil(filtered.length/10)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
