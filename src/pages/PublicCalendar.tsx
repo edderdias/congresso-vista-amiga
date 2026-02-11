@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths, isSameDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, Award, Mic, User, Video } from "lucide-react";
@@ -16,6 +16,7 @@ export default function PublicCalendar() {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
+  const [congregationName, setCongregationName] = useState("");
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,13 +29,13 @@ export default function PublicCalendar() {
 
     try {
       // Buscamos todos os dados necessários para o período
-      const [pubs, meets, clean, avDesig, generalDesig] = await Promise.all([
+      const [pubs, meets, clean, avDesig, generalDesig, settings] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
-        // Lógica de sobreposição: início da escala <= fim do mês E fim da escala >= início do mês
         supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
         supabase.from("av_designations").select("*"),
-        supabase.from("designations").select("*, profiles(full_name)").gte("meeting_date", start).lte("meeting_date", end)
+        supabase.from("designations").select("*, profiles(full_name)").gte("meeting_date", start).lte("meeting_date", end),
+        supabase.from("settings").select("congregation_name").single()
       ]);
 
       setPublishers(pubs.data || []);
@@ -42,6 +43,7 @@ export default function PublicCalendar() {
       setCleaning(clean.data || []);
       setAv(avDesig.data || []);
       setDesignations(generalDesig.data || []);
+      if (settings.data) setCongregationName(settings.data.congregation_name);
     } catch (error) {
       console.error("[PublicCalendar] Erro ao carregar dados:", error);
     } finally {
@@ -75,7 +77,7 @@ export default function PublicCalendar() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-            <CalendarIcon className="h-8 w-8" /> Calendário da Congregação
+            <CalendarIcon className="h-8 w-8" /> Calendário da Congregação {congregationName && `- ${congregationName}`}
           </h1>
           <div className="flex items-center gap-4 bg-white p-2 rounded-lg shadow-sm">
             <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}><ChevronLeft /></Button>
