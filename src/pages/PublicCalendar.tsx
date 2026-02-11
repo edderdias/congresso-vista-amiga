@@ -27,12 +27,12 @@ export default function PublicCalendar() {
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
     try {
-      console.log("[PublicCalendar] Carregando dados para o período:", { start, end });
-      
+      // Buscamos todos os dados necessários para o período
       const [pubs, meets, clean, avDesig, generalDesig] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
-        supabase.from("cleaning_schedules").select("*, groups(group_number)").or(`start_date.lte.${end},end_date.gte.${start}`),
+        // Lógica de sobreposição: início da escala <= fim do mês E fim da escala >= início do mês
+        supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
         supabase.from("av_designations").select("*"),
         supabase.from("designations").select("*, profiles(full_name)").gte("meeting_date", start).lte("meeting_date", end)
       ]);
@@ -42,13 +42,6 @@ export default function PublicCalendar() {
       setCleaning(clean.data || []);
       setAv(avDesig.data || []);
       setDesignations(generalDesig.data || []);
-      
-      console.log("[PublicCalendar] Dados carregados:", { 
-        reunioes: meets.data?.length, 
-        limpeza: clean.data?.length, 
-        av: avDesig.data?.length,
-        designacoes: generalDesig.data?.length 
-      });
     } catch (error) {
       console.error("[PublicCalendar] Erro ao carregar dados:", error);
     } finally {
