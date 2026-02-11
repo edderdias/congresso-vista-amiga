@@ -47,7 +47,6 @@ export default function Publishers() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Estados dos Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -69,20 +68,32 @@ export default function Publishers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Construindo o payload explicitamente para evitar enviar campos extras (como group_number)
     const payload = { 
-      ...formData, 
-      group_id: formData.group_id === "none" ? null : formData.group_id,
+      full_name: formData.full_name,
+      phone: formData.phone || null,
       birth_date: formData.birth_date || null,
       baptism_date: formData.baptism_date || null,
       gender: formData.gender || null,
-      hope: formData.hope || null
+      hope: formData.hope || null,
+      privileges: formData.privileges || [],
+      status: formData.status,
+      group_id: formData.group_id === "none" ? null : formData.group_id
     };
+
     const { error } = editingId 
       ? await supabase.from("publishers").update(payload).eq("id", editingId)
       : await supabase.from("publishers").insert([payload]);
 
-    if (error) toast.error("Erro ao salvar");
-    else { toast.success("Salvo!"); setOpen(false); loadData(); }
+    if (error) {
+      console.error("Erro ao salvar publicador:", error);
+      toast.error("Erro ao salvar: " + error.message);
+    } else {
+      toast.success("Salvo com sucesso!");
+      setOpen(false);
+      loadData();
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -104,7 +115,6 @@ export default function Publishers() {
     }));
   };
 
-  // Lógica de Filtragem
   const filtered = publishers.filter(p => {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
@@ -123,13 +133,13 @@ export default function Publishers() {
           <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => setEditingId(null)}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <DialogHeader><DialogTitle>Dados do Publicador</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingId ? "Editar Publicador" : "Novo Publicador"}</DialogTitle></DialogHeader>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required /></div>
-                <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="(00) 0000-0000" /></div>
+                <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Ex: 11999999999" /></div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -377,7 +387,17 @@ export default function Publishers() {
                             <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleStatusChange(p.id, 'mudou')}>Sim</AlertDialogAction></AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
+                          full_name: p.full_name || "",
+                          phone: p.phone || "",
+                          birth_date: p.birth_date || "",
+                          baptism_date: p.baptism_date || "",
+                          gender: p.gender || "",
+                          privileges: p.privileges || [],
+                          hope: p.hope || "",
+                          status: p.status || "active",
+                          group_id: p.group_id || "none"
+                        }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                           <AlertDialogContent>
