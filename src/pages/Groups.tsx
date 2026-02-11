@@ -135,6 +135,7 @@ export default function Groups() {
                 <TableHead>Grupo</TableHead>
                 <TableHead>Superintendente</TableHead>
                 <TableHead>Ajudante</TableHead>
+                <TableHead>Saída de Campo</TableHead>
                 <TableHead>Publicadores</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -145,6 +146,7 @@ export default function Groups() {
                   <TableCell className="font-bold">{g.group_number}</TableCell>
                   <TableCell>{g.overseer_name}</TableCell>
                   <TableCell>{g.assistant_name}</TableCell>
+                  <TableCell>{g.field_service_meeting || "-"}</TableCell>
                   <TableCell>{g.count}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>

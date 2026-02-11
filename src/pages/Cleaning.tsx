@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Cleaning() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -28,7 +29,7 @@ export default function Cleaning() {
   const [formData, setFormData] = useState({
     group_id: "",
     date: undefined as Date | undefined,
-    cleaning_type: "weekly" as any,
+    cleaning_type: "Semanal",
     notes: "",
     shared_name: ""
   });
@@ -57,11 +58,11 @@ export default function Cleaning() {
     const weekEnd = endOfWeek(formData.date, { weekStartsOn: 1 });
 
     const payload = {
-      group_id: formData.shared_name ? null : formData.group_id,
+      group_id: formData.shared_name && formData.shared_name !== "none" ? null : formData.group_id,
       start_date: format(weekStart, 'yyyy-MM-dd'),
       end_date: format(weekEnd, 'yyyy-MM-dd'),
-      cleaning_type: formData.shared_name ? 'weekly' : formData.cleaning_type,
-      notes: formData.shared_name || formData.notes
+      cleaning_type: formData.cleaning_type,
+      notes: formData.shared_name && formData.shared_name !== "none" ? formData.shared_name : formData.notes
     };
 
     const { error } = editingId 
@@ -73,6 +74,24 @@ export default function Cleaning() {
     else { toast.success("Salvo!"); setOpen(false); loadData(); }
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("cleaning_schedules").delete().eq("id", id);
+    if (error) toast.error("Erro ao excluir");
+    else { toast.success("Excluído!"); loadData(); }
+  };
+
+  const handleEdit = (s: any) => {
+    setEditingId(s.id);
+    setFormData({
+      group_id: s.group_id || "",
+      date: parseISO(s.start_date),
+      cleaning_type: s.cleaning_type || "Semanal",
+      notes: s.notes || "",
+      shared_name: s.group_id ? "none" : s.notes
+    });
+    setOpen(true);
+  };
+
   const calendarDays = eachDayOfInterval({ start: startOfWeek(startOfMonth(currentMonth), {weekStartsOn: 1}), end: endOfWeek(endOfMonth(currentMonth), {weekStartsOn: 1}) });
 
   return (
@@ -80,7 +99,7 @@ export default function Cleaning() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Escala de Limpeza</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button onClick={() => setEditingId(null)}><Plus className="h-4 w-4 mr-2" /> Lançar Designação</Button></DialogTrigger>
+          <DialogTrigger asChild><Button onClick={() => { setEditingId(null); setFormData({group_id: "", date: undefined, cleaning_type: "Semanal", notes: "", shared_name: ""}); }}><Plus className="h-4 w-4 mr-2" /> Lançar Designação</Button></DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <DialogHeader><DialogTitle>Designação de Limpeza</DialogTitle></DialogHeader>
@@ -98,7 +117,7 @@ export default function Cleaning() {
                 </div>
               )}
 
-              {!formData.shared_name || formData.shared_name === "none" ? (
+              {(!formData.shared_name || formData.shared_name === "none") && (
                 <div className="space-y-2">
                   <Label>Grupo Responsável</Label>
                   <Select value={formData.group_id} onValueChange={v => setFormData({...formData, group_id: v})}>
@@ -106,10 +125,22 @@ export default function Cleaning() {
                     <SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-              ) : null}
+              )}
 
               <div className="space-y-2">
-                <Label>Semana</Label>
+                <Label>Tipo de Limpeza</Label>
+                <Select value={formData.cleaning_type} onValueChange={v => setFormData({...formData, cleaning_type: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Semanal">Semanal</SelectItem>
+                    <SelectItem value="Geral">Geral</SelectItem>
+                    <SelectItem value="Especial">Especial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Escolha a Semana</Label>
                 <Popover>
                   <PopoverTrigger asChild><Button variant="outline" className="w-full text-left"><CalendarIcon className="mr-2 h-4 w-4" /> {formData.date ? format(formData.date, "dd/MM/yyyy") : "Selecione"}</Button></PopoverTrigger>
                   <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.date} onSelect={d => setFormData({...formData, date: d})} locale={ptBR} /></PopoverContent>
@@ -138,12 +169,25 @@ export default function Cleaning() {
             {calendarDays.map((day, i) => {
               const dayScheds = schedules.filter(s => isWithinInterval(day, { start: parseISO(s.start_date), end: parseISO(s.end_date) }));
               return (
-                <div key={i} className={cn("min-h-[100px] p-1 border-r border-b", !isSameMonth(day, currentMonth) && "bg-slate-50/50 opacity-50")}>
+                <div key={i} className={cn("min-h-[120px] p-1 border-r border-b", !isSameMonth(day, currentMonth) && "bg-slate-50/50 opacity-50")}>
                   <span className="text-xs font-medium">{format(day, 'd')}</span>
                   <div className="mt-1 space-y-1">
                     {dayScheds.map(s => (
-                      <div key={s.id} className={cn("text-[9px] p-1 rounded border font-bold", !s.group_id ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700")}>
-                        {!s.group_id ? s.notes : `G${s.groups?.group_number}`}
+                      <div key={s.id} className={cn("text-[9px] p-1 rounded border font-bold group relative", !s.group_id ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700")}>
+                        <div className="flex justify-between items-center">
+                          <span>{!s.group_id ? s.notes : `G${s.groups?.group_number}`}</span>
+                          <div className="hidden group-hover:flex gap-1">
+                            <button onClick={() => handleEdit(s)}><Pencil size={8} /></button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild><button><Trash2 size={8} /></button></AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle></AlertDialogHeader>
+                                <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(s.id)}>Sim</AlertDialogAction></AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                        <div className="opacity-70">{s.cleaning_type}</div>
                       </div>
                     ))}
                   </div>

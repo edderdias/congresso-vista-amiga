@@ -45,17 +45,14 @@ export default function Reports() {
     hours: 0,
     bible_studies: 0,
     notes: "",
-    participated: true,
+    participated: false,
     pioneer_status: "publicador" as any,
   });
-
-  const [filterName, setFilterName] = useState("");
-  const [filterGroup, setFilterGroup] = useState("all");
 
   useEffect(() => {
     loadReports();
     loadGroups();
-  }, [filterName, filterGroup]);
+  }, []);
 
   const loadGroups = async () => {
     const { data } = await supabase.from("groups").select("*").order("group_number");
@@ -73,17 +70,21 @@ export default function Reports() {
   };
 
   const loadReports = async () => {
-    let query = supabase
+    const { data } = await supabase
       .from("preaching_reports")
       .select("*")
       .order("year", { ascending: false })
       .order("month", { ascending: false });
-
-    if (filterName) query = query.ilike("reporter_name", `%${filterName}%`);
-    if (filterGroup !== "all") query = query.eq("group_id", parseInt(filterGroup));
-
-    const { data } = await query;
     setReports(data || []);
+  };
+
+  const handlePublisherChange = (pubId: string) => {
+    const pub = publishers.find(p => p.id === pubId);
+    let status = "publicador";
+    if (pub?.privileges?.includes("Pioneiro Regular")) status = "pioneiro_regular";
+    else if (pub?.privileges?.includes("Pioneiro Auxiliar")) status = "pioneiro_auxiliar";
+    
+    setFormData({ ...formData, publisher_id: pubId, pioneer_status: status });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,9 +130,7 @@ export default function Reports() {
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <DialogHeader>
-                <DialogTitle>Lançar Relatório</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Lançar Relatório</DialogTitle></DialogHeader>
               
               <div className="space-y-2">
                 <Label>Grupo</Label>
@@ -140,19 +139,15 @@ export default function Reports() {
                   loadPublishersByGroup(val);
                 }}>
                   <SelectTrigger><SelectValue placeholder="Selecione o grupo" /></SelectTrigger>
-                  <SelectContent>
-                    {groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Publicador</Label>
-                <Select value={formData.publisher_id} onValueChange={(val) => setFormData({...formData, publisher_id: val})} disabled={!formData.group_id}>
+                <Select value={formData.publisher_id} onValueChange={handlePublisherChange} disabled={!formData.group_id}>
                   <SelectTrigger><SelectValue placeholder="Selecione o publicador" /></SelectTrigger>
-                  <SelectContent>
-                    {publishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{publishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
@@ -170,6 +165,29 @@ export default function Reports() {
                   <Label>Estudos</Label>
                   <Input type="number" value={formData.bible_studies} onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value)})} />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <RadioGroup value={formData.pioneer_status} onValueChange={(v) => setFormData({...formData, pioneer_status: v})}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="publicador" id="pub" />
+                    <Label htmlFor="pub">Publicador</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pioneiro_auxiliar" id="aux" />
+                    <Label htmlFor="aux">Pioneiro Auxiliar</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pioneiro_regular" id="reg" />
+                    <Label htmlFor="reg">Pioneiro Regular</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
               </div>
 
               <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>

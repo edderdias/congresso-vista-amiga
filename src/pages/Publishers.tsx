@@ -60,6 +60,12 @@ export default function Publishers() {
     else { toast.success("Salvo!"); setOpen(false); loadData(); }
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("publishers").delete().eq("id", id);
+    if (error) toast.error("Erro ao excluir");
+    else { toast.success("Publicador excluído"); loadData(); }
+  };
+
   const handleStatusChange = async (id: string, status: string) => {
     await supabase.from("publishers").update({ status }).eq("id", id);
     toast.success("Status atualizado");
@@ -88,6 +94,31 @@ export default function Publishers() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Nome</Label><Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required /></div>
                 <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="Ex: 11999999999" /></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Grupo</Label>
+                  <Select value={formData.group_id} onValueChange={v => setFormData({...formData, group_id: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="inactive">Inativo</SelectItem>
+                      <SelectItem value="mudou">Mudou</SelectItem>
+                      <SelectItem value="removido">Removido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="space-y-4">
@@ -178,6 +209,13 @@ export default function Publishers() {
                       </AlertDialogContent>
                     </AlertDialog>
                     <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader><AlertDialogTitle>Excluir Publicador?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)}>Sim</AlertDialogAction></AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}

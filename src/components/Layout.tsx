@@ -56,7 +56,6 @@ export function Layout({ children }: LayoutProps) {
           toast.error("Seu acesso foi desativado ou ainda não foi aprovado.");
           navigate("/auth");
         } else {
-          // Verificar permissão da página atual
           const path = location.pathname.replace("/", "") || "dashboard";
           const hasPermission = profile.role === 'admin' || profile.permissions?.[path];
           
@@ -77,9 +76,7 @@ export function Layout({ children }: LayoutProps) {
     );
   }
 
-  if (!session || !profile) {
-    return null;
-  }
+  if (!session || !profile) return null;
 
   return (
     <SidebarProvider>
@@ -97,6 +94,9 @@ export function Layout({ children }: LayoutProps) {
           <main className="flex-1 p-6 bg-background overflow-auto">
             {children}
           </main>
+          <footer className="p-4 border-t bg-card text-center text-xs text-muted-foreground">
+            © Copyright 2026 Eder Dias | Desenvolvido por Eder Dias
+          </footer>
         </div>
       </div>
     </SidebarProvider>

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [congregationName, setCongregationName] = useState("");
   const navigate = useNavigate();
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ 
@@ -22,11 +23,15 @@ export default function Auth() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/");
-      }
+      if (session) navigate("/");
     });
+    loadSettings();
   }, [navigate]);
+
+  const loadSettings = async () => {
+    const { data } = await supabase.from("settings").select("congregation_name").single();
+    if (data) setCongregationName(data.congregation_name);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +48,6 @@ export default function Auth() {
       return;
     }
 
-    // Verificar status do usuário após login
     const { data: profile } = await supabase
       .from("profiles")
       .select("status")
@@ -62,29 +66,21 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (signupData.password !== signupData.confirmPassword) {
       toast.error("As senhas não coincidem");
       return;
     }
 
     setLoading(true);
-
     const { error } = await supabase.auth.signUp({
       email: signupData.email,
       password: signupData.password,
-      options: {
-        data: {
-          full_name: signupData.fullName,
-        },
-      },
+      options: { data: { full_name: signupData.fullName } },
     });
 
     setLoading(false);
-
-    if (error) {
-      toast.error("Erro no cadastro: " + error.message);
-    } else {
+    if (error) toast.error("Erro no cadastro: " + error.message);
+    else {
       toast.success("Cadastro realizado! Aguarde a aprovação do administrador.");
       setIsLogin(true);
     }
@@ -97,6 +93,9 @@ export default function Auth() {
           <CardTitle className="text-3xl font-bold text-primary">
             Sistema da Congregação
           </CardTitle>
+          {congregationName && (
+            <p className="text-lg font-semibold text-muted-foreground">{congregationName}</p>
+          )}
           <CardDescription className="text-base">
             Gerencie sua congregação de forma eficiente.
           </CardDescription>
@@ -113,25 +112,11 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    required
-                  />
+                  <Input id="login-email" type="email" value={loginData.email} onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                  />
+                  <Input id="login-password" type="password" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} required />
                 </div>
                 <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
@@ -143,47 +128,19 @@ export default function Auth() {
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nome Completo</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={signupData.fullName}
-                    onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                    required
-                  />
+                  <Input id="signup-name" type="text" value={signupData.fullName} onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    required
-                  />
+                  <Input id="signup-email" type="email" value={signupData.email} onChange={(e) => setSignupData({ ...signupData, email: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    required
-                  />
+                  <Input id="signup-password" type="password" value={signupData.password} onChange={(e) => setSignupData({ ...signupData, password: e.target.value })} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-confirm">Confirmar Senha</Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                    required
-                  />
+                  <Input id="signup-confirm" type="password" value={signupData.confirmPassword} onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })} required />
                 </div>
                 <Button type="submit" className="w-full h-11 font-semibold" disabled={loading}>
                   {loading ? "Cadastrando..." : "Cadastrar"}
@@ -195,8 +152,7 @@ export default function Auth() {
       </Card>
       
       <footer className="mt-8 text-muted-foreground text-sm text-center">
-        <p>© Copyright 2026 Eder Dias</p>
-        <p>Desenvolvido por Eder Dias</p>
+        <p>© Copyright 2026 Eder Dias | Desenvolvido por Eder Dias</p>
       </footer>
     </div>
   );
