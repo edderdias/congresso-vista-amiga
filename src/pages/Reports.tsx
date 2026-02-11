@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ export default function Reports() {
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
@@ -153,8 +154,12 @@ export default function Reports() {
     { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" }
   ];
 
-  const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
-  const paginatedReports = reports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const filteredReports = reports.filter(r => 
+    r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
+  const paginatedReports = filteredReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -236,8 +241,20 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col lg:flex-row gap-4 items-end">
-            <div className="space-y-2 w-full lg:flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="space-y-2 w-full">
+              <Label>Filtrar por Nome</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Pesquisar nome..." 
+                  className="pl-9"
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+              </div>
+            </div>
+            <div className="space-y-2 w-full">
               <Label>Filtrar por Mês</Label>
               <Select value={filterMonth} onValueChange={setFilterMonth}>
                 <SelectTrigger>
@@ -251,7 +268,7 @@ export default function Reports() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 w-full lg:flex-1">
+            <div className="space-y-2 w-full">
               <Label>Filtrar por Grupo</Label>
               <Select value={filterGroup} onValueChange={setFilterGroup}>
                 <SelectTrigger>
@@ -265,7 +282,7 @@ export default function Reports() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 w-full lg:w-32">
+            <div className="space-y-2 w-full">
               <Label>Ano</Label>
               <Input type="number" value={filterYear} onChange={e => setFilterYear(parseInt(e.target.value))} />
             </div>

@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const SECTIONS = {
   reuniao: [
@@ -72,7 +73,9 @@ export default function Publishers() {
       ...formData, 
       group_id: formData.group_id === "none" ? null : formData.group_id,
       birth_date: formData.birth_date || null,
-      baptism_date: formData.baptism_date || null
+      baptism_date: formData.baptism_date || null,
+      gender: formData.gender || null,
+      hope: formData.hope || null
     };
     const { error } = editingId 
       ? await supabase.from("publishers").update(payload).eq("id", editingId)
@@ -151,6 +154,35 @@ export default function Publishers() {
                       </Badge>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Sexo</Label>
+                  <RadioGroup value={formData.gender} onValueChange={v => setFormData({...formData, gender: v})} className="flex gap-4 pt-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="M" id="male" />
+                      <Label htmlFor="male" className="font-normal cursor-pointer">Masculino</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="F" id="female" />
+                      <Label htmlFor="female" className="font-normal cursor-pointer">Feminino</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label>Esperança</Label>
+                  <RadioGroup value={formData.hope} onValueChange={v => setFormData({...formData, hope: v})} className="flex gap-4 pt-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="anointed" id="anointed" />
+                      <Label htmlFor="anointed" className="font-normal cursor-pointer">Ungido</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="other_sheep" id="other_sheep" />
+                      <Label htmlFor="other_sheep" className="font-normal cursor-pointer">Outras Ovelhas</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
               </div>
 
@@ -299,6 +331,7 @@ export default function Publishers() {
                   <TableHead>Nome</TableHead>
                   <TableHead>WhatsApp</TableHead>
                   <TableHead>Grupo</TableHead>
+                  <TableHead>Privilégios</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -306,7 +339,7 @@ export default function Publishers() {
               <TableBody>
                 {paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhum publicador encontrado com esses filtros.
                     </TableCell>
                   </TableRow>
@@ -322,7 +355,20 @@ export default function Publishers() {
                         ) : "-"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
-                      <TableCell className="whitespace-nowrap capitalize">{p.status}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex flex-wrap gap-1">
+                          {p.privileges?.filter((priv: string) => PRIVILEGES.includes(priv)).map((priv: string) => (
+                            <Badge key={priv} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                              {priv}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={p.status === 'active' ? 'default' : 'secondary'} className={p.status === 'active' ? "bg-blue-500" : ""}>
+                          {p.status === 'active' ? 'Ativo' : p.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Mudou"><MapPin className="h-4 w-4" /></Button></AlertDialogTrigger>
