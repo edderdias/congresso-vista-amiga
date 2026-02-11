@@ -14,6 +14,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { cn } from "@/lib/utils";
 
 const SECTIONS = {
   reuniao: [
@@ -49,7 +50,7 @@ export default function Publishers() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("default"); // Padrão: Ativos e Repreendidos
   const [filterPrivilege, setFilterPrivilege] = useState("all");
 
   const [formData, setFormData] = useState({
@@ -69,7 +70,6 @@ export default function Publishers() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Construindo o payload explicitamente para evitar enviar campos extras (como group_number)
     const payload = { 
       full_name: formData.full_name,
       phone: formData.phone || null,
@@ -118,12 +118,42 @@ export default function Publishers() {
   const filtered = publishers.filter(p => {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
-    const matchesStatus = filterStatus === "all" || p.status === filterStatus;
+    
+    // Lógica de filtro de status
+    let matchesStatus = true;
+    if (filterStatus === "default") {
+      matchesStatus = p.status === "active" || p.status === "repreendido";
+    } else if (filterStatus !== "all") {
+      matchesStatus = p.status === filterStatus;
+    }
+
     const matchesPrivilege = filterPrivilege === "all" || p.privileges?.includes(filterPrivilege);
     return matchesSearch && matchesGroup && matchesStatus && matchesPrivilege;
   });
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
+
+  const getStatusBadge = (status: string) => {
+    const configs: Record<string, string> = {
+      active: "bg-green-500 hover:bg-green-600",
+      inactive: "bg-yellow-500 hover:bg-yellow-600",
+      removido: "bg-red-500 hover:bg-red-600",
+      repreendido: "bg-blue-500 hover:bg-blue-600",
+      mudou: "bg-gray-500 hover:bg-gray-600",
+    };
+    const labels: Record<string, string> = {
+      active: "Ativo",
+      inactive: "Inativo",
+      removido: "Removido",
+      repreendido: "Repreendido",
+      mudou: "Mudou",
+    };
+    return (
+      <Badge className={cn("text-white border-none", configs[status] || "bg-slate-500")}>
+        {labels[status] || status}
+      </Badge>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -214,6 +244,7 @@ export default function Publishers() {
                     <SelectContent>
                       <SelectItem value="active">Ativo</SelectItem>
                       <SelectItem value="inactive">Inativo</SelectItem>
+                      <SelectItem value="repreendido">Repreendido</SelectItem>
                       <SelectItem value="mudou">Mudou</SelectItem>
                       <SelectItem value="removido">Removido</SelectItem>
                     </SelectContent>
@@ -309,9 +340,11 @@ export default function Publishers() {
                   <SelectValue placeholder="Filtrar por Status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="default">Padrão (Ativos/Repreendidos)</SelectItem>
                   <SelectItem value="all">Todos os Status</SelectItem>
                   <SelectItem value="active">Ativo</SelectItem>
                   <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="repreendido">Repreendido</SelectItem>
                   <SelectItem value="mudou">Mudou</SelectItem>
                   <SelectItem value="removido">Removido</SelectItem>
                 </SelectContent>
@@ -375,9 +408,7 @@ export default function Publishers() {
                         </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <Badge variant={p.status === 'active' ? 'default' : 'secondary'} className={p.status === 'active' ? "bg-blue-500" : ""}>
-                          {p.status === 'active' ? 'Ativo' : p.status}
-                        </Badge>
+                        {getStatusBadge(p.status)}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <AlertDialog>
