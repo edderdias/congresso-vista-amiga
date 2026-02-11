@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,11 @@ export default function Reports() {
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
+  // Estados de Filtro
+  const [filterMonth, setFilterMonth] = useState<string>("all");
+  const [filterGroup, setFilterGroup] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+
   const [formData, setFormData] = useState({
     group_id: "",
     publisher_id: "",
@@ -52,7 +57,7 @@ export default function Reports() {
   useEffect(() => {
     loadReports();
     loadGroups();
-  }, []);
+  }, [filterMonth, filterGroup, filterYear]);
 
   const loadGroups = async () => {
     const { data } = await supabase.from("groups").select("*").order("group_number");
@@ -70,12 +75,27 @@ export default function Reports() {
   };
 
   const loadReports = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("preaching_reports")
       .select("*")
-      .order("year", { ascending: false })
-      .order("month", { ascending: false });
-    setReports(data || []);
+      .eq("year", filterYear)
+      .order("month", { ascending: false })
+      .order("reporter_name", { ascending: true });
+
+    if (filterMonth !== "all") {
+      query = query.eq("month", parseInt(filterMonth));
+    }
+
+    if (filterGroup !== "all") {
+      query = query.eq("group_id", parseInt(filterGroup));
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      toast.error("Erro ao carregar relatórios");
+    } else {
+      setReports(data || []);
+    }
   };
 
   const handlePublisherChange = (pubId: string) => {
@@ -114,6 +134,15 @@ export default function Reports() {
       loadReports();
     }
   };
+
+  const monthOptions = [
+    { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" },
+    { value: "3", label: "Março" }, { value: "4", label: "Abril" },
+    { value: "5", label: "Maio" }, { value: "6", label: "Junho" },
+    { value: "7", label: "Julho" }, { value: "8", label: "Agosto" },
+    { value: "9", label: "Setembro" }, { value: "10", label: "Outubro" },
+    { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" }
+  ];
 
   const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
   const paginatedReports = reports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -197,7 +226,43 @@ export default function Reports() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="space-y-2 flex-1">
+              <Label>Filtrar por Mês</Label>
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os meses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os meses</SelectItem>
+                  {monthOptions.map(m => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 flex-1">
+              <Label>Filtrar por Grupo</Label>
+              <Select value={filterGroup} onValueChange={setFilterGroup}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os grupos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os grupos</SelectItem>
+                  {groups.map(g => (
+                    <SelectItem key={g.id} value={g.group_number.toString()}>Grupo {g.group_number}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 w-32">
+              <Label>Ano</Label>
+              <Input type="number" value={filterYear} onChange={e => setFilterYear(parseInt(e.target.value))} />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -210,18 +275,26 @@ export default function Reports() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedReports.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell>{r.reporter_name}</TableCell>
-                  <TableCell>{r.group_id}</TableCell>
-                  <TableCell>{r.month}/{r.year}</TableCell>
-                  <TableCell>{r.hours}</TableCell>
-                  <TableCell>{r.bible_studies}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+              {paginatedReports.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Nenhum relatório encontrado para os filtros selecionados.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                paginatedReports.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.reporter_name}</TableCell>
+                    <TableCell>Grupo {r.group_id}</TableCell>
+                    <TableCell>{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
+                    <TableCell>{r.hours}</TableCell>
+                    <TableCell>{r.bible_studies}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
           <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
