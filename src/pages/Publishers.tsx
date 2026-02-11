@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 const SECTIONS = {
   reuniao: [
@@ -24,6 +25,19 @@ const SECTIONS = {
 };
 
 const PRIVILEGES = ["Ancião", "Servo Ministérial", "Pioneiro Regular", "Pioneiro Auxiliar", "Publicador Batizado", "Publicador não Batizado"];
+
+const calculateYears = (dateString: string | null) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - date.getFullYear();
+  const m = now.getMonth() - date.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < date.getDate())) {
+    years--;
+  }
+  return years >= 0 ? years : 0;
+};
 
 export default function Publishers() {
   const [publishers, setPublishers] = useState<any[]>([]);
@@ -116,8 +130,28 @@ export default function Publishers() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Data de Nascimento</Label><Input type="date" value={formData.birth_date || ""} onChange={e => setFormData({...formData, birth_date: e.target.value})} /></div>
-                <div className="space-y-2"><Label>Data de Batismo</Label><Input type="date" value={formData.baptism_date || ""} onChange={e => setFormData({...formData, baptism_date: e.target.value})} /></div>
+                <div className="space-y-2">
+                  <Label>Data de Nascimento</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="date" value={formData.birth_date || ""} onChange={e => setFormData({...formData, birth_date: e.target.value})} />
+                    {formData.birth_date && (
+                      <Badge variant="outline" className="whitespace-nowrap bg-slate-50">
+                        {calculateYears(formData.birth_date)} anos
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de Batismo</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="date" value={formData.baptism_date || ""} onChange={e => setFormData({...formData, baptism_date: e.target.value})} />
+                    {formData.baptism_date && (
+                      <Badge variant="outline" className="whitespace-nowrap bg-slate-50">
+                        {calculateYears(formData.baptism_date)} anos de batismo
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
