@@ -15,8 +15,10 @@ import School from "./pages/School";
 import Publishers from "./pages/Publishers";
 import Auth from "./pages/Auth";
 import PublicReport from "./pages/PublicReport";
+import PublicCalendar from "./pages/PublicCalendar";
 import Meetings from "./pages/Meetings";
 import AudioVideo from "./pages/AudioVideo";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +33,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/relatorio-publico" element={<PublicReport />} />
           <Route path="/relatorio-publico/:groupNumber" element={<PublicReport />} />
+          <Route path="/calendario" element={<PublicCalendar />} />
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />
@@ -42,6 +45,7 @@ const App = () => (
           <Route path="/school" element={<Layout><School /></Layout>} />
           <Route path="/territories" element={<Layout><Territories /></Layout>} />
           <Route path="/users" element={<Layout><Users /></Layout>} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

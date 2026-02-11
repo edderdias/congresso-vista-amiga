@@ -27,6 +27,7 @@ const allItems = [
   { id: "school", title: "Escola", url: "/school", icon: BookOpen },
   { id: "territories", title: "Territórios", url: "/territories", icon: MapPin },
   { id: "users", title: "Gerenciar Usuários", url: "/users", icon: Settings },
+  { id: "settings", title: "Configurações", url: "/settings", icon: Settings },
 ];
 
 interface AppSidebarProps {
@@ -40,14 +41,10 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error("Erro ao sair: " + error.message);
-    } else {
-      navigate("/auth");
-    }
+    if (error) toast.error("Erro ao sair");
+    else navigate("/auth");
   };
 
-  // Filtrar itens com base nas permissões
   const filteredItems = allItems.filter(item => {
     if (userProfile?.role === 'admin') return true;
     return userProfile?.permissions?.[item.id];
@@ -57,9 +54,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
     <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarContent>
         <div className="p-4 border-b border-sidebar-border">
-          {!collapsed && (
-            <h2 className="text-xl font-bold text-sidebar-foreground">Congregação</h2>
-          )}
+          {!collapsed && <h2 className="text-xl font-bold text-sidebar-foreground">Congregação</h2>}
         </div>
         
         <SidebarGroup>
@@ -69,15 +64,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
               {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={({ isActive }) =>
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "hover:bg-sidebar-accent/50"
-                      }
-                    >
+                    <NavLink to={item.url} end={item.url === "/"} className={({ isActive }) => isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50"}>
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -89,11 +76,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
         </SidebarGroup>
 
         <div className="mt-auto p-4 border-t border-sidebar-border">
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
-          >
+          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50">
             <LogOut className="h-4 w-4 mr-2" />
             {!collapsed && <span>Sair</span>}
           </Button>
