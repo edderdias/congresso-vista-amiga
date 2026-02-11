@@ -142,11 +142,11 @@ export default function PublicCalendar() {
                           </div>
                         ))}
                         {dayClean.map(s => (
-                          <div key={s.id} onClick={() => setSelectedEvent({ type: 'cleaning', data: s })} className="p-2 rounded bg-green-50 border border-green-100 cursor-pointer hover:bg-red-100 transition-colors shadow-sm">
+                          <div key={s.id} onClick={() => setSelectedEvent({ type: 'cleaning', data: s })} className="p-2 rounded bg-green-50 border border-green-100 cursor-pointer hover:bg-green-100 transition-colors shadow-sm">
                             <div className="flex items-center gap-1 text-[10px] font-bold text-green-800">
                               <Brush size={10} /> {s.group_id ? `Grupo ${s.groups?.group_number}` : s.notes}
                             </div>
-                            <div className="text-[8px] text-green-600">{s.cleaning_type}</div>
+                            <div className="text-[8px] text-red-600">{s.cleaning_type}</div>
                           </div>
                         ))}
                       </div>
