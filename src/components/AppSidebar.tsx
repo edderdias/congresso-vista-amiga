@@ -17,6 +17,7 @@ import { toast } from "sonner";
 
 const allItems = [
   { id: "dashboard", title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { id: "calendario", title: "Calendário", url: "/calendario", icon: Calendar },
   { id: "reports", title: "Relatórios", url: "/reports", icon: FileText },
   { id: "groups", title: "Grupos", url: "/groups", icon: Users },
   { id: "publishers", title: "Publicadores", url: "/publishers", icon: User },
@@ -47,6 +48,8 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
 
   const filteredItems = allItems.filter(item => {
     if (userProfile?.role === 'admin') return true;
+    // Permite acesso ao calendário para todos os usuários ativos
+    if (item.id === 'calendario') return true;
     return userProfile?.permissions?.[item.id];
   });
 

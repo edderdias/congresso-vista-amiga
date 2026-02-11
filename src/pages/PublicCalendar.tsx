@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ export default function PublicCalendar() {
   const [cleaning, setCleaning] = useState<any[]>([]);
   const [av, setAv] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [designations, setDesignations] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,17 +27,19 @@ export default function PublicCalendar() {
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
     try {
-      const [pubs, meets, clean, avDesig] = await Promise.all([
+      const [pubs, meets, clean, avDesig, generalDesig] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
         supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
-        supabase.from("av_designations").select("*")
+        supabase.from("av_designations").select("*"),
+        supabase.from("designations").select("*, profiles(full_name)").gte("meeting_date", start).lte("meeting_date", end)
       ]);
 
       setPublishers(pubs.data || []);
       setMeetings(meets.data || []);
       setCleaning(clean.data || []);
       setAv(avDesig.data || []);
+      setDesignations(generalDesig.data || []);
     } catch (error) {
       console.error("Erro ao carregar dados do calendário:", error);
     } finally {
@@ -50,6 +53,17 @@ export default function PublicCalendar() {
     start: startOfWeek(startOfMonth(currentMonth), {weekStartsOn: 1}), 
     end: endOfWeek(endOfMonth(currentMonth), {weekStartsOn: 1}) 
   });
+
+  const getDesignationLabel = (type: string) => {
+    const types: Record<string, string> = {
+      sound: "Som",
+      attendant: "Indicador",
+      literature: "Literatura",
+      cleaning: "Limpeza",
+      security: "Segurança"
+    };
+    return types[type] || type;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -89,6 +103,7 @@ export default function PublicCalendar() {
                       return false;
                     }
                   });
+                  const dayDesigs = designations.filter(d => d.meeting_date === dayStr);
                   
                   return (
                     <div key={i} className={cn("min-h-[150px] p-2 border-r border-b bg-white", !format(day, 'MM').includes(format(currentMonth, 'MM')) && "bg-slate-50 opacity-40")}>
@@ -107,6 +122,14 @@ export default function PublicCalendar() {
                             </div>
                           );
                         })}
+                        {dayDesigs.map(d => (
+                          <div key={d.id} onClick={() => setSelectedEvent({ type: 'designation', data: d })} className="p-2 rounded bg-purple-50 border border-purple-100 space-y-1 cursor-pointer hover:bg-purple-100 transition-colors">
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-purple-800">
+                              <Award size={10} /> {getDesignationLabel(d.designation_type)}
+                            </div>
+                            <div className="text-[9px] text-purple-600 truncate">{d.profiles?.full_name}</div>
+                          </div>
+                        ))}
                         {dayClean.map(s => (
                           <div key={s.id} onClick={() => setSelectedEvent({ type: 'cleaning', data: s })} className="p-2 rounded bg-green-50 border border-green-100 cursor-pointer hover:bg-green-100 transition-colors">
                             <div className="flex items-center gap-1 text-[10px] font-bold text-green-800">
@@ -147,6 +170,23 @@ export default function PublicCalendar() {
                             <div><span className="text-muted-foreground">Mic 2:</span> {getPubName(selectedEvent.av.mic_2_id)}</div>
                             <div><span className="text-muted-foreground">Palco:</span> {getPubName(selectedEvent.av.stage_id)}</div>
                           </div>
+                        </div>
+                      )}
+                    </>
+                  ) : selectedEvent?.type === 'designation' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div><Label className="text-muted-foreground">Tipo</Label><p className="font-bold">{getDesignationLabel(selectedEvent.data.designation_type)}</p></div>
+                        <div><Label className="text-muted-foreground">Data</Label><p className="font-bold">{selectedEvent.data.meeting_date ? format(parseISO(selectedEvent.data.meeting_date), "dd/MM/yyyy") : "-"}</p></div>
+                      </div>
+                      <div className="border-t pt-4">
+                        <Label className="text-primary font-bold">Designado</Label>
+                        <p className="text-lg font-bold">{selectedEvent.data.profiles?.full_name}</p>
+                      </div>
+                      {selectedEvent.data.notes && (
+                        <div className="border-t pt-4">
+                          <Label className="text-muted-foreground">Observações</Label>
+                          <p className="text-sm">{selectedEvent.data.notes}</p>
                         </div>
                       )}
                     </>
