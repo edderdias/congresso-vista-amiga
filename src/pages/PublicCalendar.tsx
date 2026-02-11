@@ -146,7 +146,7 @@ export default function PublicCalendar() {
                             <div className="flex items-center gap-1 text-[10px] font-bold text-green-800">
                               <Brush size={10} /> {s.group_id ? `Grupo ${s.groups?.group_number}` : s.notes}
                             </div>
-                            <div className="text-[8px] text-red-600">{s.cleaning_type}</div>
+                            <div className="text-[8px] text-green-600">{s.cleaning_type}</div>
                           </div>
                         ))}
                       </div>
