@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Search, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,11 @@ export default function Publishers() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Estados dos Filtros
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterGroup, setFilterGroup] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
@@ -77,13 +81,23 @@ export default function Publishers() {
     }));
   };
 
-  const filtered = publishers.filter(p => p.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+  // Lógica de Filtragem
+  const filtered = publishers.filter(p => {
+    const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
+    const matchesStatus = filterStatus === "all" || p.status === filterStatus;
+    return matchesSearch && matchesGroup && matchesStatus;
+  });
+
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Publicadores</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Publicadores</h1>
+          <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => setEditingId(null)}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -175,8 +189,49 @@ export default function Publishers() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="mb-4"><Input placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+        <CardHeader className="pb-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Pesquisar por nome..." 
+                className="pl-9"
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={filterGroup} onValueChange={setFilterGroup}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por Grupo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Grupos</SelectItem>
+                  {groups.map(g => (
+                    <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="mudou">Mudou</SelectItem>
+                  <SelectItem value="removido">Removido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -184,40 +239,50 @@ export default function Publishers() {
                   <TableHead>Nome</TableHead>
                   <TableHead>WhatsApp</TableHead>
                   <TableHead>Grupo</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-bold whitespace-nowrap">{p.full_name}</TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {p.phone ? (
-                        <a href={`https://wa.me/55${p.phone.replace(/\D/g, '')}`} target="_blank" className="text-green-600 hover:underline font-medium">
-                          {p.phone}
-                        </a>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Mudou"><MapPin className="h-4 w-4" /></Button></AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader><AlertDialogTitle>Confirmar Mudança?</AlertDialogTitle><AlertDialogDescription>Deseja marcar {p.full_name} como 'Mudou'?</AlertDialogDescription></AlertDialogHeader>
-                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleStatusChange(p.id, 'mudou')}>Sim</AlertDialogAction></AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader><AlertDialogTitle>Excluir Publicador?</AlertDialogTitle><AlertDialogDescription>Deseja remover {p.full_name} do sistema?</AlertDialogDescription></AlertDialogHeader>
-                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction></AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                {paginated.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      Nenhum publicador encontrado com esses filtros.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  paginated.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-bold whitespace-nowrap">{p.full_name}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {p.phone ? (
+                          <a href={`https://wa.me/55${p.phone.replace(/\D/g, '')}`} target="_blank" className="text-green-600 hover:underline font-medium">
+                            {p.phone}
+                          </a>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
+                      <TableCell className="whitespace-nowrap capitalize">{p.status}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" title="Mudou"><MapPin className="h-4 w-4" /></Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Confirmar Mudança?</AlertDialogTitle><AlertDialogDescription>Deseja marcar {p.full_name} como 'Mudou'?</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleStatusChange(p.id, 'mudou')}>Sim</AlertDialogAction></AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({...p, group_id: p.group_id || "none"}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Excluir Publicador?</AlertDialogTitle><AlertDialogDescription>Deseja remover {p.full_name} do sistema?</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction></AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
