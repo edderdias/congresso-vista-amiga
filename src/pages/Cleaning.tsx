@@ -133,8 +133,8 @@ export default function Cleaning() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Semanal">Semanal</SelectItem>
-                    <SelectItem value="Geral">Geral</SelectItem>
-                    <SelectItem value="Especial">Especial</SelectItem>
+                    <SelectItem value="Pós Reunião">Geral</SelectItem>
+                    <SelectItem value="Geral">Especial</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
