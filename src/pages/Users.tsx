@@ -32,6 +32,8 @@ const PAGES = [
   { id: "groups", name: "Grupos" },
   { id: "publishers", name: "Publicadores" },
   { id: "meetings", name: "Reuniões" },
+  { id: "speeches", name: "Discursos" },
+  { id: "attendance", name: "Assistência" },
   { id: "audio-video", name: "Áudio e Vídeo" },
   { id: "cleaning", name: "Limpeza" },
   { id: "designations", name: "Designações" },

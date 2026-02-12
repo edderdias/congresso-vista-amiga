@@ -19,6 +19,8 @@ import PublicCalendar from "./pages/PublicCalendar";
 import Meetings from "./pages/Meetings";
 import AudioVideo from "./pages/AudioVideo";
 import Settings from "./pages/Settings";
+import Attendance from "./pages/Attendance";
+import Speeches from "./pages/Speeches";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,8 @@ const App = () => (
           <Route path="/publishers" element={<Layout><Publishers /></Layout>} />
           <Route path="/meetings" element={<Layout><Meetings /></Layout>} />
           <Route path="/audio-video" element={<Layout><AudioVideo /></Layout>} />
+          <Route path="/attendance" element={<Layout><Attendance /></Layout>} />
+          <Route path="/speeches" element={<Layout><Speeches /></Layout>} />
           <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} />
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
           <Route path="/school" element={<Layout><School /></Layout>} />

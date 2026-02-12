@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor } from "lucide-react";
+import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor, BarChart3, Mic2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -17,11 +17,12 @@ import { toast } from "sonner";
 
 const allItems = [
   { id: "dashboard", title: "Dashboard", url: "/", icon: LayoutDashboard },
-  // { id: "calendario", title: "Calendário", url: "/calendario", icon: Calendar },
   { id: "reports", title: "Relatórios", url: "/reports", icon: FileText },
   { id: "groups", title: "Grupos", url: "/groups", icon: Users },
   { id: "publishers", title: "Publicadores", url: "/publishers", icon: User },
   { id: "meetings", title: "Reuniões", url: "/meetings", icon: Calendar },
+  { id: "speeches", title: "Discursos", url: "/speeches", icon: Mic2 },
+  { id: "attendance", title: "Assistência", url: "/attendance", icon: BarChart3 },
   { id: "audio-video", title: "Áudio e Vídeo", url: "/audio-video", icon: Monitor },
   { id: "cleaning", title: "Limpeza", url: "/cleaning", icon: Brush },
   { id: "designations", title: "Designações", url: "/designations", icon: Award },
@@ -48,8 +49,6 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
 
   const filteredItems = allItems.filter(item => {
     if (userProfile?.role === 'admin') return true;
-    // Permite acesso ao calendário para todos os usuários ativos
-    if (item.id === 'calendario') return true;
     return userProfile?.permissions?.[item.id];
   });
 
