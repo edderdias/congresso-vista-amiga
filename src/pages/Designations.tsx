@@ -90,7 +90,7 @@ export default function Designations() {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("designations").delete().eq("id", id);
     if (error) {
-      toast.error("Erro ao excluir");
+      toast.error("Erro ao excluir: " + error.message);
     } else {
       toast.success("Designação excluída");
       loadDesignations();
@@ -105,7 +105,7 @@ export default function Designations() {
       user_id: formData.user_id,
       designation_type: formData.designation_type,
       meeting_date: formData.meeting_date,
-      notes: formData.notes
+      notes: formData.notes || null
     };
 
     const { error } = editingId 
@@ -113,7 +113,8 @@ export default function Designations() {
       : await supabase.from("designations").insert([payload]);
 
     if (error) {
-      toast.error("Erro ao salvar designação");
+      console.error("Erro Supabase:", error);
+      toast.error("Erro ao salvar: " + error.message);
     } else {
       toast.success("Designação salva com sucesso!");
       setOpen(false);
