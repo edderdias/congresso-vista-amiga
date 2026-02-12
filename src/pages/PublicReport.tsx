@@ -38,7 +38,7 @@ export default function PublicReport() {
     loadGroups();
   }, [groupNumber]);
 
-  // Lógica para marcar participação automaticamente
+  // Lógica para marcar participação automaticamente se houver horas ou estudos
   useEffect(() => {
     if (formData.hours > 0 || formData.bible_studies > 0) {
       setFormData(prev => ({ ...prev, participated: true }));
@@ -55,14 +55,9 @@ export default function PublicReport() {
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
 
-    if (now.getDate() > 20) {
-      month += 1;
-      if (month > 12) {
-        month = 1;
-        year += 1;
-      }
-    }
-
+    // Se for depois do dia 20, sugere o mês atual. Se for antes, sugere o mês anterior? 
+    // Geralmente relatórios são do mês que passou.
+    // Vamos manter a lógica simples: sugere o mês atual.
     setFormData(prev => ({ ...prev, month: month.toString(), year }));
   };
 
@@ -85,6 +80,7 @@ export default function PublicReport() {
       .from("publishers")
       .select("id, full_name, privileges")
       .eq("group_id", groupId)
+      .eq("status", "active") // Apenas ativos podem relatar publicamente
       .order("full_name");
     setPublishers(data || []);
   };
@@ -99,6 +95,11 @@ export default function PublicReport() {
     e.preventDefault();
     if (!selectedPublisherId) {
       toast.error("Por favor, selecione seu nome.");
+      return;
+    }
+
+    if (!formData.participated && formData.hours === 0 && formData.bible_studies === 0) {
+      toast.error("Por favor, marque a participação ou insira horas/estudos.");
       return;
     }
 
@@ -124,7 +125,8 @@ export default function PublicReport() {
     setLoading(false);
 
     if (error) {
-      toast.error("Erro ao enviar relatório: " + error.message);
+      console.error("Erro RLS ou DB:", error);
+      toast.error("Erro ao enviar relatório. Verifique se a política de acesso foi configurada no banco.");
     } else {
       setSubmitted(true);
       toast.success("Relatório enviado com sucesso!");
