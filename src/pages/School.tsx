@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Combobox } from "@/components/ui/combobox";
 
 export default function School() {
   const [data, setData] = useState<any[]>([]);
@@ -43,7 +43,6 @@ export default function School() {
       .eq("status", "active")
       .order("full_name");
     
-    // Filtra apenas quem tem "Parte de Estudante"
     const students = pubs?.filter(p => p.privileges?.includes("Parte de Estudante")) || [];
     setPublishers(students);
   };
@@ -62,7 +61,6 @@ export default function School() {
 
       if (error) throw error;
 
-      // Como não podemos alterar a estrutura para joins complexos, buscamos os nomes manualmente
       const { data: allPubs } = await supabase.from("publishers").select("id, full_name");
       
       const formatted = schoolData.map(item => ({
@@ -83,11 +81,15 @@ export default function School() {
     if (!formData.student_id) return toast.error("Selecione o estudante principal");
 
     setLoading(true);
+    
+    // Se for Leitura ou Discurso, o ajudante é sempre nulo
+    const isSoloPart = formData.part_type === "Leitura da Bíblia" || formData.part_type === "Discurso";
+    
     const payload = {
       meeting_date: formData.meeting_date,
       part_type: formData.part_type,
       student_id: formData.student_id,
-      assistant_id: formData.assistant_id === "none" ? null : formData.assistant_id
+      assistant_id: isSoloPart || formData.assistant_id === "none" ? null : formData.assistant_id
     };
 
     try {
@@ -147,6 +149,11 @@ export default function School() {
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
 
+  const publisherOptions = publishers.map(p => ({ value: p.id, label: p.full_name }));
+  const assistantOptions = [{ value: "none", label: "Nenhum" }, ...publisherOptions];
+
+  const showAssistant = formData.part_type !== "Leitura da Bíblia" && formData.part_type !== "Discurso";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -183,23 +190,24 @@ export default function School() {
                 </div>
                 <div className="space-y-2">
                   <Label>Principal</Label>
-                  <Select value={formData.student_id} onValueChange={v => setFormData({...formData, student_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o estudante" /></SelectTrigger>
-                    <SelectContent>
-                      {publishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Combobox 
+                    options={publisherOptions} 
+                    value={formData.student_id} 
+                    onChange={(v) => setFormData({...formData, student_id: v})}
+                    placeholder="Pesquisar estudante..."
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label>Ajudante</Label>
-                  <Select value={formData.assistant_id} onValueChange={v => setFormData({...formData, assistant_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o ajudante" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {publishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {showAssistant && (
+                  <div className="space-y-2">
+                    <Label>Ajudante</Label>
+                    <Combobox 
+                      options={assistantOptions} 
+                      value={formData.assistant_id} 
+                      onChange={(v) => setFormData({...formData, assistant_id: v})}
+                      placeholder="Pesquisar ajudante..."
+                    />
+                  </div>
+                )}
                 <DialogFooter><Button type="submit" disabled={loading}>Salvar</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -236,7 +244,7 @@ export default function School() {
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle><AlertDialogDescription>Deseja remover esta designação da escola?</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(item.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim</AlertDialogAction></AlertDialogFooter>
+                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(item.id)}>Sim</AlertDialogAction></AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
                       </TableCell>

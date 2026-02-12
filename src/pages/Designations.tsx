@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { Combobox } from "@/components/ui/combobox";
 
 interface Designation {
   id: string;
@@ -68,7 +69,6 @@ export default function Designations() {
     if (error) {
       toast.error("Erro ao carregar designações");
     } else {
-      // Buscamos nomes dos publicadores
       const { data: pubs } = await supabase.from("publishers").select("id, full_name");
       const formatted = data.map(d => ({
         ...d,
@@ -189,6 +189,8 @@ export default function Designations() {
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
 
+  const publisherOptions = getFilteredPublishers().map(p => ({ value: p.id, label: p.full_name }));
+
   const totalPages = Math.ceil(designations.length / ITEMS_PER_PAGE);
   const paginatedDesignations = designations.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -238,16 +240,12 @@ export default function Designations() {
                   </div>
                   <div className="space-y-2">
                     <Label>Designado</Label>
-                    <Select value={formData.user_id} onValueChange={(value) => setFormData({ ...formData, user_id: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma pessoa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getFilteredPublishers().map((p) => (
-                          <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Combobox 
+                      options={publisherOptions} 
+                      value={formData.user_id} 
+                      onChange={(v) => setFormData({...formData, user_id: v})}
+                      placeholder="Pesquisar pessoa..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Observações</Label>
@@ -303,7 +301,7 @@ export default function Designations() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(designation.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                              <AlertDialogAction onClick={() => handleDelete(designation.id)}>Excluir</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
