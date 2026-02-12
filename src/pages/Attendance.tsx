@@ -47,7 +47,7 @@ export default function Attendance() {
       setData(attendanceData || []);
     } catch (error: any) {
       console.error("[Attendance] Erro ao carregar:", error);
-      toast.error("Erro ao carregar dados. Verifique se a tabela existe.");
+      toast.error(`Erro ao carregar assistência: ${error.message || "Verifique se a tabela existe no Supabase"}`);
     }
   };
 

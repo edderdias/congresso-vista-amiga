@@ -47,7 +47,7 @@ export default function Speeches() {
       setData(speechesData || []);
     } catch (error: any) {
       console.error("[Speeches] Erro ao carregar:", error);
-      toast.error("Erro ao carregar discursos. Verifique se a tabela existe.");
+      toast.error(`Erro ao carregar discursos: ${error.message || "Verifique se a tabela existe no Supabase"}`);
     }
   };
 
