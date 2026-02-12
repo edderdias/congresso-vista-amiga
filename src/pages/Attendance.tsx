@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Users, Monitor, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Attendance() {
@@ -33,18 +32,23 @@ export default function Attendance() {
   useEffect(() => { loadData(); }, [filterMonth, filterYear]);
 
   const loadData = async () => {
-    const start = `${filterYear}-${filterMonth}-01`;
-    const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
+    try {
+      const start = `${filterYear}-${filterMonth}-01`;
+      const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
 
-    const { data: attendanceData, error } = await supabase
-      .from("attendance")
-      .select("*")
-      .gte("date", start)
-      .lte("date", end)
-      .order("date", { ascending: false });
+      const { data: attendanceData, error } = await supabase
+        .from("attendance")
+        .select("*")
+        .gte("date", start)
+        .lte("date", end)
+        .order("date", { ascending: false });
 
-    if (error) toast.error("Erro ao carregar dados");
-    else setData(attendanceData || []);
+      if (error) throw error;
+      setData(attendanceData || []);
+    } catch (error: any) {
+      console.error("[Attendance] Erro ao carregar:", error);
+      toast.error("Erro ao carregar dados. Verifique se a tabela existe.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,20 +56,28 @@ export default function Attendance() {
     setLoading(true);
 
     const payload = {
-      ...formData,
+      date: formData.date,
+      type: formData.type,
+      in_person: Number(formData.in_person),
+      zoom: Number(formData.zoom),
       total: Number(formData.in_person) + Number(formData.zoom)
     };
 
-    const { error } = editingId 
-      ? await supabase.from("attendance").update(payload).eq("id", editingId)
-      : await supabase.from("attendance").insert([payload]);
+    try {
+      const { error } = editingId 
+        ? await supabase.from("attendance").update(payload).eq("id", editingId)
+        : await supabase.from("attendance").insert([payload]);
 
-    setLoading(false);
-    if (error) toast.error("Erro ao salvar");
-    else {
+      if (error) throw error;
+
       toast.success("Salvo com sucesso!");
       setOpen(false);
       loadData();
+    } catch (error: any) {
+      console.error("[Attendance] Erro ao salvar:", error);
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,7 +98,16 @@ export default function Attendance() {
     setOpen(true);
   };
 
-  // Cálculos do Dashboard
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({
+      date: format(new Date(), "yyyy-MM-dd"),
+      type: "Meio de Semana",
+      in_person: 0,
+      zoom: 0
+    });
+  };
+
   const midweek = data.filter(d => d.type === "Meio de Semana");
   const weekend = data.filter(d => d.type === "Final de Semana");
 
@@ -116,9 +137,9 @@ export default function Attendance() {
             <SelectContent>{months.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
           </Select>
           <Input type="number" className="w-[100px]" value={filterYear} onChange={e => setFilterYear(e.target.value)} />
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) setEditingId(null); }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Adicionar</Button>
+              <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" /> Adicionar</Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit} className="space-y-4">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, BookOpen, User, Building } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -32,34 +32,44 @@ export default function Speeches() {
   useEffect(() => { loadData(); }, [filterMonth, filterYear]);
 
   const loadData = async () => {
-    const start = `${filterYear}-${filterMonth}-01`;
-    const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
+    try {
+      const start = `${filterYear}-${filterMonth}-01`;
+      const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
 
-    const { data: speechesData, error } = await supabase
-      .from("speeches")
-      .select("*")
-      .gte("date", start)
-      .lte("date", end)
-      .order("date", { ascending: false });
+      const { data: speechesData, error } = await supabase
+        .from("speeches")
+        .select("*")
+        .gte("date", start)
+        .lte("date", end)
+        .order("date", { ascending: false });
 
-    if (error) toast.error("Erro ao carregar discursos");
-    else setData(speechesData || []);
+      if (error) throw error;
+      setData(speechesData || []);
+    } catch (error: any) {
+      console.error("[Speeches] Erro ao carregar:", error);
+      toast.error("Erro ao carregar discursos. Verifique se a tabela existe.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = editingId 
-      ? await supabase.from("speeches").update(formData).eq("id", editingId)
-      : await supabase.from("speeches").insert([formData]);
+    try {
+      const { error } = editingId 
+        ? await supabase.from("speeches").update(formData).eq("id", editingId)
+        : await supabase.from("speeches").insert([formData]);
 
-    setLoading(false);
-    if (error) toast.error("Erro ao salvar");
-    else {
+      if (error) throw error;
+
       toast.success("Discurso salvo!");
       setOpen(false);
       loadData();
+    } catch (error: any) {
+      console.error("[Speeches] Erro ao salvar:", error);
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,6 +88,16 @@ export default function Speeches() {
       congregation: item.congregation
     });
     setOpen(true);
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({
+      date: format(new Date(), "yyyy-MM-dd"),
+      title: "",
+      speaker: "",
+      congregation: ""
+    });
   };
 
   const months = [
@@ -100,9 +120,9 @@ export default function Speeches() {
             <SelectContent>{months.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
           </Select>
           <Input type="number" className="w-[100px]" value={filterYear} onChange={e => setFilterYear(e.target.value)} />
-          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) setEditingId(null); }}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Adicionar</Button>
+              <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" /> Adicionar</Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit} className="space-y-4">
