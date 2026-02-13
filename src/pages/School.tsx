@@ -12,12 +12,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Combobox } from "@/components/ui/combobox";
+
+interface Meeting {
+  id: string;
+  date: string;
+  type: string;
+}
 
 export default function School() {
   const [data, setData] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,7 +33,7 @@ export default function School() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
   const [formData, setFormData] = useState({
-    meeting_date: format(new Date(), "yyyy-MM-dd"),
+    meeting_date: "",
     part_type: "Leitura da Bíblia",
     student_id: "",
     assistant_id: "none"
@@ -34,7 +42,16 @@ export default function School() {
   useEffect(() => { 
     loadData(); 
     loadPublishers();
+    loadMeetings();
   }, [filterMonth, filterYear]);
+
+  const loadMeetings = async () => {
+    const { data } = await supabase
+      .from("meetings")
+      .select("*")
+      .order("date", { ascending: false });
+    setMeetings(data || []);
+  };
 
   const loadPublishers = async () => {
     const { data: pubs } = await supabase
@@ -78,11 +95,11 @@ export default function School() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.meeting_date) return toast.error("Selecione a reunião");
     if (!formData.student_id) return toast.error("Selecione o estudante principal");
 
     setLoading(true);
     
-    // Se for Leitura ou Discurso, o ajudante é sempre nulo
     const isSoloPart = formData.part_type === "Leitura da Bíblia" || formData.part_type === "Discurso";
     
     const payload = {
@@ -129,7 +146,7 @@ export default function School() {
   const resetForm = () => {
     setEditingId(null);
     setFormData({
-      meeting_date: format(new Date(), "yyyy-MM-dd"),
+      meeting_date: "",
       part_type: "Leitura da Bíblia",
       student_id: "",
       assistant_id: "none"
@@ -175,11 +192,22 @@ export default function School() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar" : "Nova"} Designação de Escola</DialogTitle>
-                  <DialogDescription>Apenas publicadores com privilégio "Parte de Estudante" são listados.</DialogDescription>
+                  <DialogDescription>Selecione a reunião cadastrada.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-2">
-                  <Label>Data</Label>
-                  <Input type="date" value={formData.meeting_date} onChange={e => setFormData({...formData, meeting_date: e.target.value})} required />
+                  <Label>Reunião</Label>
+                  <Select value={formData.meeting_date} onValueChange={(v) => setFormData({...formData, meeting_date: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a reunião" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {meetings.map((m) => (
+                        <SelectItem key={m.id} value={m.date}>
+                          {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Parte</Label>

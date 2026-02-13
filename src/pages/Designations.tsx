@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Combobox } from "@/components/ui/combobox";
 
 interface Designation {
@@ -31,11 +32,18 @@ interface Publisher {
   privileges: string[];
 }
 
+interface Meeting {
+  id: string;
+  date: string;
+  type: string;
+}
+
 const ITEMS_PER_PAGE = 10;
 
 export default function Designations() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [publishers, setPublishers] = useState<Publisher[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [open, setOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,14 +54,23 @@ export default function Designations() {
   const [formData, setFormData] = useState({
     user_id: "",
     designation_type: "Presidente",
-    meeting_date: format(new Date(), "yyyy-MM-dd"),
+    meeting_date: "",
     notes: "",
   });
 
   useEffect(() => {
     loadDesignations();
     loadPublishers();
+    loadMeetings();
   }, [filterMonth, filterYear]);
+
+  const loadMeetings = async () => {
+    const { data } = await supabase
+      .from("meetings")
+      .select("*")
+      .order("date", { ascending: false });
+    setMeetings(data || []);
+  };
 
   const loadDesignations = async () => {
     const start = `${filterYear}-${filterMonth}-01`;
@@ -100,6 +117,7 @@ export default function Designations() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.user_id) return toast.error("Selecione um designado");
+    if (!formData.meeting_date) return toast.error("Selecione uma reunião");
 
     const payload = {
       user_id: formData.user_id,
@@ -128,7 +146,7 @@ export default function Designations() {
     setFormData({ 
       user_id: "", 
       designation_type: "Presidente", 
-      meeting_date: format(new Date(), "yyyy-MM-dd"), 
+      meeting_date: "", 
       notes: "" 
     });
   };
@@ -221,12 +239,23 @@ export default function Designations() {
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>{editingId ? "Editar" : "Nova"} Designação</DialogTitle>
-                  <DialogDescription>O filtro de designados muda conforme o tipo selecionado.</DialogDescription>
+                  <DialogDescription>Selecione a reunião e o designado.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label>Data da Reunião</Label>
-                    <Input type="date" value={formData.meeting_date} onChange={e => setFormData({...formData, meeting_date: e.target.value})} required />
+                    <Label>Reunião</Label>
+                    <Select value={formData.meeting_date} onValueChange={(v) => setFormData({...formData, meeting_date: v})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a reunião" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {meetings.map((m) => (
+                          <SelectItem key={m.id} value={m.date}>
+                            {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Tipo de Designação</Label>
