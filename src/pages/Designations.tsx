@@ -56,6 +56,8 @@ export default function Designations() {
     designation_type: "Presidente",
     meeting_date: "",
     notes: "",
+    theme: "",
+    minutes: ""
   });
 
   useEffect(() => {
@@ -119,11 +121,18 @@ export default function Designations() {
     if (!formData.user_id) return toast.error("Selecione um designado");
     if (!formData.meeting_date) return toast.error("Selecione uma reunião");
 
+    let finalNotes = formData.notes;
+    if (formData.designation_type === "Tesouro") {
+      finalNotes = formData.theme;
+    } else if (formData.designation_type === "Nossa Vida Cristã") {
+      finalNotes = formData.minutes ? `${formData.minutes} min - ${formData.theme}` : formData.theme;
+    }
+
     const payload = {
       user_id: formData.user_id,
       designation_type: formData.designation_type,
       meeting_date: formData.meeting_date,
-      notes: formData.notes || null
+      notes: finalNotes || null
     };
 
     const { error } = editingId 
@@ -147,17 +156,36 @@ export default function Designations() {
       user_id: "", 
       designation_type: "Presidente", 
       meeting_date: "", 
-      notes: "" 
+      notes: "",
+      theme: "",
+      minutes: ""
     });
   };
 
   const handleEdit = (d: Designation) => {
     setEditingId(d.id);
+    
+    let theme = "";
+    let minutes = "";
+    let notes = d.notes || "";
+
+    if (d.designation_type === "Tesouro") {
+      theme = notes;
+    } else if (d.designation_type === "Nossa Vida Cristã" && notes.includes(" min - ")) {
+      const parts = notes.split(" min - ");
+      minutes = parts[0];
+      theme = parts[1];
+    } else if (d.designation_type === "Nossa Vida Cristã") {
+      theme = notes;
+    }
+
     setFormData({
       user_id: d.user_id,
       designation_type: d.designation_type,
       meeting_date: d.meeting_date,
-      notes: d.notes || ""
+      notes: notes,
+      theme: theme,
+      minutes: minutes
     });
     setOpen(true);
   };
@@ -259,7 +287,7 @@ export default function Designations() {
                   </div>
                   <div className="space-y-2">
                     <Label>Tipo de Designação</Label>
-                    <Select value={formData.designation_type} onValueChange={(v) => setFormData({ ...formData, designation_type: v, user_id: "" })}>
+                    <Select value={formData.designation_type} onValueChange={(v) => setFormData({ ...formData, designation_type: v, user_id: "", theme: "", minutes: "" })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {designationTypes.map((type) => (
@@ -268,6 +296,27 @@ export default function Designations() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {formData.designation_type === "Tesouro" && (
+                    <div className="space-y-2">
+                      <Label>Tema</Label>
+                      <Input value={formData.theme} onChange={(e) => setFormData({ ...formData, theme: e.target.value })} placeholder="Informe o tema do Tesouro" required />
+                    </div>
+                  )}
+
+                  {formData.designation_type === "Nossa Vida Cristã" && (
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="col-span-1 space-y-2">
+                        <Label>Min</Label>
+                        <Input type="number" value={formData.minutes} onChange={(e) => setFormData({ ...formData, minutes: e.target.value })} placeholder="Ex: 15" />
+                      </div>
+                      <div className="col-span-3 space-y-2">
+                        <Label>Tema</Label>
+                        <Input value={formData.theme} onChange={(e) => setFormData({ ...formData, theme: e.target.value })} placeholder="Informe o tema" required />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label>Designado</Label>
                     <Combobox 
@@ -277,10 +326,13 @@ export default function Designations() {
                       placeholder="Pesquisar pessoa..."
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Observações</Label>
-                    <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
-                  </div>
+
+                  {formData.designation_type !== "Tesouro" && formData.designation_type !== "Nossa Vida Cristã" && (
+                    <div className="space-y-2">
+                      <Label>Observações</Label>
+                      <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full sm:w-auto">Salvar</Button>
@@ -304,12 +356,13 @@ export default function Designations() {
                   <TableHead>Data</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Designado</TableHead>
+                  <TableHead>Observação/Tema</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedDesignations.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada.</TableCell></TableRow>
                 ) : (
                   paginatedDesignations.map((designation) => (
                     <TableRow key={designation.id}>
@@ -318,6 +371,9 @@ export default function Designations() {
                         <Badge variant="secondary">{designation.designation_type}</Badge>
                       </TableCell>
                       <TableCell className="font-medium whitespace-nowrap">{designation.publisher_name}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                        {designation.notes || "-"}
+                      </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(designation)}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
