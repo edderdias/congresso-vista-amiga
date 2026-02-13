@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Eye, Map as MapIcon, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Eye, Map as MapIcon, Image as ImageIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { PaginationControls } from "@/components/PaginationControls";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Territory {
   id: string;
@@ -64,7 +65,6 @@ export default function Territories() {
 
       if (error) throw error;
 
-      // Buscar nomes dos publicadores separadamente para evitar erros de relacionamento
       const { data: pubsData } = await supabase.from("publishers").select("id, full_name");
       
       const formatted = territoriesData.map(t => ({
@@ -99,6 +99,16 @@ export default function Territories() {
       map_url: territory.map_url || ""
     });
     setOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("territories").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Sucesso!", description: "Território excluído com sucesso." });
+      loadTerritories();
+    }
   };
 
   const handleView = (territory: Territory) => {
@@ -185,7 +195,7 @@ export default function Territories() {
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>{editingId ? "Editar Território" : "Adicionar Território"}</DialogTitle>
+                <DialogTitle>{editingId ? "Editar" : "Adicionar"} Território</DialogTitle>
                 <DialogDescription>Preencha os dados do território abaixo.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -245,7 +255,6 @@ export default function Territories() {
         </Dialog>
       </div>
 
-      {/* Modal de Visualização */}
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedTerritory && (
@@ -321,13 +330,23 @@ export default function Territories() {
               <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(territory)}>
                 <Pencil className="h-4 w-4 mr-1" /> Editar
               </Button>
-              {territory.map_url && (
-                <Button variant="ghost" size="icon" asChild>
-                  <a href={territory.map_url} target="_blank" rel="noopener noreferrer">
-                    <MapIcon className="h-4 w-4 text-primary" />
-                  </a>
-                </Button>
-              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Excluir Território?</AlertDialogTitle>
+                    <AlertDialogDescription>Deseja realmente remover o território {territory.number}?</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Não</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(territory.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardFooter>
           </Card>
         ))}

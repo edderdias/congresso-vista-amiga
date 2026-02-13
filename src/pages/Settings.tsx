@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Settings() {
   const [loading, setLoading] = useState(false);
@@ -80,7 +81,21 @@ export default function Settings() {
                 {formData.shared_congregations.map((name, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={name} onChange={e => updateShared(i, e.target.value)} placeholder="Nome da congregação" />
-                    <Button variant="ghost" size="icon" onClick={() => removeShared(i)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remover Congregação?</AlertDialogTitle>
+                          <AlertDialogDescription>Deseja remover esta congregação da lista de compartilhamento?</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Não</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => removeShared(i)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Remover</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))}
                 <Button variant="outline" size="sm" onClick={addShared}><Plus className="h-4 w-4 mr-1" /> Adicionar Congregação</Button>
