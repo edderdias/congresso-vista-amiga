@@ -93,42 +93,42 @@ export default function PublicReport() {
       return;
     }
 
-    if (!formData.participated && formData.hours === 0 && formData.bible_studies === 0) {
-      toast.error("Por favor, marque a participação ou insira horas/estudos.");
-      return;
-    }
-
     setLoading(true);
     const publisher = publishers.find(p => p.id === selectedPublisherId);
     const group = groups.find(g => g.id === selectedGroupId);
 
-    // Verificação de duplicidade
-    const { data: existingReport, error: checkError } = await supabase
-      .from("preaching_reports")
-      .select("id")
-      .eq("reporter_name", publisher?.full_name)
-      .eq("month", parseInt(formData.month))
-      .eq("year", formData.year)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error("Erro ao verificar duplicidade:", checkError);
+    if (!publisher) {
+      setLoading(false);
+      toast.error("Publicador não encontrado.");
+      return;
     }
 
-    if (existingReport) {
+    // Verificação de duplicidade rigorosa
+    const { data: existingReports, error: checkError } = await supabase
+      .from("preaching_reports")
+      .select("id")
+      .eq("reporter_name", publisher.full_name)
+      .eq("month", parseInt(formData.month))
+      .eq("year", formData.year);
+
+    if (checkError) {
+      console.error("[PublicReport] Erro ao verificar duplicidade:", checkError);
+    }
+
+    if (existingReports && existingReports.length > 0) {
       setLoading(false);
       toast.error("Relatório já enviado para esse mês. Caso queira corrigir a informação favor passar para o Superintendente do seu Grupo", {
-        duration: 6000
+        duration: 8000
       });
       return;
     }
 
     let pioneerStatus: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular" = "publicador";
-    if (publisher?.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
-    else if (publisher?.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
+    if (publisher.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
+    else if (publisher.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
 
     const { error } = await supabase.from("preaching_reports").insert([{
-      reporter_name: publisher?.full_name,
+      reporter_name: publisher.full_name,
       group_id: group?.group_number,
       month: parseInt(formData.month),
       year: formData.year,
