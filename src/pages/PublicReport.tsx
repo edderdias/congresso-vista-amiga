@@ -38,7 +38,6 @@ export default function PublicReport() {
     loadGroups();
   }, [groupNumber]);
 
-  // Lógica para marcar participação automaticamente se houver horas ou estudos
   useEffect(() => {
     if (formData.hours > 0 || formData.bible_studies > 0) {
       setFormData(prev => ({ ...prev, participated: true }));
@@ -54,10 +53,6 @@ export default function PublicReport() {
     const now = new Date();
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
-
-    // Se for depois do dia 20, sugere o mês atual. Se for antes, sugere o mês anterior? 
-    // Geralmente relatórios são do mês que passou.
-    // Vamos manter a lógica simples: sugere o mês atual.
     setFormData(prev => ({ ...prev, month: month.toString(), year }));
   };
 
@@ -80,7 +75,7 @@ export default function PublicReport() {
       .from("publishers")
       .select("id, full_name, privileges")
       .eq("group_id", groupId)
-      .eq("status", "active") // Apenas ativos podem relatar publicamente
+      .eq("status", "active")
       .order("full_name");
     setPublishers(data || []);
   };
@@ -107,6 +102,27 @@ export default function PublicReport() {
     const publisher = publishers.find(p => p.id === selectedPublisherId);
     const group = groups.find(g => g.id === selectedGroupId);
 
+    // Verificação de duplicidade
+    const { data: existingReport, error: checkError } = await supabase
+      .from("preaching_reports")
+      .select("id")
+      .eq("reporter_name", publisher?.full_name)
+      .eq("month", parseInt(formData.month))
+      .eq("year", formData.year)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Erro ao verificar duplicidade:", checkError);
+    }
+
+    if (existingReport) {
+      setLoading(false);
+      toast.error("Relatório já enviado para esse mês. Caso queira corrigir a informação favor passar para o Superintendente do seu Grupo", {
+        duration: 6000
+      });
+      return;
+    }
+
     let pioneerStatus: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular" = "publicador";
     if (publisher?.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
     else if (publisher?.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
@@ -125,8 +141,8 @@ export default function PublicReport() {
     setLoading(false);
 
     if (error) {
-      console.error("Erro RLS ou DB:", error);
-      toast.error("Erro ao enviar relatório. Verifique se a política de acesso foi configurada no banco.");
+      console.error("Erro ao enviar relatório:", error);
+      toast.error("Erro ao enviar relatório. Tente novamente mais tarde.");
     } else {
       setSubmitted(true);
       toast.success("Relatório enviado com sucesso!");
