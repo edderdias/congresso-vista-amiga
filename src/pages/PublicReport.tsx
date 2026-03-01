@@ -51,8 +51,19 @@ export default function PublicReport() {
 
   const calculateDefaultDate = () => {
     const now = new Date();
+    const day = now.getDate();
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
+
+    // Regra: Dia 20 ou menos -> Mês anterior. Dia 21 ou mais -> Mês atual.
+    if (day <= 20) {
+      month = month - 1;
+      if (month === 0) {
+        month = 12;
+        year = year - 1;
+      }
+    }
+
     setFormData(prev => ({ ...prev, month: month.toString(), year }));
   };
 
