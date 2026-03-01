@@ -66,13 +66,14 @@ export default function Reports() {
   };
 
   const loadPublishersByGroup = async (groupId: string) => {
-    if (!groupId) return;
+    if (!groupId) return [];
     const { data } = await supabase
       .from("publishers")
       .select("*")
       .eq("group_id", groupId)
       .order("full_name");
     setPublishers(data || []);
+    return data || [];
   };
 
   const loadReports = async () => {
@@ -106,6 +107,32 @@ export default function Reports() {
       toast.success("Relatório excluído");
       loadReports();
     }
+  };
+
+  const handleEdit = async (report: Report) => {
+    setEditingReportId(report.id);
+    
+    // Encontrar o grupo pelo número
+    const group = groups.find(g => g.group_number === report.group_id);
+    const groupId = group?.id || "";
+    
+    // Carregar publicadores do grupo para poder selecionar o correto
+    const groupPubs = await loadPublishersByGroup(groupId);
+    const publisher = groupPubs.find(p => p.full_name === report.reporter_name);
+    
+    setFormData({
+      group_id: groupId,
+      publisher_id: publisher?.id || "",
+      month: report.month.toString(),
+      year: report.year,
+      hours: report.hours,
+      bible_studies: report.bible_studies,
+      notes: report.notes || "",
+      participated: report.hours > 0 || report.bible_studies > 0 || !!report.participated,
+      pioneer_status: report.pioneer_status,
+    });
+    
+    setOpen(true);
   };
 
   const handlePublisherChange = (pubId: string) => {
@@ -145,6 +172,21 @@ export default function Reports() {
     }
   };
 
+  const resetForm = () => {
+    setEditingReportId(null);
+    setFormData({
+      group_id: "",
+      publisher_id: "",
+      month: (new Date().getMonth() + 1).toString(),
+      year: new Date().getFullYear(),
+      hours: 0,
+      bible_studies: 0,
+      notes: "",
+      participated: false,
+      pioneer_status: "publicador" as any,
+    });
+  };
+
   const monthOptions = [
     { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" },
     { value: "3", label: "Março" }, { value: "4", label: "Abril" },
@@ -165,15 +207,15 @@ export default function Reports() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Relatórios</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto" onClick={() => setEditingReportId(null)}>
+            <Button className="w-full sm:w-auto" onClick={resetForm}>
               <Plus className="h-4 w-4 mr-2" /> Novo Relatório
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <DialogHeader><DialogTitle>Lançar Relatório</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingReportId ? "Editar" : "Lançar"} Relatório</DialogTitle></DialogHeader>
               
               <div className="space-y-2">
                 <Label>Grupo</Label>
@@ -202,11 +244,11 @@ export default function Reports() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Horas</Label>
-                  <Input type="number" value={formData.hours} onChange={e => setFormData({...formData, hours: parseInt(e.target.value)})} />
+                  <Input type="number" value={formData.hours} onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Estudos</Label>
-                  <Input type="number" value={formData.bible_studies} onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value)})} />
+                  <Input type="number" value={formData.bible_studies} onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})} />
                 </div>
               </div>
 
@@ -284,7 +326,7 @@ export default function Reports() {
             </div>
             <div className="space-y-2 w-full">
               <Label>Ano</Label>
-              <Input type="number" value={filterYear} onChange={e => setFilterYear(parseInt(e.target.value))} />
+              <Input type="number" value={filterYear} onChange={e => setFilterYear(parseInt(e.target.value) || new Date().getFullYear())} />
             </div>
           </div>
         </CardHeader>
@@ -317,7 +359,7 @@ export default function Reports() {
                       <TableCell>{r.hours}</TableCell>
                       <TableCell>{r.bible_studies}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(r)}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
