@@ -217,6 +217,20 @@ export default function Reports() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <DialogHeader><DialogTitle>{editingReportId ? "Editar" : "Lançar"} Relatório</DialogTitle></DialogHeader>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Mês</Label>
+                  <Select value={formData.month} onValueChange={(val) => setFormData({...formData, month: val})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Ano</Label>
+                  <Input type="number" value={formData.year} onChange={e => setFormData({...formData, year: parseInt(e.target.value) || new Date().getFullYear()})} />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label>Grupo</Label>
                 <Select value={formData.group_id} onValueChange={(val) => {
