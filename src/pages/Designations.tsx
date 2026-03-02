@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2, Clock, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -52,13 +51,18 @@ export default function Designations() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  
   const [formData, setFormData] = useState<Record<string, { user_id: string, notes: string, id?: string }>>({
     "Presidente": { user_id: "", notes: "" },
     "Oração Inicial": { user_id: "", notes: "" },
     "Tesouro": { user_id: "", notes: "" },
     "Joias Espirituais": { user_id: "", notes: "" },
+    "Estudo de Livro": { user_id: "", notes: "" },
+    "Leitura do Livro": { user_id: "", notes: "" },
     "Oração Final": { user_id: "", notes: "" },
   });
+
+  const [vidaCristaParts, setVidaCristaParts] = useState<{ id?: string, min: string, tema: string, user_id: string }[]>([]);
 
   useEffect(() => {
     loadDesignations();
@@ -112,7 +116,6 @@ export default function Designations() {
 
     setSelectedMeeting(meeting);
     
-    // Buscar designações existentes para esta reunião
     const { data } = await supabase
       .from("designations")
       .select("*")
@@ -123,17 +126,45 @@ export default function Designations() {
       "Oração Inicial": { user_id: "", notes: "" },
       "Tesouro": { user_id: "", notes: "" },
       "Joias Espirituais": { user_id: "", notes: "" },
+      "Estudo de Livro": { user_id: "", notes: "" },
+      "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
     };
 
+    const newVidaCrista: any[] = [];
+
     if (data) {
       data.forEach(d => {
-        if (newFormData[d.designation_type]) {
+        if (d.designation_type === "Nossa Vida Cristã") {
+          const [min, ...temaParts] = (d.notes || "").split(" - ");
+          newVidaCrista.push({
+            id: d.id,
+            min: min || "",
+            tema: temaParts.join(" - ") || "",
+            user_id: d.user_id
+          });
+        } else if (newFormData[d.designation_type]) {
           newFormData[d.designation_type] = { user_id: d.user_id, notes: d.notes || "", id: d.id };
         }
       });
     }
+    
     setFormData(newFormData);
+    setVidaCristaParts(newVidaCrista.length > 0 ? newVidaCrista : [{ min: "", tema: "", user_id: "" }]);
+  };
+
+  const addVidaCristaPart = () => {
+    setVidaCristaParts([...vidaCristaParts, { min: "", tema: "", user_id: "" }]);
+  };
+
+  const removeVidaCristaPart = (index: number) => {
+    setVidaCristaParts(vidaCristaParts.filter((_, i) => i !== index));
+  };
+
+  const updateVidaCristaPart = (index: number, field: string, value: string) => {
+    const newParts = [...vidaCristaParts];
+    newParts[index] = { ...newParts[index], [field]: value };
+    setVidaCristaParts(newParts);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,6 +172,7 @@ export default function Designations() {
     if (!selectedMeeting) return toast.error("Selecione a reunião");
 
     setLoading(true);
+    
     const payloads = Object.entries(formData)
       .filter(([_, data]) => data.user_id)
       .map(([type, data]) => ({
@@ -151,12 +183,24 @@ export default function Designations() {
         notes: data.notes || null
       }));
 
-    if (payloads.length === 0) {
+    const vidaCristaPayloads = vidaCristaParts
+      .filter(p => p.user_id)
+      .map(p => ({
+        id: p.id,
+        user_id: p.user_id,
+        designation_type: "Nossa Vida Cristã",
+        meeting_date: selectedMeeting.date,
+        notes: `${p.min} - ${p.tema}`
+      }));
+
+    const finalPayload = [...payloads, ...vidaCristaPayloads];
+
+    if (finalPayload.length === 0) {
       setLoading(false);
       return toast.error("Preencha pelo menos uma designação");
     }
 
-    const { error } = await supabase.from("designations").upsert(payloads);
+    const { error } = await supabase.from("designations").upsert(finalPayload);
 
     setLoading(false);
     if (error) {
@@ -176,8 +220,11 @@ export default function Designations() {
       "Oração Inicial": { user_id: "", notes: "" },
       "Tesouro": { user_id: "", notes: "" },
       "Joias Espirituais": { user_id: "", notes: "" },
+      "Estudo de Livro": { user_id: "", notes: "" },
+      "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
     });
+    setVidaCristaParts([{ min: "", tema: "", user_id: "" }]);
   };
 
   const handleDelete = async (id: string) => {
@@ -227,7 +274,7 @@ export default function Designations() {
                 <Plus className="h-4 w-4 mr-2" /> Programar Reunião
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>Programação da Reunião</DialogTitle>
@@ -252,44 +299,47 @@ export default function Designations() {
 
                   {selectedMeeting?.type.includes("Meio de Semana") && (
                     <div className="space-y-6 border-t pt-4">
-                      <div className="space-y-2">
-                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
-                        <Combobox 
-                          options={getPubsByPrivilege("Presidência Vida e Ministério")} 
-                          value={formData["Presidente"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
-                          placeholder="Pesquisar presidente..."
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
-                        <Combobox 
-                          options={getPubsByPrivilege("Oração")} 
-                          value={formData["Oração Inicial"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
-                          placeholder="Pesquisar orador..."
-                        />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
+                          <Combobox 
+                            options={getPubsByPrivilege("Presidência Vida e Ministério")} 
+                            value={formData["Presidente"].user_id} 
+                            onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
+                            placeholder="Pesquisar..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
+                          <Combobox 
+                            options={getPubsByPrivilege("Oração")} 
+                            value={formData["Oração Inicial"].user_id} 
+                            onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
+                            placeholder="Pesquisar..."
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-3 p-3 bg-slate-50 rounded-lg border">
                         <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Tesouro</Label>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Tema do Tesouro</Label>
-                          <Input 
-                            placeholder="Informe o tema" 
-                            value={formData["Tesouro"].notes} 
-                            onChange={(e) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], notes: e.target.value}})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs text-muted-foreground">Orador</Label>
-                          <Combobox 
-                            options={getPubsByPrivilege("Tesouro")} 
-                            value={formData["Tesouro"].user_id} 
-                            onChange={(v) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], user_id: v}})}
-                            placeholder="Pesquisar orador..."
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Tema</Label>
+                            <Input 
+                              placeholder="Informe o tema" 
+                              value={formData["Tesouro"].notes} 
+                              onChange={(e) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], notes: e.target.value}})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Orador</Label>
+                            <Combobox 
+                              options={getPubsByPrivilege("Tesouro")} 
+                              value={formData["Tesouro"].user_id} 
+                              onChange={(v) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], user_id: v}})}
+                              placeholder="Pesquisar..."
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -299,8 +349,77 @@ export default function Designations() {
                           options={getPubsByPrivilege("Encontre Joias")} 
                           value={formData["Joias Espirituais"].user_id} 
                           onChange={(v) => setFormData({...formData, "Joias Espirituais": {...formData["Joias Espirituais"], user_id: v}})}
-                          placeholder="Pesquisar orador..."
+                          placeholder="Pesquisar..."
                         />
+                      </div>
+
+                      <div className="space-y-4 border-t pt-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-primary font-bold flex items-center gap-2"><User className="h-4 w-4" /> Nossa Vida Cristã</Label>
+                          <Button type="button" variant="outline" size="sm" onClick={addVidaCristaPart}>
+                            <PlusCircle className="h-4 w-4 mr-1" /> Adicionar Parte
+                          </Button>
+                        </div>
+                        
+                        {vidaCristaParts.map((part, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-slate-50 rounded-lg border relative group">
+                            <div className="col-span-2 space-y-1">
+                              <Label className="text-[10px]">Min</Label>
+                              <Input placeholder="5" value={part.min} onChange={e => updateVidaCristaPart(index, "min", e.target.value)} />
+                            </div>
+                            <div className="col-span-5 space-y-1">
+                              <Label className="text-[10px]">Tema</Label>
+                              <Input placeholder="Tema da parte" value={part.tema} onChange={e => updateVidaCristaPart(index, "tema", e.target.value)} />
+                            </div>
+                            <div className="col-span-4 space-y-1">
+                              <Label className="text-[10px]">Orador</Label>
+                              <Combobox 
+                                options={getPubsByPrivilege("Nossa Vida Cristã")} 
+                                value={part.user_id} 
+                                onChange={(v) => updateVidaCristaPart(index, "user_id", v)}
+                                placeholder="Pesquisar..."
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeVidaCristaPart(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-4 border-t pt-4">
+                        <Label className="text-primary font-bold">Encerramento</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
+                            <Combobox 
+                              options={getPubsByPrivilege("Dirigente Est. de Livro")} 
+                              value={formData["Estudo de Livro"].user_id} 
+                              onChange={(v) => setFormData({...formData, "Estudo de Livro": {...formData["Estudo de Livro"], user_id: v}})}
+                              placeholder="Pesquisar..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">Leitura do Livro</Label>
+                            <Combobox 
+                              options={getPubsByPrivilege("Leitura do Livro")} 
+                              value={formData["Leitura do Livro"].user_id} 
+                              onChange={(v) => setFormData({...formData, "Leitura do Livro": {...formData["Leitura do Livro"], user_id: v}})}
+                              placeholder="Pesquisar..."
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Oração Final</Label>
+                          <Combobox 
+                            options={getPubsByPrivilege("Oração")} 
+                            value={formData["Oração Final"].user_id} 
+                            onChange={(v) => setFormData({...formData, "Oração Final": {...formData["Oração Final"], user_id: v}})}
+                            placeholder="Pesquisar..."
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
