@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle, Users, Eye, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Meeting {
   id: string;
@@ -23,12 +24,33 @@ interface Meeting {
   type: string;
 }
 
+interface SchoolAssignment {
+  id: string;
+  meeting_date: string;
+  part_type: string;
+  student_id: string;
+  assistant_id: string | null;
+  student_name?: string;
+  assistant_name?: string;
+}
+
+interface GroupedSchoolProgram {
+  date: string;
+  assignments: SchoolAssignment[];
+}
+
+const ITEMS_PER_PAGE = 10;
+
 export default function School() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<SchoolAssignment[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<GroupedSchoolProgram | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
@@ -63,6 +85,7 @@ export default function School() {
 
   const loadData = async () => {
     try {
+      setLoading(true);
       const start = `${filterYear}-${filterMonth}-01`;
       const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
 
@@ -87,6 +110,8 @@ export default function School() {
     } catch (error: any) {
       console.error("[School] Erro ao carregar:", error);
       toast.error("Erro ao carregar dados da escola.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,10 +217,13 @@ export default function School() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("school_assignments").delete().eq("id", id);
-    if (error) toast.error("Erro ao excluir");
-    else { toast.success("Excluído!"); loadData(); }
+  const handleDeleteProgram = async (date: string) => {
+    const { error } = await supabase.from("school_assignments").delete().eq("meeting_date", date);
+    if (error) toast.error("Erro ao excluir programação");
+    else {
+      toast.success("Programação excluída!");
+      loadData();
+    }
   };
 
   const resetForm = () => {
@@ -221,6 +249,42 @@ export default function School() {
     { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
+
+  // Agrupar designações por data
+  const groupedPrograms: GroupedSchoolProgram[] = Array.from(new Set(data.map(d => d.meeting_date)))
+    .map(date => ({
+      date,
+      assignments: data.filter(d => d.meeting_date === date)
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const totalPages = Math.ceil(groupedPrograms.length / ITEMS_PER_PAGE);
+  const paginatedPrograms = groupedPrograms.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const getBibleReadingStudent = (program: GroupedSchoolProgram) => {
+    return program.assignments.find(a => a.part_type === "Leitura da Bíblia")?.student_name || "-";
+  };
+
+  const getMinistryPartStudent = (program: GroupedSchoolProgram, index: number) => {
+    const parts = program.assignments.filter(a => a.part_type !== "Leitura da Bíblia");
+    return parts[index]?.student_name || "-";
+  };
+
+  const handleViewProgram = (program: GroupedSchoolProgram) => {
+    setSelectedProgram(program);
+    setViewOpen(true);
+  };
+
+  const handleEditProgram = (program: GroupedSchoolProgram) => {
+    const meeting = meetings.find(m => m.date === program.date);
+    if (meeting) {
+      handleMeetingChange(meeting.id);
+      setOpen(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -338,47 +402,60 @@ export default function School() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>Programação da Escola</CardTitle>
+          <CardDescription>Quadro geral de estudantes por reunião</CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
-                  <TableHead>Parte</TableHead>
-                  <TableHead>Estudante</TableHead>
-                  <TableHead>Ajudante</TableHead>
+                  <TableHead>Leitura da Bíblia</TableHead>
+                  <TableHead>Parte 1</TableHead>
+                  <TableHead>Parte 2</TableHead>
+                  <TableHead>Parte 3</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada para este mês.</TableCell></TableRow>
+                {paginatedPrograms.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma programação encontrada para este mês.</TableCell></TableRow>
                 ) : (
-                  data.map(item => (
-                    <TableRow key={item.id}>
-                      <TableCell className="whitespace-nowrap">{format(parseISO(item.meeting_date), "dd/MM/yyyy")}</TableCell>
-                      <TableCell className="font-medium">
-                        <Badge variant={item.part_type === "Leitura da Bíblia" ? "default" : "outline"}>
-                          {item.part_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{item.student_name}</TableCell>
-                      <TableCell>{item.assistant_name || "-"}</TableCell>
+                  paginatedPrograms.map(program => (
+                    <TableRow key={program.date}>
+                      <TableCell className="whitespace-nowrap font-bold">{format(parseISO(program.date), "dd/MM/yyyy")}</TableCell>
+                      <TableCell className="whitespace-nowrap">{getBibleReadingStudent(program)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{getMinistryPartStudent(program, 0)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{getMinistryPartStudent(program, 1)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{getMinistryPartStudent(program, 2)}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          const meeting = meetings.find(m => m.date === item.meeting_date);
-                          if (meeting) {
-                            handleMeetingChange(meeting.id);
-                            setOpen(true);
-                          }
-                        }}><Pencil className="h-4 w-4" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle><AlertDialogDescription>Deseja remover esta designação da escola?</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(item.id)}>Sim</AlertDialogAction></AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Visualizar" onClick={() => handleViewProgram(program)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Editar" onClick={() => handleEditProgram(program)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive" title="Excluir">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir Programação?</AlertDialogTitle>
+                                <AlertDialogDescription>Deseja remover todas as designações da escola para a reunião de {format(parseISO(program.date), "dd/MM/yyyy")}?</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteProgram(program.date)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -386,8 +463,65 @@ export default function School() {
               </TableBody>
             </Table>
           </div>
+          <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" /> Detalhes da Escola
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProgram && (
+                <>Reunião de {format(parseISO(selectedProgram.date), "dd/MM/yyyy")}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProgram && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2 border-b pb-4">
+                <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
+                <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
+                  <span className="text-sm font-medium">Leitura da Bíblia</span>
+                  <span className="text-sm font-bold">{getBibleReadingStudent(selectedProgram)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-primary font-bold text-xs">Faça seu melhor no ministério</Label>
+                {selectedProgram.assignments
+                  .filter(a => a.part_type !== "Leitura da Bíblia")
+                  .map((a, i) => (
+                    <div key={i} className="p-3 bg-slate-50 rounded-lg border space-y-2">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-bold text-primary uppercase">{a.part_type}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground text-[10px] block">Estudante</span>
+                          <span className="font-bold">{a.student_name}</span>
+                        </div>
+                        {a.assistant_name && a.assistant_name !== "-" && (
+                          <div>
+                            <span className="text-muted-foreground text-[10px] block">Ajudante</span>
+                            <span className="font-bold">{a.assistant_name}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setViewOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
