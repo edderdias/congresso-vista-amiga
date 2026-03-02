@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -46,18 +46,18 @@ export default function Designations() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [open, setOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
-  const [formData, setFormData] = useState({
-    user_id: "",
-    designation_type: "Presidente",
-    meeting_date: "",
-    notes: "",
-    theme: "",
-    minutes: ""
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [formData, setFormData] = useState<Record<string, { user_id: string, notes: string, id?: string }>>({
+    "Presidente": { user_id: "", notes: "" },
+    "Oração Inicial": { user_id: "", notes: "" },
+    "Tesouro": { user_id: "", notes: "" },
+    "Joias Espirituais": { user_id: "", notes: "" },
+    "Oração Final": { user_id: "", notes: "" },
   });
 
   useEffect(() => {
@@ -106,44 +106,63 @@ export default function Designations() {
     setPublishers(data || []);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("designations").delete().eq("id", id);
-    if (error) {
-      toast.error("Erro ao excluir: " + error.message);
-    } else {
-      toast.success("Designação excluída");
-      loadDesignations();
+  const handleMeetingChange = async (meetingId: string) => {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    setSelectedMeeting(meeting);
+    
+    // Buscar designações existentes para esta reunião
+    const { data } = await supabase
+      .from("designations")
+      .select("*")
+      .eq("meeting_date", meeting.date);
+
+    const newFormData: any = {
+      "Presidente": { user_id: "", notes: "" },
+      "Oração Inicial": { user_id: "", notes: "" },
+      "Tesouro": { user_id: "", notes: "" },
+      "Joias Espirituais": { user_id: "", notes: "" },
+      "Oração Final": { user_id: "", notes: "" },
+    };
+
+    if (data) {
+      data.forEach(d => {
+        if (newFormData[d.designation_type]) {
+          newFormData[d.designation_type] = { user_id: d.user_id, notes: d.notes || "", id: d.id };
+        }
+      });
     }
+    setFormData(newFormData);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.user_id) return toast.error("Selecione um designado");
-    if (!formData.meeting_date) return toast.error("Selecione uma reunião");
+    if (!selectedMeeting) return toast.error("Selecione a reunião");
 
-    let finalNotes = formData.notes;
-    if (formData.designation_type === "Tesouro") {
-      finalNotes = formData.theme;
-    } else if (formData.designation_type === "Nossa Vida Cristã") {
-      finalNotes = formData.minutes ? `${formData.minutes} min - ${formData.theme}` : formData.theme;
+    setLoading(true);
+    const payloads = Object.entries(formData)
+      .filter(([_, data]) => data.user_id)
+      .map(([type, data]) => ({
+        id: data.id,
+        user_id: data.user_id,
+        designation_type: type,
+        meeting_date: selectedMeeting.date,
+        notes: data.notes || null
+      }));
+
+    if (payloads.length === 0) {
+      setLoading(false);
+      return toast.error("Preencha pelo menos uma designação");
     }
 
-    const payload = {
-      user_id: formData.user_id,
-      designation_type: formData.designation_type,
-      meeting_date: formData.meeting_date,
-      notes: finalNotes || null
-    };
+    const { error } = await supabase.from("designations").upsert(payloads);
 
-    const { error } = editingId 
-      ? await supabase.from("designations").update(payload).eq("id", editingId)
-      : await supabase.from("designations").insert([payload]);
-
+    setLoading(false);
     if (error) {
-      console.error("Erro Supabase:", error);
       toast.error("Erro ao salvar: " + error.message);
     } else {
-      toast.success("Designação salva com sucesso!");
+      toast.success("Programação salva com sucesso!");
       setOpen(false);
       loadDesignations();
       resetForm();
@@ -151,82 +170,29 @@ export default function Designations() {
   };
 
   const resetForm = () => {
-    setEditingId(null);
-    setFormData({ 
-      user_id: "", 
-      designation_type: "Presidente", 
-      meeting_date: "", 
-      notes: "",
-      theme: "",
-      minutes: ""
-    });
-  };
-
-  const handleEdit = (d: Designation) => {
-    setEditingId(d.id);
-    
-    let theme = "";
-    let minutes = "";
-    let notes = d.notes || "";
-
-    if (d.designation_type === "Tesouro") {
-      theme = notes;
-    } else if (d.designation_type === "Nossa Vida Cristã" && notes.includes(" min - ")) {
-      const parts = notes.split(" min - ");
-      minutes = parts[0];
-      theme = parts[1];
-    } else if (d.designation_type === "Nossa Vida Cristã") {
-      theme = notes;
-    }
-
+    setSelectedMeeting(null);
     setFormData({
-      user_id: d.user_id,
-      designation_type: d.designation_type,
-      meeting_date: d.meeting_date,
-      notes: notes,
-      theme: theme,
-      minutes: minutes
+      "Presidente": { user_id: "", notes: "" },
+      "Oração Inicial": { user_id: "", notes: "" },
+      "Tesouro": { user_id: "", notes: "" },
+      "Joias Espirituais": { user_id: "", notes: "" },
+      "Oração Final": { user_id: "", notes: "" },
     });
-    setOpen(true);
   };
 
-  const designationTypes = [
-    { value: "Presidente", label: "Presidente" },
-    { value: "Oração Inicial", label: "Oração Inicial" },
-    { value: "Tesouro", label: "Tesouro" },
-    { value: "Joias Espirituais", label: "Joias Espirituais" },
-    { value: "Nossa Vida Cristã", label: "Nossa Vida Cristã" },
-    { value: "Necessidade Locais", label: "Necessidade Locais" },
-    { value: "Estudo de Livro", label: "Estudo de Livro" },
-    { value: "Leitura do Livro", label: "Leitura do Livro" },
-    { value: "Oração Final", label: "Oração Final" },
-  ];
-
-  const getFilteredPublishers = () => {
-    const type = formData.designation_type;
-    if (!type) return publishers;
-
-    switch (type) {
-      case "Oração Inicial":
-      case "Oração Final":
-        return publishers.filter(p => p.privileges?.includes("Oração"));
-      case "Presidente":
-        return publishers.filter(p => p.privileges?.includes("Presidência Vida e Ministério"));
-      case "Tesouro":
-        return publishers.filter(p => p.privileges?.includes("Tesouro"));
-      case "Joias Espirituais":
-        return publishers.filter(p => p.privileges?.includes("Encontre Joias"));
-      case "Nossa Vida Cristã":
-        return publishers.filter(p => p.privileges?.includes("Nossa Vida Cristã"));
-      case "Necessidade Locais":
-        return publishers.filter(p => p.privileges?.includes("Necessidade Locais"));
-      case "Estudo de Livro":
-        return publishers.filter(p => p.privileges?.includes("Dirigente Est. de Livro"));
-      case "Leitura do Livro":
-        return publishers.filter(p => p.privileges?.includes("Leitura do Livro"));
-      default:
-        return publishers;
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("designations").delete().eq("id", id);
+    if (error) toast.error("Erro ao excluir");
+    else {
+      toast.success("Designação excluída");
+      loadDesignations();
     }
+  };
+
+  const getPubsByPrivilege = (privilege: string) => {
+    return publishers
+      .filter(p => p.privileges?.includes(privilege))
+      .map(p => ({ value: p.id, label: p.full_name }));
   };
 
   const months = [
@@ -235,8 +201,6 @@ export default function Designations() {
     { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
-
-  const publisherOptions = getFilteredPublishers().map(p => ({ value: p.id, label: p.full_name }));
 
   const totalPages = Math.ceil(designations.length / ITEMS_PER_PAGE);
   const paginatedDesignations = designations.slice(
@@ -260,82 +224,97 @@ export default function Designations() {
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if(!v) resetForm(); }}>
             <DialogTrigger asChild>
               <Button onClick={resetForm} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" /> Cadastrar
+                <Plus className="h-4 w-4 mr-2" /> Programar Reunião
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
-                  <DialogTitle>{editingId ? "Editar" : "Nova"} Designação</DialogTitle>
-                  <DialogDescription>Selecione a reunião e o designado.</DialogDescription>
+                  <DialogTitle>Programação da Reunião</DialogTitle>
+                  <DialogDescription>Selecione a reunião e preencha os designados.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-6 py-4">
                   <div className="space-y-2">
-                    <Label>Reunião</Label>
-                    <Select value={formData.meeting_date} onValueChange={(v) => setFormData({...formData, meeting_date: v})}>
+                    <Label className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Reunião</Label>
+                    <Select value={selectedMeeting?.id || ""} onValueChange={handleMeetingChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a reunião" />
                       </SelectTrigger>
                       <SelectContent>
                         {meetings.map((m) => (
-                          <SelectItem key={m.id} value={m.date}>
+                          <SelectItem key={m.id} value={m.id}>
                             {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Tipo de Designação</Label>
-                    <Select value={formData.designation_type} onValueChange={(v) => setFormData({ ...formData, designation_type: v, user_id: "", theme: "", minutes: "" })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {designationTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  {formData.designation_type === "Tesouro" && (
-                    <div className="space-y-2">
-                      <Label>Tema</Label>
-                      <Input value={formData.theme} onChange={(e) => setFormData({ ...formData, theme: e.target.value })} placeholder="Informe o tema do Tesouro" required />
+                  {selectedMeeting?.type.includes("Meio de Semana") && (
+                    <div className="space-y-6 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Presidência Vida e Ministério")} 
+                          value={formData["Presidente"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
+                          placeholder="Pesquisar presidente..."
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Oração")} 
+                          value={formData["Oração Inicial"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
+                          placeholder="Pesquisar orador..."
+                        />
+                      </div>
+
+                      <div className="space-y-3 p-3 bg-slate-50 rounded-lg border">
+                        <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Tesouro</Label>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Tema do Tesouro</Label>
+                          <Input 
+                            placeholder="Informe o tema" 
+                            value={formData["Tesouro"].notes} 
+                            onChange={(e) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], notes: e.target.value}})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Orador</Label>
+                          <Combobox 
+                            options={getPubsByPrivilege("Tesouro")} 
+                            value={formData["Tesouro"].user_id} 
+                            onChange={(v) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], user_id: v}})}
+                            placeholder="Pesquisar orador..."
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Joias Espirituais</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Encontre Joias")} 
+                          value={formData["Joias Espirituais"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Joias Espirituais": {...formData["Joias Espirituais"], user_id: v}})}
+                          placeholder="Pesquisar orador..."
+                        />
+                      </div>
                     </div>
                   )}
 
-                  {formData.designation_type === "Nossa Vida Cristã" && (
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="col-span-1 space-y-2">
-                        <Label>Min</Label>
-                        <Input type="number" value={formData.minutes} onChange={(e) => setFormData({ ...formData, minutes: e.target.value })} placeholder="Ex: 15" />
-                      </div>
-                      <div className="col-span-3 space-y-2">
-                        <Label>Tema</Label>
-                        <Input value={formData.theme} onChange={(e) => setFormData({ ...formData, theme: e.target.value })} placeholder="Informe o tema" required />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Designado</Label>
-                    <Combobox 
-                      options={publisherOptions} 
-                      value={formData.user_id} 
-                      onChange={(v) => setFormData({...formData, user_id: v})}
-                      placeholder="Pesquisar pessoa..."
-                    />
-                  </div>
-
-                  {formData.designation_type !== "Tesouro" && formData.designation_type !== "Nossa Vida Cristã" && (
-                    <div className="space-y-2">
-                      <Label>Observações</Label>
-                      <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
+                  {selectedMeeting && !selectedMeeting.type.includes("Meio de Semana") && (
+                    <div className="space-y-4 border-t pt-4">
+                      <p className="text-sm text-muted-foreground italic">Para reuniões de final de semana, as designações são gerenciadas na aba de Discursos e Áudio/Vídeo.</p>
                     </div>
                   )}
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full sm:w-auto">Salvar</Button>
+                  <Button type="submit" className="w-full sm:w-auto" disabled={loading || !selectedMeeting}>
+                    {loading ? "Salvando..." : "Salvar Programação"}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -375,7 +354,6 @@ export default function Designations() {
                         {designation.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(designation)}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
