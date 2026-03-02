@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export default function Speeches() {
   const [data, setData] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -23,13 +24,25 @@ export default function Speeches() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), "yyyy-MM-dd"),
+    meeting_id: "",
     title: "",
     speaker: "",
     congregation: ""
   });
 
-  useEffect(() => { loadData(); }, [filterMonth, filterYear]);
+  useEffect(() => { 
+    loadData(); 
+    loadMeetings();
+  }, [filterMonth, filterYear]);
+
+  const loadMeetings = async () => {
+    const { data } = await supabase
+      .from("meetings")
+      .select("*")
+      .or('type.eq.Final de Semana,type.eq.Visita do Viajante (Final de Semana)')
+      .order("date", { ascending: false });
+    setMeetings(data || []);
+  };
 
   const loadData = async () => {
     try {
@@ -47,18 +60,28 @@ export default function Speeches() {
       setData(speechesData || []);
     } catch (error: any) {
       console.error("[Speeches] Erro ao carregar:", error);
-      toast.error(`Erro ao carregar discursos: ${error.message || "Verifique se a tabela existe no Supabase"}`);
+      toast.error(`Erro ao carregar discursos: ${error.message}`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.meeting_id) return toast.error("Selecione a reunião");
+
     setLoading(true);
+    const selectedMeeting = meetings.find(m => m.id === formData.meeting_id);
+
+    const payload = {
+      date: selectedMeeting.date,
+      title: formData.title,
+      speaker: formData.speaker,
+      congregation: formData.congregation
+    };
 
     try {
       const { error } = editingId 
-        ? await supabase.from("speeches").update(formData).eq("id", editingId)
-        : await supabase.from("speeches").insert([formData]);
+        ? await supabase.from("speeches").update(payload).eq("id", editingId)
+        : await supabase.from("speeches").insert([payload]);
 
       if (error) throw error;
 
@@ -81,8 +104,9 @@ export default function Speeches() {
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
+    const meeting = meetings.find(m => m.date === item.date);
     setFormData({
-      date: item.date,
+      meeting_id: meeting?.id || "",
       title: item.title,
       speaker: item.speaker,
       congregation: item.congregation
@@ -93,7 +117,7 @@ export default function Speeches() {
   const resetForm = () => {
     setEditingId(null);
     setFormData({
-      date: format(new Date(), "yyyy-MM-dd"),
+      meeting_id: "",
       title: "",
       speaker: "",
       congregation: ""
@@ -126,10 +150,24 @@ export default function Speeches() {
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <DialogHeader><DialogTitle>{editingId ? "Editar" : "Novo"} Discurso</DialogTitle></DialogHeader>
+                <DialogHeader>
+                  <DialogTitle>{editingId ? "Editar" : "Novo"} Discurso</DialogTitle>
+                  <DialogDescription>Selecione uma reunião de final de semana cadastrada.</DialogDescription>
+                </DialogHeader>
                 <div className="space-y-2">
-                  <Label>Data</Label>
-                  <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+                  <Label>Reunião (Fim de Semana)</Label>
+                  <Select value={formData.meeting_id} onValueChange={(v) => setFormData({...formData, meeting_id: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a reunião" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {meetings.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Tema / Número</Label>

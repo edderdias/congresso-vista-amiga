@@ -5,17 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Attendance() {
   const [data, setData] = useState<any[]>([]);
+  const [meetings, setMeetings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -23,13 +25,23 @@ export default function Attendance() {
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
   const [formData, setFormData] = useState({
-    date: format(new Date(), "yyyy-MM-dd"),
-    type: "Meio de Semana",
+    meeting_id: "",
     in_person: 0,
     zoom: 0
   });
 
-  useEffect(() => { loadData(); }, [filterMonth, filterYear]);
+  useEffect(() => { 
+    loadData(); 
+    loadMeetings();
+  }, [filterMonth, filterYear]);
+
+  const loadMeetings = async () => {
+    const { data } = await supabase
+      .from("meetings")
+      .select("*")
+      .order("date", { ascending: false });
+    setMeetings(data || []);
+  };
 
   const loadData = async () => {
     try {
@@ -47,17 +59,20 @@ export default function Attendance() {
       setData(attendanceData || []);
     } catch (error: any) {
       console.error("[Attendance] Erro ao carregar:", error);
-      toast.error(`Erro ao carregar assistência: ${error.message || "Verifique se a tabela existe no Supabase"}`);
+      toast.error(`Erro ao carregar assistência: ${error.message}`);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!formData.meeting_id) return toast.error("Selecione a reunião");
 
+    setLoading(true);
+    const selectedMeeting = meetings.find(m => m.id === formData.meeting_id);
+    
     const payload = {
-      date: formData.date,
-      type: formData.type,
+      date: selectedMeeting.date,
+      type: selectedMeeting.type,
       in_person: Number(formData.in_person),
       zoom: Number(formData.zoom),
       total: Number(formData.in_person) + Number(formData.zoom)
@@ -89,9 +104,10 @@ export default function Attendance() {
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
+    // Tenta encontrar a reunião correspondente pela data e tipo
+    const meeting = meetings.find(m => m.date === item.date && m.type === item.type);
     setFormData({
-      date: item.date,
-      type: item.type,
+      meeting_id: meeting?.id || "",
       in_person: item.in_person,
       zoom: item.zoom
     });
@@ -101,8 +117,7 @@ export default function Attendance() {
   const resetForm = () => {
     setEditingId(null);
     setFormData({
-      date: format(new Date(), "yyyy-MM-dd"),
-      type: "Meio de Semana",
+      meeting_id: "",
       in_person: 0,
       zoom: 0
     });
@@ -143,22 +158,24 @@ export default function Attendance() {
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <DialogHeader><DialogTitle>{editingId ? "Editar" : "Lançar"} Assistência</DialogTitle></DialogHeader>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data</Label>
-                    <Input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Meio de Semana">Meio de Semana</SelectItem>
-                        <SelectItem value="Final de Semana">Final de Semana</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <DialogHeader>
+                  <DialogTitle>{editingId ? "Editar" : "Lançar"} Assistência</DialogTitle>
+                  <DialogDescription>Selecione a reunião cadastrada para lançar a assistência.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2">
+                  <Label>Reunião</Label>
+                  <Select value={formData.meeting_id} onValueChange={(v) => setFormData({...formData, meeting_id: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a reunião" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {meetings.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
