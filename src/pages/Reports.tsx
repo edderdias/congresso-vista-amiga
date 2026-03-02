@@ -214,7 +214,11 @@ export default function Reports() {
     }
 
     // Lógica para "Falta Relatar"
-    const reportedNames = new Set(reports.map(r => r.reporter_name));
+    // Se o filtro de mês for "all", o "Falta Relatar" não é preciso, então usamos o mês atual como base ou o mês selecionado
+    const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
+    
+    const reportedNames = new Set(reports.filter(r => r.month === targetMonth && r.year === filterYear).map(r => r.reporter_name));
+    
     const missing = allActivePublishers.filter(p => {
       const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGroup = filterGroup === "all" || p.group_id === groups.find(g => g.group_number.toString() === filterGroup)?.id;
@@ -224,7 +228,7 @@ export default function Reports() {
       id: p.id,
       reporter_name: p.full_name,
       group_id: p.groups?.group_number || null,
-      month: parseInt(filterMonth),
+      month: targetMonth,
       year: filterYear,
       hours: 0,
       bible_studies: 0,
