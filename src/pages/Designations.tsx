@@ -390,7 +390,6 @@ export default function Designations() {
                       </div>
 
                       <div className="space-y-4 border-t pt-4">
-                        <Label className="text-primary font-bold">Encerramento</Label>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
