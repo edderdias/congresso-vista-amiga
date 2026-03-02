@@ -69,10 +69,11 @@ export default function Reports() {
   };
 
   const loadAllActivePublishers = async () => {
+    // Consideramos Ativos e Repreendidos como publicadores que devem relatar
     const { data } = await supabase
       .from("publishers")
       .select("*, groups(group_number)")
-      .eq("status", "active")
+      .in("status", ["active", "repreendido"])
       .order("full_name");
     setAllActivePublishers(data || []);
   };
@@ -214,14 +215,25 @@ export default function Reports() {
     }
 
     // Lógica para "Falta Relatar"
-    // Se o filtro de mês for "all", o "Falta Relatar" não é preciso, então usamos o mês atual como base ou o mês selecionado
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    const reportedNames = new Set(reports.filter(r => r.month === targetMonth && r.year === filterYear).map(r => r.reporter_name));
+    // Pegamos os nomes de quem já relatou NESTE mês e ano específicos
+    const reportedNames = new Set(
+      reports
+        .filter(r => r.month === targetMonth && r.year === filterYear)
+        .map(r => r.reporter_name)
+    );
     
     const missing = allActivePublishers.filter(p => {
       const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGroup = filterGroup === "all" || p.group_id === groups.find(g => g.group_number.toString() === filterGroup)?.id;
+      
+      // Filtro de grupo: comparamos o group_id (UUID) do publicador com o ID do grupo selecionado
+      let matchesGroup = true;
+      if (filterGroup !== "all") {
+        const selectedGroup = groups.find(g => g.group_number.toString() === filterGroup);
+        matchesGroup = p.group_id === selectedGroup?.id;
+      }
+
       const hasNotReported = !reportedNames.has(p.full_name);
       return matchesSearch && matchesGroup && hasNotReported;
     }).map(p => ({
