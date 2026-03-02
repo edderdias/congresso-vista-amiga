@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2, Clock, PlusCircle } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2, Clock, PlusCircle, Eye, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,12 @@ interface Meeting {
   type: string;
 }
 
+interface GroupedProgram {
+  date: string;
+  meetingType: string;
+  designations: Designation[];
+}
+
 const ITEMS_PER_PAGE = 10;
 
 export default function Designations() {
@@ -44,6 +50,8 @@ export default function Designations() {
   const [publishers, setPublishers] = useState<Publisher[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<GroupedProgram | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   
@@ -65,49 +73,31 @@ export default function Designations() {
   const [vidaCristaParts, setVidaCristaParts] = useState<{ id?: string, min: string, tema: string, user_id: string }[]>([]);
 
   useEffect(() => {
-    loadDesignations();
-    loadPublishers();
-    loadMeetings();
+    loadData();
   }, [filterMonth, filterYear]);
 
-  const loadMeetings = async () => {
-    const { data } = await supabase
-      .from("meetings")
-      .select("*")
-      .order("date", { ascending: false });
-    setMeetings(data || []);
-  };
-
-  const loadDesignations = async () => {
+  const loadData = async () => {
+    setLoading(true);
     const start = `${filterYear}-${filterMonth}-01`;
     const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
 
-    const { data, error } = await supabase
-      .from("designations")
-      .select("*")
-      .gte("meeting_date", start)
-      .lte("meeting_date", end)
-      .order("meeting_date", { ascending: false });
+    const [desigRes, pubsRes, meetsRes] = await Promise.all([
+      supabase.from("designations").select("*").gte("meeting_date", start).lte("meeting_date", end),
+      supabase.from("publishers").select("id, full_name, privileges").eq("status", "active"),
+      supabase.from("meetings").select("*").order("date", { ascending: false })
+    ]);
 
-    if (error) {
-      toast.error("Erro ao carregar designações");
-    } else {
-      const { data: pubs } = await supabase.from("publishers").select("id, full_name");
-      const formatted = data.map(d => ({
+    if (pubsRes.data) setPublishers(pubsRes.data);
+    if (meetsRes.data) setMeetings(meetsRes.data);
+    
+    if (desigRes.data) {
+      const formatted = desigRes.data.map(d => ({
         ...d,
-        publisher_name: pubs?.find(p => p.id === d.user_id)?.full_name || "-"
+        publisher_name: pubsRes.data?.find(p => p.id === d.user_id)?.full_name || "-"
       }));
-      setDesignations(formatted || []);
+      setDesignations(formatted);
     }
-  };
-
-  const loadPublishers = async () => {
-    const { data } = await supabase
-      .from("publishers")
-      .select("id, full_name, privileges")
-      .eq("status", "active")
-      .order("full_name");
-    setPublishers(data || []);
+    setLoading(false);
   };
 
   const handleMeetingChange = async (meetingId: string) => {
@@ -208,7 +198,7 @@ export default function Designations() {
     } else {
       toast.success("Programação salva com sucesso!");
       setOpen(false);
-      loadDesignations();
+      loadData();
       resetForm();
     }
   };
@@ -227,13 +217,26 @@ export default function Designations() {
     setVidaCristaParts([{ min: "", tema: "", user_id: "" }]);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("designations").delete().eq("id", id);
-    if (error) toast.error("Erro ao excluir");
+  const handleDeleteProgram = async (date: string) => {
+    const { error } = await supabase.from("designations").delete().eq("meeting_date", date);
+    if (error) toast.error("Erro ao excluir programação");
     else {
-      toast.success("Designação excluída");
-      loadDesignations();
+      toast.success("Programação excluída");
+      loadData();
     }
+  };
+
+  const handleEditProgram = (program: GroupedProgram) => {
+    const meeting = meetings.find(m => m.date === program.date);
+    if (meeting) {
+      handleMeetingChange(meeting.id);
+      setOpen(true);
+    }
+  };
+
+  const handleViewProgram = (program: GroupedProgram) => {
+    setSelectedProgram(program);
+    setViewOpen(true);
   };
 
   const getPubsByPrivilege = (privilege: string) => {
@@ -249,11 +252,33 @@ export default function Designations() {
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
 
-  const totalPages = Math.ceil(designations.length / ITEMS_PER_PAGE);
-  const paginatedDesignations = designations.slice(
+  // Agrupar designações por data
+  const groupedPrograms: GroupedProgram[] = Array.from(new Set(designations.map(d => d.meeting_date)))
+    .map(date => {
+      const meeting = meetings.find(m => m.date === date);
+      return {
+        date,
+        meetingType: meeting?.type || "Não definida",
+        designations: designations.filter(d => d.meeting_date === date)
+      };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const totalPages = Math.ceil(groupedPrograms.length / ITEMS_PER_PAGE);
+  const paginatedPrograms = groupedPrograms.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const getDesigValue = (program: GroupedProgram, type: string) => {
+    const d = program.designations.find(x => x.designation_type === type);
+    return d?.publisher_name || "-";
+  };
+
+  const getTreasureTheme = (program: GroupedProgram) => {
+    const d = program.designations.find(x => x.designation_type === "Tesouro");
+    return d?.notes || "-";
+  };
 
   return (
     <div className="space-y-6">
@@ -443,8 +468,8 @@ export default function Designations() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Todas as Designações</CardTitle>
-          <CardDescription>Lista de atribuições para o mês selecionado</CardDescription>
+          <CardTitle>Programação das Reuniões</CardTitle>
+          <CardDescription>Quadro geral de designações por data</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -453,41 +478,55 @@ export default function Designations() {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Designado</TableHead>
-                  <TableHead>Observação/Tema</TableHead>
+                  <TableHead>Presidente</TableHead>
+                  <TableHead>Tesouro (Tema)</TableHead>
+                  <TableHead>Joias</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedDesignations.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada.</TableCell></TableRow>
+                {paginatedPrograms.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma programação encontrada.</TableCell></TableRow>
                 ) : (
-                  paginatedDesignations.map((designation) => (
-                    <TableRow key={designation.id}>
-                      <TableCell className="whitespace-nowrap">{format(parseISO(designation.meeting_date), "dd/MM/yyyy")}</TableCell>
+                  paginatedPrograms.map((program) => (
+                    <TableRow key={program.date}>
+                      <TableCell className="whitespace-nowrap font-bold">{format(parseISO(program.date), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="whitespace-nowrap">
-                        <Badge variant="secondary">{designation.designation_type}</Badge>
+                        <Badge variant="outline">{program.meetingType}</Badge>
                       </TableCell>
-                      <TableCell className="font-medium whitespace-nowrap">{designation.publisher_name}</TableCell>
-                      <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                        {designation.notes || "-"}
+                      <TableCell className="whitespace-nowrap">{getDesigValue(program, "Presidente")}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        <span className="font-medium">{getDesigValue(program, "Tesouro")}</span>
+                        <br />
+                        <span className="text-[10px] text-muted-foreground">{getTreasureTheme(program)}</span>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap">{getDesigValue(program, "Joias Espirituais")}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir Designação?</AlertDialogTitle>
-                              <AlertDialogDescription>Deseja remover esta atribuição?</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(designation.id)}>Excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Visualizar" onClick={() => handleViewProgram(program)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Editar" onClick={() => handleEditProgram(program)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive" title="Excluir">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir Programação?</AlertDialogTitle>
+                                <AlertDialogDescription>Deseja remover todas as designações da reunião de {format(parseISO(program.date), "dd/MM/yyyy")}?</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteProgram(program.date)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -498,6 +537,80 @@ export default function Designations() {
           <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" /> Detalhes da Programação
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProgram && (
+                <>Reunião de {format(parseISO(selectedProgram.date), "dd/MM/yyyy")} ({selectedProgram.meetingType})</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProgram && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 border-b pb-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Presidente</Label>
+                  <p className="font-bold">{getDesigValue(selectedProgram, "Presidente")}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Oração Inicial</Label>
+                  <p className="font-bold">{getDesigValue(selectedProgram, "Oração Inicial")}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-b pb-4">
+                <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
+                <div className="bg-slate-50 p-2 rounded">
+                  <p className="text-sm font-medium">{getTreasureTheme(selectedProgram)}</p>
+                  <p className="text-xs text-muted-foreground">Orador: {getDesigValue(selectedProgram, "Tesouro")}</p>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">Joias Espirituais:</span>
+                  <span className="text-sm font-bold">{getDesigValue(selectedProgram, "Joias Espirituais")}</span>
+                </div>
+              </div>
+
+              {selectedProgram.designations.some(d => d.designation_type === "Nossa Vida Cristã") && (
+                <div className="space-y-2 border-b pb-4">
+                  <Label className="text-primary font-bold text-xs">Nossa Vida Cristã</Label>
+                  {selectedProgram.designations
+                    .filter(d => d.designation_type === "Nossa Vida Cristã")
+                    .map((d, i) => (
+                      <div key={i} className="flex justify-between items-start gap-2 text-sm border-l-2 border-primary pl-2">
+                        <div className="flex-1">
+                          <p className="font-medium">{d.notes}</p>
+                          <p className="text-xs text-muted-foreground">{d.publisher_name}</p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Estudo de Livro</Label>
+                  <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Estudo de Livro")}</p>
+                  <p className="text-[10px] text-muted-foreground">Leitura: {getDesigValue(selectedProgram, "Leitura do Livro")}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Oração Final</Label>
+                  <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Oração Final")}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setViewOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
