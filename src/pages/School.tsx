@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -35,7 +35,7 @@ export default function School() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   
   const [bibleReading, setBibleReading] = useState({ id: "", student_id: "" });
-  const [ministryParts, setMinistryParts] = useState<{ id?: string, min: string, tema: string, student_id: string }[]>([]);
+  const [ministryParts, setMinistryParts] = useState<{ id?: string, min: string, tema: string, student_id: string, assistant_id: string }[]>([]);
 
   useEffect(() => { 
     loadData(); 
@@ -80,6 +80,7 @@ export default function School() {
       const formatted = schoolData.map(item => ({
         ...item,
         student_name: allPubs?.find(p => p.id === item.student_id)?.full_name || "-",
+        assistant_name: allPubs?.find(p => p.id === item.assistant_id)?.full_name || "-",
       }));
 
       setData(formatted);
@@ -115,19 +116,20 @@ export default function School() {
             id: d.id,
             min: min.replace(" min", "") || "",
             tema: temaParts.join(" - ") || "",
-            student_id: d.student_id
+            student_id: d.student_id || "",
+            assistant_id: d.assistant_id || ""
           };
         });
       
-      setMinistryParts(others.length > 0 ? others : [{ min: "", tema: "", student_id: "" }]);
+      setMinistryParts(others.length > 0 ? others : [{ min: "", tema: "", student_id: "", assistant_id: "" }]);
     } else {
       setBibleReading({ id: "", student_id: "" });
-      setMinistryParts([{ min: "", tema: "", student_id: "" }]);
+      setMinistryParts([{ min: "", tema: "", student_id: "", assistant_id: "" }]);
     }
   };
 
   const addMinistryPart = () => {
-    setMinistryParts([...ministryParts, { min: "", tema: "", student_id: "" }]);
+    setMinistryParts([...ministryParts, { min: "", tema: "", student_id: "", assistant_id: "" }]);
   };
 
   const removeMinistryPart = (index: number) => {
@@ -153,7 +155,8 @@ export default function School() {
         ...(bibleReading.id ? { id: bibleReading.id } : {}),
         meeting_date: selectedMeeting.date,
         part_type: "Leitura da Bíblia",
-        student_id: bibleReading.student_id
+        student_id: bibleReading.student_id,
+        assistant_id: null
       });
     }
 
@@ -163,7 +166,8 @@ export default function School() {
           ...(p.id ? { id: p.id } : {}),
           meeting_date: selectedMeeting.date,
           part_type: `${p.min} min - ${p.tema}`,
-          student_id: p.student_id
+          student_id: p.student_id,
+          assistant_id: p.assistant_id || null
         });
       }
     });
@@ -197,15 +201,16 @@ export default function School() {
   const resetForm = () => {
     setSelectedMeeting(null);
     setBibleReading({ id: "", student_id: "" });
-    setMinistryParts([{ min: "", tema: "", student_id: "" }]);
+    setMinistryParts([{ min: "", tema: "", student_id: "", assistant_id: "" }]);
   };
 
-  const getPubsByPrivilege = (privilege: string, gender?: string) => {
+  const getPubsByPrivilege = (privilege: string, gender?: string, excludeId?: string) => {
     return publishers
       .filter(p => {
         const hasPriv = p.privileges?.includes(privilege);
         const matchesGender = gender ? p.gender === gender : true;
-        return hasPriv && matchesGender;
+        const isNotExcluded = excludeId ? p.id !== excludeId : true;
+        return hasPriv && matchesGender && isNotExcluded;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
   };
@@ -234,7 +239,7 @@ export default function School() {
             <DialogTrigger asChild>
               <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" /> Cadastrar</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <DialogHeader>
                   <DialogTitle>Programação da Escola</DialogTitle>
@@ -278,28 +283,42 @@ export default function School() {
                       </div>
                       
                       {ministryParts.map((part, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-slate-50 rounded-lg border relative group">
-                          <div className="col-span-2 space-y-1">
-                            <Label className="text-[10px]">Min</Label>
-                            <Input placeholder="5" value={part.min} onChange={e => updateMinistryPart(index, "min", e.target.value)} />
+                        <div key={index} className="space-y-3 p-4 bg-slate-50 rounded-lg border relative group">
+                          <div className="grid grid-cols-12 gap-3 items-end">
+                            <div className="col-span-2 space-y-1">
+                              <Label className="text-[10px]">Min</Label>
+                              <Input placeholder="5" value={part.min} onChange={e => updateMinistryPart(index, "min", e.target.value)} />
+                            </div>
+                            <div className="col-span-9 space-y-1">
+                              <Label className="text-[10px]">Tema</Label>
+                              <Input placeholder="Ex: Iniciando Conversas" value={part.tema} onChange={e => updateMinistryPart(index, "tema", e.target.value)} />
+                            </div>
+                            <div className="col-span-1">
+                              <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeMinistryPart(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="col-span-5 space-y-1">
-                            <Label className="text-[10px]">Tema</Label>
-                            <Input placeholder="Ex: Iniciando Conversas" value={part.tema} onChange={e => updateMinistryPart(index, "tema", e.target.value)} />
-                          </div>
-                          <div className="col-span-4 space-y-1">
-                            <Label className="text-[10px]">Estudante</Label>
-                            <Combobox 
-                              options={getPubsByPrivilege("Parte de Estudante")} 
-                              value={part.student_id} 
-                              onChange={(v) => updateMinistryPart(index, "student_id", v)}
-                              placeholder="Pesquisar..."
-                            />
-                          </div>
-                          <div className="col-span-1">
-                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeMinistryPart(index)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] flex items-center gap-1"><User size={10} /> Estudante</Label>
+                              <Combobox 
+                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.assistant_id)} 
+                                value={part.student_id} 
+                                onChange={(v) => updateMinistryPart(index, "student_id", v)}
+                                placeholder="Pesquisar estudante..."
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] flex items-center gap-1"><Users size={10} /> Ajudante</Label>
+                              <Combobox 
+                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.student_id)} 
+                                value={part.assistant_id} 
+                                onChange={(v) => updateMinistryPart(index, "assistant_id", v)}
+                                placeholder="Pesquisar ajudante..."
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -327,12 +346,13 @@ export default function School() {
                   <TableHead>Data</TableHead>
                   <TableHead>Parte</TableHead>
                   <TableHead>Estudante</TableHead>
+                  <TableHead>Ajudante</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada para este mês.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada para este mês.</TableCell></TableRow>
                 ) : (
                   data.map(item => (
                     <TableRow key={item.id}>
@@ -343,6 +363,7 @@ export default function School() {
                         </Badge>
                       </TableCell>
                       <TableCell>{item.student_name}</TableCell>
+                      <TableCell>{item.assistant_name || "-"}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <Button variant="ghost" size="icon" onClick={() => {
                           const meeting = meetings.find(m => m.date === item.meeting_date);
