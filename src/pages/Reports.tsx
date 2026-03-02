@@ -34,14 +34,16 @@ export default function Reports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
+  const [allActivePublishers, setAllActivePublishers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterMonth, setFilterMonth] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>((new Date().getMonth() + 1).toString());
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+  const [showMissing, setShowMissing] = useState(false);
 
   const [formData, setFormData] = useState({
     group_id: "",
@@ -58,11 +60,21 @@ export default function Reports() {
   useEffect(() => {
     loadReports();
     loadGroups();
+    loadAllActivePublishers();
   }, [filterMonth, filterGroup, filterYear]);
 
   const loadGroups = async () => {
     const { data } = await supabase.from("groups").select("*").order("group_number");
     setGroups(data || []);
+  };
+
+  const loadAllActivePublishers = async () => {
+    const { data } = await supabase
+      .from("publishers")
+      .select("*, groups(group_number)")
+      .eq("status", "active")
+      .order("full_name");
+    setAllActivePublishers(data || []);
   };
 
   const loadPublishersByGroup = async (groupId: string) => {
@@ -112,11 +124,9 @@ export default function Reports() {
   const handleEdit = async (report: Report) => {
     setEditingReportId(report.id);
     
-    // Encontrar o grupo pelo número
     const group = groups.find(g => g.group_number === report.group_id);
     const groupId = group?.id || "";
     
-    // Carregar publicadores do grupo para poder selecionar o correto
     const groupPubs = await loadPublishersByGroup(groupId);
     const publisher = groupPubs.find(p => p.full_name === report.reporter_name);
     
@@ -196,12 +206,39 @@ export default function Reports() {
     { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" }
   ];
 
-  const filteredReports = reports.filter(r => 
-    r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getDisplayData = () => {
+    if (!showMissing) {
+      return reports.filter(r => 
+        r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
-  const paginatedReports = filteredReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    // Lógica para "Falta Relatar"
+    const reportedNames = new Set(reports.map(r => r.reporter_name));
+    const missing = allActivePublishers.filter(p => {
+      const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGroup = filterGroup === "all" || p.group_id === groups.find(g => g.group_number.toString() === filterGroup)?.id;
+      const hasNotReported = !reportedNames.has(p.full_name);
+      return matchesSearch && matchesGroup && hasNotReported;
+    }).map(p => ({
+      id: p.id,
+      reporter_name: p.full_name,
+      group_id: p.groups?.group_number || null,
+      month: parseInt(filterMonth),
+      year: filterYear,
+      hours: 0,
+      bible_studies: 0,
+      notes: "Pendente",
+      pioneer_status: "publicador" as any,
+      isMissing: true
+    }));
+
+    return missing;
+  };
+
+  const filteredData = getDisplayData();
+  const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+  const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -297,7 +334,7 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div className="space-y-2 w-full">
               <Label>Filtrar por Nome</Label>
               <div className="relative">
@@ -342,6 +379,10 @@ export default function Reports() {
               <Label>Ano</Label>
               <Input type="number" value={filterYear} onChange={e => setFilterYear(parseInt(e.target.value) || new Date().getFullYear())} />
             </div>
+            <div className="flex items-center space-x-2 pb-2">
+              <Checkbox id="missing" checked={showMissing} onCheckedChange={(v) => setShowMissing(!!v)} />
+              <Label htmlFor="missing" className="font-bold text-red-600 cursor-pointer">Falta relatar</Label>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -354,41 +395,49 @@ export default function Reports() {
                   <TableHead>Mês/Ano</TableHead>
                   <TableHead>Horas</TableHead>
                   <TableHead>Estudos</TableHead>
+                  <TableHead>Observação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedReports.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhum relatório encontrado para os filtros selecionados.
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nenhum registro encontrado para os filtros selecionados.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedReports.map(r => (
-                    <TableRow key={r.id}>
+                  paginatedData.map(r => (
+                    <TableRow key={r.id} className={showMissing ? "bg-red-50/30" : ""}>
                       <TableCell className="font-medium whitespace-nowrap">{r.reporter_name}</TableCell>
                       <TableCell className="whitespace-nowrap">Grupo {r.group_id}</TableCell>
                       <TableCell className="whitespace-nowrap">{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
-                      <TableCell>{r.hours}</TableCell>
-                      <TableCell>{r.bible_studies}</TableCell>
+                      <TableCell>{showMissing ? "-" : r.hours}</TableCell>
+                      <TableCell>{showMissing ? "-" : r.bible_studies}</TableCell>
+                      <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                        {r.notes || "-"}
+                      </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(r)}><Pencil className="h-4 w-4" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Excluir Relatório?</AlertDialogTitle>
-                              <AlertDialogDescription>Deseja realmente excluir o relatório de {r.reporter_name}?</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {!showMissing && (
+                          <>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(r as Report)}><Pencil className="h-4 w-4" /></Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir Relatório?</AlertDialogTitle>
+                                  <AlertDialogDescription>Deseja realmente excluir o relatório de {r.reporter_name}?</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(r.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
