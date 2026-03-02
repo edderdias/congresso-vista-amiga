@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { Badge } from "@/components/ui/badge";
 
 interface Meeting {
   id: string;
@@ -28,16 +29,13 @@ export default function School() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
-  const [formData, setFormData] = useState({
-    meeting_date: "",
-    part_type: "Leitura da Bíblia",
-    student_id: "",
-    assistant_id: "none"
-  });
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  
+  const [bibleReading, setBibleReading] = useState({ id: "", student_id: "" });
+  const [ministryParts, setMinistryParts] = useState<{ id?: string, min: string, tema: string, student_id: string }[]>([]);
 
   useEffect(() => { 
     loadData(); 
@@ -49,6 +47,7 @@ export default function School() {
     const { data } = await supabase
       .from("meetings")
       .select("*")
+      .eq("type", "Meio de Semana")
       .order("date", { ascending: false });
     setMeetings(data || []);
   };
@@ -56,12 +55,10 @@ export default function School() {
   const loadPublishers = async () => {
     const { data: pubs } = await supabase
       .from("publishers")
-      .select("id, full_name, privileges")
+      .select("id, full_name, privileges, gender")
       .eq("status", "active")
       .order("full_name");
-    
-    const students = pubs?.filter(p => p.privileges?.includes("Parte de Estudante")) || [];
-    setPublishers(students);
+    setPublishers(pubs || []);
   };
 
   const loadData = async () => {
@@ -83,7 +80,6 @@ export default function School() {
       const formatted = schoolData.map(item => ({
         ...item,
         student_name: allPubs?.find(p => p.id === item.student_id)?.full_name || "-",
-        assistant_name: allPubs?.find(p => p.id === item.assistant_id)?.full_name || "-"
       }));
 
       setData(formatted);
@@ -93,32 +89,98 @@ export default function School() {
     }
   };
 
+  const handleMeetingChange = async (meetingId: string) => {
+    const meeting = meetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    setSelectedMeeting(meeting);
+    
+    const { data } = await supabase
+      .from("school_assignments")
+      .select("*")
+      .eq("meeting_date", meeting.date);
+
+    if (data) {
+      const reading = data.find(d => d.part_type === "Leitura da Bíblia");
+      setBibleReading({ 
+        id: reading?.id || "", 
+        student_id: reading?.student_id || "" 
+      });
+
+      const others = data
+        .filter(d => d.part_type !== "Leitura da Bíblia")
+        .map(d => {
+          const [min, ...temaParts] = d.part_type.split(" - ");
+          return {
+            id: d.id,
+            min: min.replace(" min", "") || "",
+            tema: temaParts.join(" - ") || "",
+            student_id: d.student_id
+          };
+        });
+      
+      setMinistryParts(others.length > 0 ? others : [{ min: "", tema: "", student_id: "" }]);
+    } else {
+      setBibleReading({ id: "", student_id: "" });
+      setMinistryParts([{ min: "", tema: "", student_id: "" }]);
+    }
+  };
+
+  const addMinistryPart = () => {
+    setMinistryParts([...ministryParts, { min: "", tema: "", student_id: "" }]);
+  };
+
+  const removeMinistryPart = (index: number) => {
+    setMinistryParts(ministryParts.filter((_, i) => i !== index));
+  };
+
+  const updateMinistryPart = (index: number, field: string, value: string) => {
+    const newParts = [...ministryParts];
+    newParts[index] = { ...newParts[index], [field]: value };
+    setMinistryParts(newParts);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.meeting_date) return toast.error("Selecione a reunião");
-    if (!formData.student_id) return toast.error("Selecione o estudante principal");
+    if (!selectedMeeting) return toast.error("Selecione a reunião");
 
     setLoading(true);
     
-    const isSoloPart = formData.part_type === "Leitura da Bíblia" || formData.part_type === "Discurso";
-    
-    const payload = {
-      meeting_date: formData.meeting_date,
-      part_type: formData.part_type,
-      student_id: formData.student_id,
-      assistant_id: isSoloPart || formData.assistant_id === "none" ? null : formData.assistant_id
-    };
+    const payloads: any[] = [];
+
+    if (bibleReading.student_id) {
+      payloads.push({
+        ...(bibleReading.id ? { id: bibleReading.id } : {}),
+        meeting_date: selectedMeeting.date,
+        part_type: "Leitura da Bíblia",
+        student_id: bibleReading.student_id
+      });
+    }
+
+    ministryParts.forEach(p => {
+      if (p.student_id) {
+        payloads.push({
+          ...(p.id ? { id: p.id } : {}),
+          meeting_date: selectedMeeting.date,
+          part_type: `${p.min} min - ${p.tema}`,
+          student_id: p.student_id
+        });
+      }
+    });
+
+    if (payloads.length === 0) {
+      setLoading(false);
+      return toast.error("Preencha pelo menos uma designação");
+    }
 
     try {
-      const { error } = editingId 
-        ? await supabase.from("school_assignments").update(payload).eq("id", editingId)
-        : await supabase.from("school_assignments").insert([payload]);
-
+      const { error } = await supabase.from("school_assignments").upsert(payloads);
       if (error) throw error;
 
-      toast.success("Designação salva!");
+      toast.success("Programação da escola salva!");
       setOpen(false);
       loadData();
+      resetForm();
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
@@ -132,32 +194,21 @@ export default function School() {
     else { toast.success("Excluído!"); loadData(); }
   };
 
-  const handleEdit = (item: any) => {
-    setEditingId(item.id);
-    setFormData({
-      meeting_date: item.meeting_date,
-      part_type: item.part_type,
-      student_id: item.student_id,
-      assistant_id: item.assistant_id || "none"
-    });
-    setOpen(true);
-  };
-
   const resetForm = () => {
-    setEditingId(null);
-    setFormData({
-      meeting_date: "",
-      part_type: "Leitura da Bíblia",
-      student_id: "",
-      assistant_id: "none"
-    });
+    setSelectedMeeting(null);
+    setBibleReading({ id: "", student_id: "" });
+    setMinistryParts([{ min: "", tema: "", student_id: "" }]);
   };
 
-  const parts = [
-    "Leitura da Bíblia", "Iniciando Conversas 1", "Iniciando Conversas 2", 
-    "Cultivando o Interesse", "Explicando suas crenças", 
-    "Fazendo Discípulos 1", "Fazendo Discípulos 2", "Discurso"
-  ];
+  const getPubsByPrivilege = (privilege: string, gender?: string) => {
+    return publishers
+      .filter(p => {
+        const hasPriv = p.privileges?.includes(privilege);
+        const matchesGender = gender ? p.gender === gender : true;
+        return hasPriv && matchesGender;
+      })
+      .map(p => ({ value: p.id, label: p.full_name }));
+  };
 
   const months = [
     { v: "01", l: "Janeiro" }, { v: "02", l: "Fevereiro" }, { v: "03", l: "Março" },
@@ -165,11 +216,6 @@ export default function School() {
     { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
-
-  const publisherOptions = publishers.map(p => ({ value: p.id, label: p.full_name }));
-  const assistantOptions = [{ value: "none", label: "Nenhum" }, ...publisherOptions];
-
-  const showAssistant = formData.part_type !== "Leitura da Bíblia" && formData.part_type !== "Discurso";
 
   return (
     <div className="space-y-6">
@@ -188,55 +234,84 @@ export default function School() {
             <DialogTrigger asChild>
               <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" /> Cadastrar</Button>
             </DialogTrigger>
-            <DialogContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <DialogHeader>
-                  <DialogTitle>{editingId ? "Editar" : "Nova"} Designação de Escola</DialogTitle>
-                  <DialogDescription>Selecione a reunião cadastrada.</DialogDescription>
+                  <DialogTitle>Programação da Escola</DialogTitle>
+                  <DialogDescription>Selecione a reunião de meio de semana e preencha os estudantes.</DialogDescription>
                 </DialogHeader>
+                
                 <div className="space-y-2">
-                  <Label>Reunião</Label>
-                  <Select value={formData.meeting_date} onValueChange={(v) => setFormData({...formData, meeting_date: v})}>
+                  <Label className="flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Reunião (Meio de Semana)</Label>
+                  <Select value={selectedMeeting?.id || ""} onValueChange={handleMeetingChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a reunião" />
                     </SelectTrigger>
                     <SelectContent>
                       {meetings.map((m) => (
-                        <SelectItem key={m.id} value={m.date}>
-                          {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
+                        <SelectItem key={m.id} value={m.id}>
+                          {format(parseISO(m.date), "dd/MM/yyyy")}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Parte</Label>
-                  <Select value={formData.part_type} onValueChange={v => setFormData({...formData, part_type: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{parts.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Principal</Label>
-                  <Combobox 
-                    options={publisherOptions} 
-                    value={formData.student_id} 
-                    onChange={(v) => setFormData({...formData, student_id: v})}
-                    placeholder="Pesquisar estudante..."
-                  />
-                </div>
-                {showAssistant && (
-                  <div className="space-y-2">
-                    <Label>Ajudante</Label>
-                    <Combobox 
-                      options={assistantOptions} 
-                      value={formData.assistant_id} 
-                      onChange={(v) => setFormData({...formData, assistant_id: v})}
-                      placeholder="Pesquisar ajudante..."
-                    />
+
+                {selectedMeeting && (
+                  <div className="space-y-6 border-t pt-4">
+                    <div className="space-y-2">
+                      <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Leitura da Bíblia</Label>
+                      <Combobox 
+                        options={getPubsByPrivilege("Parte de Estudante", "M")} 
+                        value={bibleReading.student_id} 
+                        onChange={(v) => setBibleReading({...bibleReading, student_id: v})}
+                        placeholder="Pesquisar estudante (M)..."
+                      />
+                    </div>
+
+                    <div className="space-y-4 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-primary font-bold flex items-center gap-2">Faça seu melhor no ministério</Label>
+                        <Button type="button" variant="outline" size="sm" onClick={addMinistryPart}>
+                          <PlusCircle className="h-4 w-4 mr-1" /> Adicionar Parte
+                        </Button>
+                      </div>
+                      
+                      {ministryParts.map((part, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-slate-50 rounded-lg border relative group">
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-[10px]">Min</Label>
+                            <Input placeholder="5" value={part.min} onChange={e => updateMinistryPart(index, "min", e.target.value)} />
+                          </div>
+                          <div className="col-span-5 space-y-1">
+                            <Label className="text-[10px]">Tema</Label>
+                            <Input placeholder="Ex: Iniciando Conversas" value={part.tema} onChange={e => updateMinistryPart(index, "tema", e.target.value)} />
+                          </div>
+                          <div className="col-span-4 space-y-1">
+                            <Label className="text-[10px]">Estudante</Label>
+                            <Combobox 
+                              options={getPubsByPrivilege("Parte de Estudante")} 
+                              value={part.student_id} 
+                              onChange={(v) => updateMinistryPart(index, "student_id", v)}
+                              placeholder="Pesquisar..."
+                            />
+                          </div>
+                          <div className="col-span-1">
+                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeMinistryPart(index)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
-                <DialogFooter><Button type="submit" disabled={loading}>Salvar</Button></DialogFooter>
+
+                <DialogFooter>
+                  <Button type="submit" disabled={loading || !selectedMeeting} className="w-full sm:w-auto">
+                    {loading ? "Salvando..." : "Salvar Programação"}
+                  </Button>
+                </DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -251,23 +326,31 @@ export default function School() {
                 <TableRow>
                   <TableHead>Data</TableHead>
                   <TableHead>Parte</TableHead>
-                  <TableHead>Principal</TableHead>
-                  <TableHead>Ajudante</TableHead>
+                  <TableHead>Estudante</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada para este mês.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhuma designação encontrada para este mês.</TableCell></TableRow>
                 ) : (
                   data.map(item => (
                     <TableRow key={item.id}>
                       <TableCell className="whitespace-nowrap">{format(parseISO(item.meeting_date), "dd/MM/yyyy")}</TableCell>
-                      <TableCell className="font-medium">{item.part_type}</TableCell>
+                      <TableCell className="font-medium">
+                        <Badge variant={item.part_type === "Leitura da Bíblia" ? "default" : "outline"}>
+                          {item.part_type}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{item.student_name}</TableCell>
-                      <TableCell>{item.assistant_name}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          const meeting = meetings.find(m => m.date === item.meeting_date);
+                          if (meeting) {
+                            handleMeetingChange(meeting.id);
+                            setOpen(true);
+                          }
+                        }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                           <AlertDialogContent>
