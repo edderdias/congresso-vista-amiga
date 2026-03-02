@@ -176,7 +176,7 @@ export default function Designations() {
     const payloads = Object.entries(formData)
       .filter(([_, data]) => data.user_id)
       .map(([type, data]) => ({
-        id: data.id,
+        ...(data.id ? { id: data.id } : {}),
         user_id: data.user_id,
         designation_type: type,
         meeting_date: selectedMeeting.date,
@@ -186,7 +186,7 @@ export default function Designations() {
     const vidaCristaPayloads = vidaCristaParts
       .filter(p => p.user_id)
       .map(p => ({
-        id: p.id,
+        ...(p.id ? { id: p.id } : {}),
         user_id: p.user_id,
         designation_type: "Nossa Vida Cristã",
         meeting_date: selectedMeeting.date,
@@ -390,6 +390,7 @@ export default function Designations() {
                       </div>
 
                       <div className="space-y-4 border-t pt-4">
+                        <Label className="text-primary font-bold">Encerramento</Label>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
