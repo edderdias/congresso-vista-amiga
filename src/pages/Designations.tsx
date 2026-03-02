@@ -68,6 +68,7 @@ export default function Designations() {
     "Estudo de Livro": { user_id: "", notes: "" },
     "Leitura do Livro": { user_id: "", notes: "" },
     "Oração Final": { user_id: "", notes: "" },
+    "Leitura A Sentinela": { user_id: "", notes: "" },
   });
 
   const [vidaCristaParts, setVidaCristaParts] = useState<{ id?: string, min: string, tema: string, user_id: string }[]>([]);
@@ -119,6 +120,7 @@ export default function Designations() {
       "Estudo de Livro": { user_id: "", notes: "" },
       "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
+      "Leitura A Sentinela": { user_id: "", notes: "" },
     };
 
     const newVidaCrista: any[] = [];
@@ -213,6 +215,7 @@ export default function Designations() {
       "Estudo de Livro": { user_id: "", notes: "" },
       "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
+      "Leitura A Sentinela": { user_id: "", notes: "" },
     });
     setVidaCristaParts([{ min: "", tema: "", user_id: "" }]);
   };
@@ -280,6 +283,8 @@ export default function Designations() {
     return d?.notes || "-";
   };
 
+  const isWeekend = selectedMeeting?.type.includes("Final de Semana");
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -322,7 +327,7 @@ export default function Designations() {
                     </Select>
                   </div>
 
-                  {selectedMeeting?.type.includes("Meio de Semana") && (
+                  {selectedMeeting && !isWeekend && (
                     <div className="space-y-6 border-t pt-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -449,9 +454,35 @@ export default function Designations() {
                     </div>
                   )}
 
-                  {selectedMeeting && !selectedMeeting.type.includes("Meio de Semana") && (
-                    <div className="space-y-4 border-t pt-4">
-                      <p className="text-sm text-muted-foreground italic">Para reuniões de final de semana, as designações são gerenciadas na aba de Discursos e Áudio/Vídeo.</p>
+                  {selectedMeeting && isWeekend && (
+                    <div className="space-y-6 border-t pt-4">
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Presidência Final de Semana")} 
+                          value={formData["Presidente"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
+                          placeholder="Pesquisar..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Oração")} 
+                          value={formData["Oração Inicial"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
+                          placeholder="Pesquisar..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Leitor da Sentinela</Label>
+                        <Combobox 
+                          options={getPubsByPrivilege("Leitura A Sentinela")} 
+                          value={formData["Leitura A Sentinela"].user_id} 
+                          onChange={(v) => setFormData({...formData, "Leitura A Sentinela": {...formData["Leitura A Sentinela"], user_id: v}})}
+                          placeholder="Pesquisar..."
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -564,45 +595,56 @@ export default function Designations() {
                 </div>
               </div>
 
-              <div className="space-y-2 border-b pb-4">
-                <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
-                <div className="bg-slate-50 p-2 rounded">
-                  <p className="text-sm font-medium">{getTreasureTheme(selectedProgram)}</p>
-                  <p className="text-xs text-muted-foreground">Orador: {getDesigValue(selectedProgram, "Tesouro")}</p>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Joias Espirituais:</span>
-                  <span className="text-sm font-bold">{getDesigValue(selectedProgram, "Joias Espirituais")}</span>
-                </div>
-              </div>
+              {selectedProgram.meetingType.includes("Meio de Semana") ? (
+                <>
+                  <div className="space-y-2 border-b pb-4">
+                    <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
+                    <div className="bg-slate-50 p-2 rounded">
+                      <p className="text-sm font-medium">{getTreasureTheme(selectedProgram)}</p>
+                      <p className="text-xs text-muted-foreground">Orador: {getDesigValue(selectedProgram, "Tesouro")}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">Joias Espirituais:</span>
+                      <span className="text-sm font-bold">{getDesigValue(selectedProgram, "Joias Espirituais")}</span>
+                    </div>
+                  </div>
 
-              {selectedProgram.designations.some(d => d.designation_type === "Nossa Vida Cristã") && (
-                <div className="space-y-2 border-b pb-4">
-                  <Label className="text-primary font-bold text-xs">Nossa Vida Cristã</Label>
-                  {selectedProgram.designations
-                    .filter(d => d.designation_type === "Nossa Vida Cristã")
-                    .map((d, i) => (
-                      <div key={i} className="flex justify-between items-start gap-2 text-sm border-l-2 border-primary pl-2">
-                        <div className="flex-1">
-                          <p className="font-medium">{d.notes}</p>
-                          <p className="text-xs text-muted-foreground">{d.publisher_name}</p>
-                        </div>
-                      </div>
-                    ))}
+                  {selectedProgram.designations.some(d => d.designation_type === "Nossa Vida Cristã") && (
+                    <div className="space-y-2 border-b pb-4">
+                      <Label className="text-primary font-bold text-xs">Nossa Vida Cristã</Label>
+                      {selectedProgram.designations
+                        .filter(d => d.designation_type === "Nossa Vida Cristã")
+                        .map((d, i) => (
+                          <div key={i} className="flex justify-between items-start gap-2 text-sm border-l-2 border-primary pl-2">
+                            <div className="flex-1">
+                              <p className="font-medium">{d.notes}</p>
+                              <p className="text-xs text-muted-foreground">{d.publisher_name}</p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Estudo de Livro</Label>
+                      <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Estudo de Livro")}</p>
+                      <p className="text-[10px] text-muted-foreground">Leitura: {getDesigValue(selectedProgram, "Leitura do Livro")}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Oração Final</Label>
+                      <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Oração Final")}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Leitor da Sentinela</Label>
+                    <p className="font-bold">{getDesigValue(selectedProgram, "Leitura A Sentinela")}</p>
+                  </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Estudo de Livro</Label>
-                  <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Estudo de Livro")}</p>
-                  <p className="text-[10px] text-muted-foreground">Leitura: {getDesigValue(selectedProgram, "Leitura do Livro")}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Oração Final</Label>
-                  <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Oração Final")}</p>
-                </div>
-              </div>
             </div>
           )}
           
