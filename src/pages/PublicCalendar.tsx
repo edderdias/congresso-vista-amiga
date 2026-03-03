@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, BookOpen, Mic2, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ export default function PublicCalendar() {
   const [cleaning, setCleaning] = useState<any[]>([]);
   const [av, setAv] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
+  const [designations, setDesignations] = useState<any[]>([]);
+  const [school, setSchool] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -26,17 +28,21 @@ export default function PublicCalendar() {
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
     try {
-      const [pubs, meets, clean, avDesig] = await Promise.all([
+      const [pubs, meets, clean, avDesig, theocratic, schoolDesig] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
         supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
-        supabase.from("av_designations").select("*")
+        supabase.from("av_designations").select("*"),
+        supabase.from("designations").select("*").gte("meeting_date", start).lte("meeting_date", end),
+        supabase.from("school_assignments").select("*").gte("meeting_date", start).lte("meeting_date", end)
       ]);
 
       setPublishers(pubs.data || []);
       setMeetings(meets.data || []);
       setCleaning(clean.data || []);
       setAv(avDesig.data || []);
+      setDesignations(theocratic.data || []);
+      setSchool(schoolDesig.data || []);
     } catch (error) {
       console.error("Erro ao carregar dados do calendário:", error);
     } finally {
@@ -82,7 +88,6 @@ export default function PublicCalendar() {
                   const dayStr = format(day, 'yyyy-MM-dd');
                   const dayMeets = meetings.filter(m => m.date === dayStr);
                   
-                  // Proteção contra datas nulas ou indefinidas
                   const dayClean = cleaning.filter(s => {
                     if (!s.start_date || !s.end_date) return false;
                     try {
@@ -100,13 +105,22 @@ export default function PublicCalendar() {
                       <span className="text-sm font-bold text-slate-400">{format(day, 'd')}</span>
                       <div className="mt-2 space-y-2">
                         {dayMeets.map(m => {
-                          const d = av.find(a => a.meeting_id === m.id);
+                          const dAv = av.find(a => a.meeting_id === m.id);
+                          const dTheocratic = designations.filter(d => d.meeting_date === m.date);
+                          const dSchool = school.filter(s => s.meeting_date === m.date);
+                          
                           return (
-                            <div key={m.id} onClick={() => setSelectedEvent({ type: 'meeting', data: m, av: d })} className="p-2 rounded bg-blue-50 border border-blue-100 space-y-1 cursor-pointer hover:bg-blue-100 transition-colors">
+                            <div key={m.id} onClick={() => setSelectedEvent({ 
+                              type: 'meeting', 
+                              data: m, 
+                              av: dAv,
+                              designations: dTheocratic,
+                              school: dSchool
+                            })} className="p-2 rounded bg-blue-50 border border-blue-100 space-y-1 cursor-pointer hover:bg-blue-100 transition-colors">
                               <div className="text-[10px] font-bold text-blue-800 uppercase truncate">{m.type}</div>
-                              {d && (
+                              {dAv && (
                                 <div className="text-[9px] text-blue-600 space-y-0.5">
-                                  <div className="flex items-center gap-1"><Monitor size={8} /> {getPubName(d.operator_id)}</div>
+                                  <div className="flex items-center gap-1"><Monitor size={8} /> {getPubName(dAv.operator_id)}</div>
                                 </div>
                               )}
                             </div>
@@ -145,28 +159,65 @@ export default function PublicCalendar() {
         </Card>
 
         <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Info className="h-5 w-5 text-primary" /> Detalhes da Designação
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 pt-4">
+            <div className="space-y-6 pt-4">
               {selectedEvent?.type === 'meeting' ? (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label className="text-muted-foreground">Reunião</Label><p className="font-bold">{selectedEvent.data.type}</p></div>
-                    <div><Label className="text-muted-foreground">Data</Label><p className="font-bold">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
+                    <div><Label className="text-muted-foreground text-xs">Reunião</Label><p className="font-bold text-sm">{selectedEvent.data.type}</p></div>
+                    <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold text-sm">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
                   </div>
+
                   {selectedEvent.av && (
                     <div className="space-y-2 border-t pt-4">
-                      <Label className="text-primary font-bold">Áudio e Vídeo</Label>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <Label className="text-primary font-bold flex items-center gap-2"><Monitor className="h-4 w-4" /> Áudio e Vídeo</Label>
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-lg">
                         <div><span className="text-muted-foreground">Áudio:</span> {getPubName(selectedEvent.av.operator_id)}</div>
                         <div><span className="text-muted-foreground">Vídeo:</span> {getPubName(selectedEvent.av.video_operator_id)}</div>
                         <div><span className="text-muted-foreground">Mic 1:</span> {getPubName(selectedEvent.av.mic_1_id)}</div>
                         <div><span className="text-muted-foreground">Mic 2:</span> {getPubName(selectedEvent.av.mic_2_id)}</div>
-                        <div><span className="text-muted-foreground">Palco:</span> {getPubName(selectedEvent.av.stage_id)}</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Palco:</span> {getPubName(selectedEvent.av.stage_id)}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.designations?.length > 0 && (
+                    <div className="space-y-2 border-t pt-4">
+                      <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Programação da Reunião</Label>
+                      <div className="space-y-2">
+                        {selectedEvent.designations.map((d: any, i: number) => (
+                          <div key={i} className="flex justify-between items-start text-xs border-b border-slate-100 pb-1 last:border-0">
+                            <div className="flex-1">
+                              <span className="font-bold text-slate-700">{d.designation_type}</span>
+                              {d.notes && <p className="text-[10px] text-muted-foreground italic">{d.notes}</p>}
+                            </div>
+                            <span className="font-medium">{getPubName(d.user_id)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.school?.length > 0 && (
+                    <div className="space-y-2 border-t pt-4">
+                      <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Escola do Ministério</Label>
+                      <div className="space-y-3">
+                        {selectedEvent.school.map((s: any, i: number) => (
+                          <div key={i} className="bg-slate-50 p-2 rounded border border-slate-100">
+                            <div className="text-[10px] font-bold text-primary uppercase mb-1">{s.part_type}</div>
+                            <div className="flex justify-between items-center text-xs">
+                              <div className="flex items-center gap-1"><User size={10} className="text-muted-foreground" /> {getPubName(s.student_id)}</div>
+                              {s.assistant_id && (
+                                <div className="flex items-center gap-1"><Users size={10} className="text-muted-foreground" /> {getPubName(s.assistant_id)}</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -184,13 +235,13 @@ export default function PublicCalendar() {
                 </>
               )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <footer className="text-center text-muted-foreground text-sm py-8">
-          <p>© Copyright 2026 Eder Dias | Desenvolvido por Eder Dias</p>
-        </footer>
-      </div>
+      <footer className="text-center text-muted-foreground text-sm py-8">
+        <p>© Copyright 2026 Eder Dias | Desenvolvido por Eder Dias</p>
+      </footer>
     </div>
   );
 }
