@@ -33,7 +33,7 @@ export default function AudioVideo() {
   const loadData = async () => {
     try {
       const [pubsResponse, meetingsResponse, avResponse] = await Promise.all([
-        supabase.from("publishers").select("id, full_name, privileges, is_indicator"),
+        supabase.from("publishers").select("id, full_name, privileges"),
         supabase.from("meetings").select("*").order("date", { ascending: false }),
         supabase.from("av_designations").select("*")
       ]);
@@ -101,9 +101,9 @@ export default function AudioVideo() {
     return pub ? pub.full_name : "-";
   };
 
-  const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
+  const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Vídeo") || p.privileges?.includes("Áudio e Video"));
   const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
-  const indicatorPublishers = publishers.filter(p => p.is_indicator === true);
+  const indicatorPublishers = publishers.filter(p => p.privileges?.includes("Indicador"));
 
   return (
     <div className="space-y-6">
