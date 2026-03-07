@@ -55,8 +55,7 @@ export default function Publishers() {
 
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
-    privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none",
-    is_indicator: false
+    privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none"
   });
 
   useEffect(() => { loadData(); }, []);
@@ -80,8 +79,7 @@ export default function Publishers() {
       hope: formData.hope || null,
       privileges: formData.privileges || [],
       status: formData.status,
-      group_id: formData.group_id === "none" ? null : formData.group_id,
-      is_indicator: formData.is_indicator
+      group_id: formData.group_id === "none" ? null : formData.group_id
     };
 
     const { error } = editingId 
@@ -163,7 +161,7 @@ export default function Publishers() {
           <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none", is_indicator: false}); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
               <DialogHeader><DialogTitle>{editingId ? "Editar Publicador" : "Novo Publicador"}</DialogTitle></DialogHeader>
@@ -250,11 +248,6 @@ export default function Publishers() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded border border-blue-100">
-                <Checkbox id="is_indicator" checked={formData.is_indicator} onCheckedChange={(v) => setFormData({...formData, is_indicator: !!v})} />
-                <Label htmlFor="is_indicator" className="font-bold text-blue-800 cursor-pointer">Pode ser Indicador?</Label>
               </div>
               
               <div className="space-y-4">
@@ -407,8 +400,7 @@ export default function Publishers() {
                           privileges: p.privileges || [],
                           hope: p.hope || "",
                           status: p.status || "active",
-                          group_id: p.group_id || "none",
-                          is_indicator: p.is_indicator || false
+                          group_id: p.group_id || "none"
                         }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
