@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Monitor, Mic, User } from "lucide-react";
+import { Plus, Pencil, Monitor, Mic, User, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,8 @@ export default function AudioVideo() {
     video_operator_id: "none",
     mic_1_id: "none",
     mic_2_id: "none",
-    stage_id: "none"
+    stage_id: "none",
+    external_indicator_id: "none"
   });
 
   useEffect(() => {
@@ -31,9 +32,8 @@ export default function AudioVideo() {
 
   const loadData = async () => {
     try {
-      // Buscamos tudo separadamente para garantir a integridade dos dados na exibição
       const [pubsResponse, meetingsResponse, avResponse] = await Promise.all([
-        supabase.from("publishers").select("id, full_name, privileges"),
+        supabase.from("publishers").select("id, full_name, privileges, is_indicator"),
         supabase.from("meetings").select("*").order("date", { ascending: false }),
         supabase.from("av_designations").select("*")
       ]);
@@ -41,7 +41,6 @@ export default function AudioVideo() {
       if (pubsResponse.data) setPublishers(pubsResponse.data);
       
       if (meetingsResponse.data) {
-        // Mapeamos as designações para suas respectivas reuniões manualmente
         const meetingsWithAv = meetingsResponse.data.map(m => ({
           ...m,
           av_designations: avResponse.data ? avResponse.data.filter(av => av.meeting_id === m.id) : []
@@ -62,7 +61,8 @@ export default function AudioVideo() {
       video_operator_id: desig?.video_operator_id || "none",
       mic_1_id: desig?.mic_1_id || "none",
       mic_2_id: desig?.mic_2_id || "none",
-      stage_id: desig?.stage_id || "none"
+      stage_id: desig?.stage_id || "none",
+      external_indicator_id: desig?.external_indicator_id || "none"
     });
     setOpen(true);
   };
@@ -77,7 +77,8 @@ export default function AudioVideo() {
       video_operator_id: formData.video_operator_id === "none" ? null : formData.video_operator_id,
       mic_1_id: formData.mic_1_id === "none" ? null : formData.mic_1_id,
       mic_2_id: formData.mic_2_id === "none" ? null : formData.mic_2_id,
-      stage_id: formData.stage_id === "none" ? null : formData.stage_id
+      stage_id: formData.stage_id === "none" ? null : formData.stage_id,
+      external_indicator_id: formData.external_indicator_id === "none" ? null : formData.external_indicator_id
     };
 
     const { error } = await supabase
@@ -102,6 +103,7 @@ export default function AudioVideo() {
 
   const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Video"));
   const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
+  const indicatorPublishers = publishers.filter(p => p.is_indicator === true);
 
   return (
     <div className="space-y-6">
@@ -121,18 +123,19 @@ export default function AudioVideo() {
               <TableHeader className="bg-slate-50">
                 <TableRow>
                   <TableHead className="w-[180px]">Reunião</TableHead>
-                  <TableHead>Operador de Áudio</TableHead>
-                  <TableHead>Operador de Vídeo</TableHead>
-                  <TableHead>Microfone 1</TableHead>
-                  <TableHead>Microfone 2</TableHead>
+                  <TableHead>Áudio</TableHead>
+                  <TableHead>Vídeo</TableHead>
+                  <TableHead>Mic 1</TableHead>
+                  <TableHead>Mic 2</TableHead>
                   <TableHead>Palco</TableHead>
+                  <TableHead>Ind. Externo</TableHead>
                   <TableHead className="text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {meetings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhuma reunião cadastrada.
                     </TableCell>
                   </TableRow>
@@ -152,6 +155,7 @@ export default function AudioVideo() {
                         <TableCell>{getPubName(d?.mic_1_id)}</TableCell>
                         <TableCell>{getPubName(d?.mic_2_id)}</TableCell>
                         <TableCell>{getPubName(d?.stage_id)}</TableCell>
+                        <TableCell>{getPubName(d?.external_indicator_id)}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
                             {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
@@ -184,9 +188,7 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Áudio</Label>
                   <Select value={formData.operator_id} onValueChange={v => setFormData({...formData, operator_id: v})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -196,9 +198,7 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Vídeo</Label>
                   <Select value={formData.video_operator_id} onValueChange={v => setFormData({...formData, video_operator_id: v})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {avPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -211,9 +211,7 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 1</Label>
                   <Select value={formData.mic_1_id} onValueChange={v => setFormData({...formData, mic_1_id: v})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -223,9 +221,7 @@ export default function AudioVideo() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 2</Label>
                   <Select value={formData.mic_2_id} onValueChange={v => setFormData({...formData, mic_2_id: v})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
                       {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
@@ -234,17 +230,27 @@ export default function AudioVideo() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Palco</Label>
-                <Select value={formData.stage_id} onValueChange={v => setFormData({...formData, stage_id: v})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Palco</Label>
+                  <Select value={formData.stage_id} onValueChange={v => setFormData({...formData, stage_id: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {micPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Indicador Externo</Label>
+                  <Select value={formData.external_indicator_id} onValueChange={v => setFormData({...formData, external_indicator_id: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {indicatorPublishers.map(p => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>

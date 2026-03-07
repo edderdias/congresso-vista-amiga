@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, FileCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Report {
   id: string;
@@ -69,7 +70,6 @@ export default function Reports() {
   };
 
   const loadAllActivePublishers = async () => {
-    // Consideramos Ativos e Repreendidos como publicadores que devem relatar
     const { data } = await supabase
       .from("publishers")
       .select("*, groups(group_number)")
@@ -214,10 +214,8 @@ export default function Reports() {
       );
     }
 
-    // Lógica para "Falta Relatar"
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    // Pegamos os nomes de quem já relatou NESTE mês e ano específicos
     const reportedNames = new Set(
       reports
         .filter(r => r.month === targetMonth && r.year === filterYear)
@@ -227,7 +225,6 @@ export default function Reports() {
     const missing = allActivePublishers.filter(p => {
       const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Filtro de grupo: comparamos o group_id (UUID) do publicador com o ID do grupo selecionado
       let matchesGroup = true;
       if (filterGroup !== "all") {
         const selectedGroup = groups.find(g => g.group_number.toString() === filterGroup);
@@ -399,6 +396,13 @@ export default function Reports() {
               <Checkbox id="missing" checked={showMissing} onCheckedChange={(v) => setShowMissing(!!v)} />
               <Label htmlFor="missing" className="font-bold text-red-600 cursor-pointer">Falta relatar</Label>
             </div>
+          </div>
+          
+          <div className="pt-4 flex items-center gap-2">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1 flex items-center gap-2">
+              <FileCheck size={14} />
+              {reports.length} relatórios cadastrados no mês
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>

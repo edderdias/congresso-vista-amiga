@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, MapPin, Search, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Search, Filter, Users, Star, Clock, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -50,12 +50,13 @@ export default function Publishers() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("default"); // Padrão: Ativos e Repreendidos
+  const [filterStatus, setFilterStatus] = useState("default");
   const [filterPrivilege, setFilterPrivilege] = useState("all");
 
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
-    privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none"
+    privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none",
+    is_indicator: false
   });
 
   useEffect(() => { loadData(); }, []);
@@ -79,7 +80,8 @@ export default function Publishers() {
       hope: formData.hope || null,
       privileges: formData.privileges || [],
       status: formData.status,
-      group_id: formData.group_id === "none" ? null : formData.group_id
+      group_id: formData.group_id === "none" ? null : formData.group_id,
+      is_indicator: formData.is_indicator
     };
 
     const { error } = editingId 
@@ -87,7 +89,6 @@ export default function Publishers() {
       : await supabase.from("publishers").insert([payload]);
 
     if (error) {
-      console.error("Erro ao salvar publicador:", error);
       toast.error("Erro ao salvar: " + error.message);
     } else {
       toast.success("Salvo com sucesso!");
@@ -119,7 +120,6 @@ export default function Publishers() {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
     
-    // Lógica de filtro de status
     let matchesStatus = true;
     if (filterStatus === "default") {
       matchesStatus = p.status === "active" || p.status === "repreendido";
@@ -132,6 +132,13 @@ export default function Publishers() {
   });
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
+
+  const stats = {
+    total: publishers.filter(p => p.status === 'active' || p.status === 'repreendido').length,
+    regular: publishers.filter(p => p.privileges?.includes("Pioneiro Regular")).length,
+    auxiliary: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar")).length,
+    inactive: publishers.filter(p => p.status === 'inactive').length
+  };
 
   const getStatusBadge = (status: string) => {
     const configs: Record<string, string> = {
@@ -163,7 +170,7 @@ export default function Publishers() {
           <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="w-full sm:w-auto" onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none", is_indicator: false}); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
               <DialogHeader><DialogTitle>{editingId ? "Editar Publicador" : "Novo Publicador"}</DialogTitle></DialogHeader>
@@ -251,6 +258,11 @@ export default function Publishers() {
                   </Select>
                 </div>
               </div>
+
+              <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded border border-blue-100">
+                <Checkbox id="is_indicator" checked={formData.is_indicator} onCheckedChange={(v) => setFormData({...formData, is_indicator: !!v})} />
+                <Label htmlFor="is_indicator" className="font-bold text-blue-800 cursor-pointer">Pode ser Indicador?</Label>
+              </div>
               
               <div className="space-y-4">
                 <Label className="font-bold text-primary">Privilégios</Label>
@@ -276,35 +288,49 @@ export default function Publishers() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <Label className="font-bold text-primary">Atividades Mecânicas</Label>
-                  <div className="space-y-2 border p-3 rounded bg-slate-50">
-                    {SECTIONS.mecanicas.map(p => (
-                      <div key={p} className="flex items-center space-x-2">
-                        <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
-                        <Label htmlFor={p} className="text-xs cursor-pointer">{p}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Label className="font-bold text-primary">Pregação e Extras</Label>
-                  <div className="space-y-2 border p-3 rounded bg-slate-50">
-                    {SECTIONS.pregacao.map(p => (
-                      <div key={p} className="flex items-center space-x-2">
-                        <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
-                        <Label htmlFor={p} className="text-xs cursor-pointer">{p}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               <DialogFooter><Button type="submit" className="w-full sm:w-auto">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-blue-50 border-blue-100">
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className="p-2 bg-blue-500 rounded-lg text-white"><Users size={20} /></div>
+            <div>
+              <p className="text-xs text-blue-600 font-medium">Publicadores</p>
+              <p className="text-xl font-bold text-blue-900">{stats.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50 border-amber-100">
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className="p-2 bg-amber-500 rounded-lg text-white"><Star size={20} /></div>
+            <div>
+              <p className="text-xs text-amber-600 font-medium">Pion. Regulares</p>
+              <p className="text-xl font-bold text-amber-900">{stats.regular}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50 border-green-100">
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className="p-2 bg-green-500 rounded-lg text-white"><Clock size={20} /></div>
+            <div>
+              <p className="text-xs text-green-600 font-medium">Pion. Auxiliares</p>
+              <p className="text-xl font-bold text-green-900">{stats.auxiliary}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50 border-red-100">
+          <CardContent className="pt-4 flex items-center gap-3">
+            <div className="p-2 bg-red-500 rounded-lg text-white"><UserMinus size={20} /></div>
+            <div>
+              <p className="text-xs text-red-600 font-medium">Inativos</p>
+              <p className="text-xl font-bold text-red-900">{stats.inactive}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -427,7 +453,8 @@ export default function Publishers() {
                           privileges: p.privileges || [],
                           hope: p.hope || "",
                           status: p.status || "active",
-                          group_id: p.group_id || "none"
+                          group_id: p.group_id || "none",
+                          is_indicator: p.is_indicator || false
                         }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>

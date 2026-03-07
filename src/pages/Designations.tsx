@@ -255,7 +255,6 @@ export default function Designations() {
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
 
-  // Agrupar designações por data
   const groupedPrograms: GroupedProgram[] = Array.from(new Set(designations.map(d => d.meeting_date)))
     .map(date => {
       const meeting = meetings.find(m => m.date === date);
@@ -283,7 +282,10 @@ export default function Designations() {
     return d?.notes || "-";
   };
 
-  const isWeekend = selectedMeeting?.type.includes("Final de Semana");
+  // Atualizado para incluir Especial e Celebração
+  const isWeekend = selectedMeeting?.type.includes("Final de Semana") || 
+                    selectedMeeting?.type === "Especial" || 
+                    selectedMeeting?.type === "Celebração";
 
   return (
     <div className="space-y-6">
@@ -595,7 +597,14 @@ export default function Designations() {
                 </div>
               </div>
 
-              {selectedProgram.meetingType.includes("Meio de Semana") ? (
+              {!selectedProgram.meetingType.includes("Meio de Semana") && selectedProgram.meetingType !== "Visita do Viajante (Meio de Semana)" ? (
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Leitor da Sentinela</Label>
+                    <p className="font-bold">{getDesigValue(selectedProgram, "Leitura A Sentinela")}</p>
+                  </div>
+                </div>
+              ) : (
                 <>
                   <div className="space-y-2 border-b pb-4">
                     <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
@@ -637,13 +646,6 @@ export default function Designations() {
                     </div>
                   </div>
                 </>
-              ) : (
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Leitor da Sentinela</Label>
-                    <p className="font-bold">{getDesigValue(selectedProgram, "Leitura A Sentinela")}</p>
-                  </div>
-                </div>
               )}
             </div>
           )}

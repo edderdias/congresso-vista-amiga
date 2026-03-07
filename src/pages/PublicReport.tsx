@@ -55,7 +55,6 @@ export default function PublicReport() {
     let month = now.getMonth() + 1;
     let year = now.getFullYear();
 
-    // Regra: Dia 20 ou menos -> Mês anterior. Dia 21 ou mais -> Mês atual.
     if (day <= 20) {
       month = month - 1;
       if (month === 0) {
@@ -114,17 +113,13 @@ export default function PublicReport() {
       return;
     }
 
-    // Verificação de duplicidade rigorosa
-    const { data: existingReports, error: checkError } = await supabase
+    // Verificação de duplicidade
+    const { data: existingReports } = await supabase
       .from("preaching_reports")
       .select("id")
       .eq("reporter_name", publisher.full_name)
       .eq("month", parseInt(formData.month))
       .eq("year", formData.year);
-
-    if (checkError) {
-      console.error("[PublicReport] Erro ao verificar duplicidade:", checkError);
-    }
 
     if (existingReports && existingReports.length > 0) {
       setLoading(false);
@@ -152,7 +147,6 @@ export default function PublicReport() {
     setLoading(false);
 
     if (error) {
-      console.error("Erro ao enviar relatório:", error);
       toast.error("Erro ao enviar relatório. Tente novamente mais tarde.");
     } else {
       setSubmitted(true);
