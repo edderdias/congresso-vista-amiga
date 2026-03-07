@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, MapPin, Search, Filter, Users, Star, Clock, UserMinus } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Search, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -132,13 +132,6 @@ export default function Publishers() {
   });
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
-
-  const stats = {
-    total: publishers.filter(p => p.status === 'active' || p.status === 'repreendido').length,
-    regular: publishers.filter(p => p.privileges?.includes("Pioneiro Regular")).length,
-    auxiliary: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar")).length,
-    inactive: publishers.filter(p => p.status === 'inactive').length
-  };
 
   const getStatusBadge = (status: string) => {
     const configs: Record<string, string> = {
@@ -292,45 +285,6 @@ export default function Publishers() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-blue-50 border-blue-100">
-          <CardContent className="pt-4 flex items-center gap-3">
-            <div className="p-2 bg-blue-500 rounded-lg text-white"><Users size={20} /></div>
-            <div>
-              <p className="text-xs text-blue-600 font-medium">Publicadores</p>
-              <p className="text-xl font-bold text-blue-900">{stats.total}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50 border-amber-100">
-          <CardContent className="pt-4 flex items-center gap-3">
-            <div className="p-2 bg-amber-500 rounded-lg text-white"><Star size={20} /></div>
-            <div>
-              <p className="text-xs text-amber-600 font-medium">Pion. Regulares</p>
-              <p className="text-xl font-bold text-amber-900">{stats.regular}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-green-50 border-green-100">
-          <CardContent className="pt-4 flex items-center gap-3">
-            <div className="p-2 bg-green-500 rounded-lg text-white"><Clock size={20} /></div>
-            <div>
-              <p className="text-xs text-green-600 font-medium">Pion. Auxiliares</p>
-              <p className="text-xl font-bold text-green-900">{stats.auxiliary}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-red-50 border-red-100">
-          <CardContent className="pt-4 flex items-center gap-3">
-            <div className="p-2 bg-red-500 rounded-lg text-white"><UserMinus size={20} /></div>
-            <div>
-              <p className="text-xs text-red-600 font-medium">Inativos</p>
-              <p className="text-xl font-bold text-red-900">{stats.inactive}</p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
