@@ -50,7 +50,7 @@ export default function Publishers() {
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("default");
+  const [filterStatus, setFilterStatus] = useState("default"); // Padrão: Ativos e Repreendidos
   const [filterPrivilege, setFilterPrivilege] = useState("all");
 
   const [formData, setFormData] = useState({
@@ -87,6 +87,7 @@ export default function Publishers() {
       : await supabase.from("publishers").insert([payload]);
 
     if (error) {
+      console.error("Erro ao salvar publicador:", error);
       toast.error("Erro ao salvar: " + error.message);
     } else {
       toast.success("Salvo com sucesso!");
@@ -118,6 +119,7 @@ export default function Publishers() {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
     
+    // Lógica de filtro de status
     let matchesStatus = true;
     if (filterStatus === "default") {
       matchesStatus = p.status === "active" || p.status === "repreendido";
@@ -271,6 +273,31 @@ export default function Publishers() {
                       <Label htmlFor={p} className="text-xs cursor-pointer">{p}</Label>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <Label className="font-bold text-primary">Atividades Mecânicas</Label>
+                  <div className="space-y-2 border p-3 rounded bg-slate-50">
+                    {SECTIONS.mecanicas.map(p => (
+                      <div key={p} className="flex items-center space-x-2">
+                        <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
+                        <Label htmlFor={p} className="text-xs cursor-pointer">{p}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <Label className="font-bold text-primary">Pregação e Extras</Label>
+                  <div className="space-y-2 border p-3 rounded bg-slate-50">
+                    {SECTIONS.pregacao.map(p => (
+                      <div key={p} className="flex items-center space-x-2">
+                        <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePriv(p)} />
+                        <Label htmlFor={p} className="text-xs cursor-pointer">{p}</Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
