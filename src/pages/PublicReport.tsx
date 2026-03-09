@@ -85,7 +85,7 @@ export default function PublicReport() {
       .from("publishers")
       .select("id, full_name, privileges")
       .eq("group_id", groupId)
-      .eq("status", "active")
+      .not("status", "in", '("mudou","removido")')
       .order("full_name");
     setPublishers(data || []);
   };
