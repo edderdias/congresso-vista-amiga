@@ -79,9 +79,7 @@ export default function Publishers() {
       hope: formData.hope || null,
       privileges: formData.privileges || [],
       status: formData.status,
-      group_id: formData.group_id === "none" ? null : formData.group_id,
-      // Vincula o privilégio "Indicador" ao campo is_indicator do banco
-      is_indicator: formData.privileges.includes("Indicador")
+      group_id: formData.group_id === "none" ? null : formData.group_id
     };
 
     const { error } = editingId 
