@@ -228,7 +228,7 @@ export default function PublicCalendar() {
                           <span className="text-sm font-medium">Tesouro</span>
                           <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Tesouro")?.user_id)}</span>
                         </div>
-                        <p className="text-[10px] text-amber-700 italic">{findDesig(selectedEvent.designations, "Tesouro")?.notes || ""}</p>
+                        <p className="text-[14px] text-amber-700 italic">{findDesig(selectedEvent.designations, "Tesouro")?.notes || ""}</p>
                       </div>
                       <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
                         <span className="text-sm font-medium">Joias Espirituais</span>
