@@ -203,14 +203,26 @@ export default function School() {
     }
 
     try {
-      const { error } = await supabase.from("school_assignments").upsert(payloads);
-      if (error) throw error;
+      // Separar atualizações de inserções para evitar erro de ID nulo em lote
+      const toUpdate = payloads.filter(p => p.id);
+      const toInsert = payloads.filter(p => !p.id);
+
+      if (toUpdate.length > 0) {
+        const { error: err1 } = await supabase.from("school_assignments").upsert(toUpdate);
+        if (err1) throw err1;
+      }
+
+      if (toInsert.length > 0) {
+        const { error: err2 } = await supabase.from("school_assignments").insert(toInsert);
+        if (err2) throw err2;
+      }
 
       toast.success("Programação da escola salva!");
       setOpen(false);
       loadData();
       resetForm();
     } catch (error: any) {
+      console.error("Erro ao salvar escola:", error);
       toast.error("Erro ao salvar: " + error.message);
     } finally {
       setLoading(false);
@@ -250,7 +262,6 @@ export default function School() {
     { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
   ];
 
-  // Agrupar designações por data
   const groupedPrograms: GroupedSchoolProgram[] = Array.from(new Set(data.map(d => d.meeting_date)))
     .map(date => ({
       date,
