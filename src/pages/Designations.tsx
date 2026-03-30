@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2, Clock, PlusCircle, Eye, Info } from "lucide-react";
+import { Plus, Trash2, Pencil, Calendar as CalendarIcon, User, BookOpen, Mic2, Clock, PlusCircle, Eye, Info, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -23,12 +23,14 @@ interface Designation {
   notes: string | null;
   user_id: string;
   publisher_name?: string;
+  publisher_phone?: string;
 }
 
 interface Publisher {
   id: string;
   full_name: string;
   privileges: string[];
+  phone?: string;
 }
 
 interface Meeting {
@@ -84,7 +86,7 @@ export default function Designations() {
 
     const [desigRes, pubsRes, meetsRes] = await Promise.all([
       supabase.from("designations").select("*").gte("meeting_date", start).lte("meeting_date", end),
-      supabase.from("publishers").select("id, full_name, privileges").eq("status", "active"),
+      supabase.from("publishers").select("id, full_name, privileges, phone").eq("status", "active"),
       supabase.from("meetings").select("*").order("date", { ascending: false })
     ]);
 
@@ -92,10 +94,14 @@ export default function Designations() {
     if (meetsRes.data) setMeetings(meetsRes.data);
     
     if (desigRes.data) {
-      const formatted = desigRes.data.map(d => ({
-        ...d,
-        publisher_name: pubsRes.data?.find(p => p.id === d.user_id)?.full_name || "-"
-      }));
+      const formatted = desigRes.data.map(d => {
+        const pub = pubsRes.data?.find(p => p.id === d.user_id);
+        return {
+          ...d,
+          publisher_name: pub?.full_name || "-",
+          publisher_phone: pub?.phone || ""
+        };
+      });
       setDesignations(formatted);
     }
     setLoading(false);
@@ -197,7 +203,6 @@ export default function Designations() {
     }
 
     try {
-      // Separar atualizações de inserções para evitar erro de ID nulo em lote
       const toUpdate = payloads.filter(p => p.id);
       const toInsert = payloads.filter(p => !p.id);
 
@@ -264,6 +269,23 @@ export default function Designations() {
     return publishers
       .filter(p => p.privileges?.includes(privilege))
       .map(p => ({ value: p.id, label: p.full_name }));
+  };
+
+  const sendWhatsApp = (name: string, phone: string, date: string, type: string, notes?: string) => {
+    if (!phone) return toast.error("Publicador sem telefone cadastrado");
+    
+    const cleanPhone = phone.replace(/\D/g, "");
+    const formattedDate = format(parseISO(date), "dd/MM/yyyy");
+    
+    let message = `Olá *${name}*, você foi designado para a seguinte parte na reunião de *${formattedDate}*:\n\n`;
+    message += `📌 *Designação:* ${type}\n`;
+    if (notes && notes !== "-") {
+      message += `📝 *Tema/Obs:* ${notes}\n`;
+    }
+    message += `\nPor favor, confirme o recebimento desta mensagem. Obrigado!`;
+    
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
   };
 
   const months = [
@@ -589,7 +611,7 @@ export default function Designations() {
       </Card>
 
       <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Info className="h-5 w-5 text-primary" /> Detalhes da Programação
@@ -603,67 +625,27 @@ export default function Designations() {
           
           {selectedProgram && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                <div>
-                  <Label className="text-muted-foreground text-xs">Presidente</Label>
-                  <p className="font-bold">{getDesigValue(selectedProgram, "Presidente")}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground text-xs">Oração Inicial</Label>
-                  <p className="font-bold">{getDesigValue(selectedProgram, "Oração Inicial")}</p>
-                </div>
+              <div className="grid grid-cols-1 gap-3 border-b pb-4">
+                {selectedProgram.designations.map((d, i) => (
+                  <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground uppercase">{d.designation_type}</span>
+                      <span className="text-sm font-bold">{d.publisher_name}</span>
+                      {d.notes && <span className="text-[10px] text-primary italic">{d.notes}</span>}
+                    </div>
+                    {d.publisher_phone && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-green-600 border-green-200 hover:bg-green-50 h-8"
+                        onClick={() => sendWhatsApp(d.publisher_name!, d.publisher_phone!, d.meeting_date, d.designation_type, d.notes || undefined)}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" /> Notificar
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
-
-              {!selectedProgram.meetingType.includes("Meio de Semana") && selectedProgram.meetingType !== "Visita do Viajante (Meio de Semana)" ? (
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Leitor da Sentinela</Label>
-                    <p className="font-bold">{getDesigValue(selectedProgram, "Leitura A Sentinela")}</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2 border-b pb-4">
-                    <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
-                    <div className="bg-slate-50 p-2 rounded">
-                      <p className="text-sm font-medium">{getTreasureTheme(selectedProgram)}</p>
-                      <p className="text-xs text-muted-foreground">Orador: {getDesigValue(selectedProgram, "Tesouro")}</p>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Joias Espirituais:</span>
-                      <span className="text-sm font-bold">{getDesigValue(selectedProgram, "Joias Espirituais")}</span>
-                    </div>
-                  </div>
-
-                  {selectedProgram.designations.some(d => d.designation_type === "Nossa Vida Cristã") && (
-                    <div className="space-y-2 border-b pb-4">
-                      <Label className="text-primary font-bold text-xs">Nossa Vida Cristã</Label>
-                      {selectedProgram.designations
-                        .filter(d => d.designation_type === "Nossa Vida Cristã")
-                        .map((d, i) => (
-                          <div key={i} className="flex justify-between items-start gap-2 text-sm border-l-2 border-primary pl-2">
-                            <div className="flex-1">
-                              <p className="font-medium">{d.notes}</p>
-                              <p className="text-xs text-muted-foreground">{d.publisher_name}</p>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Estudo de Livro</Label>
-                      <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Estudo de Livro")}</p>
-                      <p className="text-[10px] text-muted-foreground">Leitura: {getDesigValue(selectedProgram, "Leitura do Livro")}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Oração Final</Label>
-                      <p className="text-sm font-bold">{getDesigValue(selectedProgram, "Oração Final")}</p>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           )}
           

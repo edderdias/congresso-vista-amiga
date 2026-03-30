@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle, Users, Eye, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar as CalendarIcon, User, BookOpen, Clock, PlusCircle, Users, Eye, Info, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,9 @@ interface SchoolAssignment {
   student_id: string;
   assistant_id: string | null;
   student_name?: string;
+  student_phone?: string;
   assistant_name?: string;
+  assistant_phone?: string;
 }
 
 interface GroupedSchoolProgram {
@@ -77,7 +79,7 @@ export default function School() {
   const loadPublishers = async () => {
     const { data: pubs } = await supabase
       .from("publishers")
-      .select("id, full_name, privileges, gender")
+      .select("id, full_name, privileges, gender, phone")
       .eq("status", "active")
       .order("full_name");
     setPublishers(pubs || []);
@@ -98,13 +100,19 @@ export default function School() {
 
       if (error) throw error;
 
-      const { data: allPubs } = await supabase.from("publishers").select("id, full_name");
+      const { data: allPubs } = await supabase.from("publishers").select("id, full_name, phone");
       
-      const formatted = schoolData.map(item => ({
-        ...item,
-        student_name: allPubs?.find(p => p.id === item.student_id)?.full_name || "-",
-        assistant_name: allPubs?.find(p => p.id === item.assistant_id)?.full_name || "-",
-      }));
+      const formatted = schoolData.map(item => {
+        const student = allPubs?.find(p => p.id === item.student_id);
+        const assistant = allPubs?.find(p => p.id === item.assistant_id);
+        return {
+          ...item,
+          student_name: student?.full_name || "-",
+          student_phone: student?.phone || "",
+          assistant_name: assistant?.full_name || "-",
+          assistant_phone: assistant?.phone || "",
+        };
+      });
 
       setData(formatted);
     } catch (error: any) {
@@ -203,7 +211,6 @@ export default function School() {
     }
 
     try {
-      // Separar atualizações de inserções para evitar erro de ID nulo em lote
       const toUpdate = payloads.filter(p => p.id);
       const toInsert = payloads.filter(p => !p.id);
 
@@ -253,6 +260,23 @@ export default function School() {
         return hasPriv && matchesGender && isNotExcluded;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
+  };
+
+  const sendWhatsApp = (name: string, phone: string, date: string, part: string, assistant?: string) => {
+    if (!phone) return toast.error("Publicador sem telefone cadastrado");
+    
+    const cleanPhone = phone.replace(/\D/g, "");
+    const formattedDate = format(parseISO(date), "dd/MM/yyyy");
+    
+    let message = `Olá *${name}*, você foi designado para a seguinte parte na reunião de *${formattedDate}*:\n\n`;
+    message += `📌 *Parte:* ${part}\n`;
+    if (assistant && assistant !== "-") {
+      message += `👤 *Ajudante:* ${assistant}\n`;
+    }
+    message += `\nPor favor, confirme o recebimento desta mensagem. Obrigado!`;
+    
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
   };
 
   const months = [
@@ -496,8 +520,23 @@ export default function School() {
               <div className="space-y-2 border-b pb-4">
                 <Label className="text-primary font-bold text-xs">Tesouros da Palavra de Deus</Label>
                 <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
-                  <span className="text-sm font-medium">Leitura da Bíblia</span>
-                  <span className="text-sm font-bold">{getBibleReadingStudent(selectedProgram)}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Leitura da Bíblia</span>
+                    <span className="text-sm font-bold">{getBibleReadingStudent(selectedProgram)}</span>
+                  </div>
+                  {selectedProgram.assignments.find(a => a.part_type === "Leitura da Bíblia")?.student_phone && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-green-600 border-green-200 hover:bg-green-50"
+                      onClick={() => {
+                        const a = selectedProgram.assignments.find(a => a.part_type === "Leitura da Bíblia");
+                        if (a) sendWhatsApp(a.student_name!, a.student_phone!, a.meeting_date, a.part_type);
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" /> Notificar
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -506,9 +545,19 @@ export default function School() {
                 {selectedProgram.assignments
                   .filter(a => a.part_type !== "Leitura da Bíblia")
                   .map((a, i) => (
-                    <div key={i} className="p-3 bg-slate-50 rounded-lg border space-y-2">
+                    <div key={i} className="p-3 bg-slate-50 rounded-lg border space-y-3">
                       <div className="flex justify-between items-start">
                         <span className="text-xs font-bold text-primary uppercase">{a.part_type}</span>
+                        {a.student_phone && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-green-600 border-green-200 hover:bg-green-50 h-7 text-[10px]"
+                            onClick={() => sendWhatsApp(a.student_name!, a.student_phone!, a.meeting_date, a.part_type, a.assistant_name)}
+                          >
+                            <MessageCircle className="h-3 w-3 mr-1" /> Notificar
+                          </Button>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
