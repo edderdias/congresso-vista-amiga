@@ -57,7 +57,6 @@ export default function PublicCalendar() {
     end: endOfWeek(endOfMonth(currentMonth), {weekStartsOn: 1}) 
   });
 
-  // Helper to find specific designations
   const findDesig = (list: any[], type: string) => list.find(d => d.designation_type === type);
 
   return (
@@ -162,7 +161,7 @@ export default function PublicCalendar() {
         </Card>
 
         <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Info className="h-6 w-6 text-primary" /> Detalhes da Designação
