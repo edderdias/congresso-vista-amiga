@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, BookOpen, Mic2, User, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, BookOpen, Mic2, User, Users, Heart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,9 @@ export default function PublicCalendar() {
     start: startOfWeek(startOfMonth(currentMonth), {weekStartsOn: 1}), 
     end: endOfWeek(endOfMonth(currentMonth), {weekStartsOn: 1}) 
   });
+
+  // Helper to find specific designations
+  const findDesig = (list: any[], type: string) => list.find(d => d.designation_type === type);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -159,84 +162,166 @@ export default function PublicCalendar() {
         </Card>
 
         <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-primary" /> Detalhes da Designação
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Info className="h-6 w-6 text-primary" /> Detalhes da Designação
               </DialogTitle>
+              <DialogDescription className="text-base">
+                {selectedEvent?.data?.date ? format(parseISO(selectedEvent.data.date), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 pt-4">
+            
+            <div className="space-y-8 pt-4">
               {selectedEvent?.type === 'meeting' ? (
                 <>
-                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
-                    <div><Label className="text-muted-foreground text-xs">Reunião</Label><p className="font-bold text-sm">{selectedEvent.data.type}</p></div>
-                    <div><Label className="text-muted-foreground text-xs">Data</Label><p className="font-bold text-sm">{selectedEvent.data.date ? format(parseISO(selectedEvent.data.date), "dd/MM/yyyy") : "-"}</p></div>
+                  {/* Seção Áudio e Vídeo */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <Monitor className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-bold text-blue-900">Áudio e Vídeo</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Áudio</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.operator_id)}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Vídeo</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.video_operator_id)}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Mic 1</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.mic_1_id)}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Mic 2</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.mic_2_id)}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Palco</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.stage_id)}</p>
+                      </div>
+                      <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Indicador Externo</Label>
+                        <p className="text-sm font-bold">{getPubName(selectedEvent.av?.external_indicator_id)}</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {selectedEvent.av && (
-                    <div className="space-y-2 border-t pt-4">
-                      <Label className="text-primary font-bold flex items-center gap-2"><Monitor className="h-4 w-4" /> Áudio e Vídeo</Label>
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-lg">
-                        <div><span className="text-muted-foreground">Áudio:</span> {getPubName(selectedEvent.av.operator_id)}</div>
-                        <div><span className="text-muted-foreground">Vídeo:</span> {getPubName(selectedEvent.av.video_operator_id)}</div>
-                        <div><span className="text-muted-foreground">Mic 1:</span> {getPubName(selectedEvent.av.mic_1_id)}</div>
-                        <div><span className="text-muted-foreground">Mic 2:</span> {getPubName(selectedEvent.av.mic_2_id)}</div>
-                        <div className="col-span-2"><span className="text-muted-foreground">Palco:</span> {getPubName(selectedEvent.av.stage_id)}</div>
+                  {/* Seção Tesouro da Palavra de Deus */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <Star className="h-5 w-5 text-amber-600" />
+                      <h3 className="font-bold text-amber-900">Tesouro da Palavra de Deus</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                        <span className="text-sm font-medium">Presidente</span>
+                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Presidente")?.user_id)}</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                        <span className="text-sm font-medium">Oração Inicial</span>
+                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Inicial")?.user_id)}</span>
+                      </div>
+                      <div className="bg-amber-50/50 p-2 rounded border border-amber-100">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium">Tesouro</span>
+                          <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Tesouro")?.user_id)}</span>
+                        </div>
+                        <p className="text-[10px] text-amber-700 italic">{findDesig(selectedEvent.designations, "Tesouro")?.notes || ""}</p>
+                      </div>
+                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                        <span className="text-sm font-medium">Joias Espirituais</span>
+                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Joias Espirituais")?.user_id)}</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                        <span className="text-sm font-medium">Leitura da Bíblia</span>
+                        <span className="text-sm font-bold">{getPubName(selectedEvent.school?.find((s: any) => s.part_type === "Leitura da Bíblia")?.student_id)}</span>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  {selectedEvent.designations?.length > 0 && (
-                    <div className="space-y-2 border-t pt-4">
-                      <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Programação da Reunião</Label>
-                      <div className="space-y-2">
-                        {selectedEvent.designations.map((d: any, i: number) => (
-                          <div key={i} className="flex justify-between items-start text-xs border-b border-slate-100 pb-1 last:border-0">
+                  {/* Seção Faça seu melhor no ministério */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <Users className="h-5 w-5 text-green-600" />
+                      <h3 className="font-bold text-green-900">Faça seu melhor no ministério</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedEvent.school?.filter((s: any) => s.part_type !== "Leitura da Bíblia").map((s: any, idx: number) => (
+                        <div key={idx} className="bg-green-50/50 p-3 rounded border border-green-100 space-y-2">
+                          <div className="text-[10px] font-bold text-green-800 uppercase">Parte {idx + 1} - {s.part_type}</div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Estudante:</span>
+                              <span className="font-bold">{getPubName(s.student_id)}</span>
+                            </div>
+                            {s.assistant_id && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Ajudante:</span>
+                                <span className="font-bold">{getPubName(s.assistant_id)}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {(!selectedEvent.school || selectedEvent.school.filter((s: any) => s.part_type !== "Leitura da Bíblia").length === 0) && (
+                        <p className="text-xs text-muted-foreground italic col-span-2">Nenhuma parte de estudante cadastrada.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Seção Nossa Vida Cristã */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <Heart className="h-5 w-5 text-red-600" />
+                      <h3 className="font-bold text-red-900">Nossa Vida Cristã</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {selectedEvent.designations?.filter((d: any) => d.designation_type === "Nossa Vida Cristã").map((d: any, idx: number) => (
+                        <div key={idx} className="bg-red-50/50 p-2 rounded border border-red-100">
+                          <div className="flex justify-between items-start gap-4">
                             <div className="flex-1">
-                              <span className="font-bold text-slate-700">{d.designation_type}</span>
-                              {d.notes && <p className="text-[10px] text-muted-foreground italic">{d.notes}</p>}
+                              <p className="text-sm font-medium">{d.notes || "Nossa Vida Cristã"}</p>
                             </div>
-                            <span className="font-medium">{getPubName(d.user_id)}</span>
+                            <span className="text-sm font-bold whitespace-nowrap">{getPubName(d.user_id)}</span>
                           </div>
-                        ))}
+                        </div>
+                      ))}
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
+                          <span className="text-xs font-medium">Estudo de Livro</span>
+                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Estudo de Livro")?.user_id)}</span>
+                        </div>
+                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
+                          <span className="text-xs font-medium">Leitura do Livro</span>
+                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura do Livro")?.user_id)}</span>
+                        </div>
+                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center sm:col-span-2">
+                          <span className="text-xs font-medium">Oração Final</span>
+                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Final")?.user_id)}</span>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  {selectedEvent.school?.length > 0 && (
-                    <div className="space-y-2 border-t pt-4">
-                      <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Escola do Ministério</Label>
-                      <div className="space-y-3">
-                        {selectedEvent.school.map((s: any, i: number) => (
-                          <div key={i} className="bg-slate-50 p-2 rounded border border-slate-100">
-                            <div className="text-[10px] font-bold text-primary uppercase mb-1">{s.part_type}</div>
-                            <div className="flex justify-between items-center text-xs">
-                              <div className="flex items-center gap-1"><User size={10} className="text-muted-foreground" /> {getPubName(s.student_id)}</div>
-                              {s.assistant_id && (
-                                <div className="flex items-center gap-1"><Users size={10} className="text-muted-foreground" /> {getPubName(s.assistant_id)}</div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label className="text-muted-foreground">Tipo</Label><p className="font-bold">Limpeza {selectedEvent?.data.cleaning_type}</p></div>
-                    <div><Label className="text-muted-foreground">Semana</Label><p className="font-bold">{selectedEvent?.data.start_date ? format(parseISO(selectedEvent.data.start_date), "dd/MM") : "-"} a {selectedEvent?.data.end_date ? format(parseISO(selectedEvent.data.end_date), "dd/MM") : "-"}</p></div>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border">
+                    <div><Label className="text-muted-foreground text-xs uppercase">Tipo</Label><p className="font-bold text-lg">Limpeza {selectedEvent?.data.cleaning_type}</p></div>
+                    <div><Label className="text-muted-foreground text-xs uppercase">Semana</Label><p className="font-bold text-lg">{selectedEvent?.data.start_date ? format(parseISO(selectedEvent.data.start_date), "dd/MM") : "-"} a {selectedEvent?.data.end_date ? format(parseISO(selectedEvent.data.end_date), "dd/MM") : "-"}</p></div>
                   </div>
-                  <div className="border-t pt-4">
-                    <Label className="text-primary font-bold">Responsável</Label>
-                    <p className="text-lg font-bold">{selectedEvent?.data.group_id ? `Grupo ${selectedEvent.data.groups?.group_number}` : selectedEvent?.data.notes}</p>
+                  <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
+                    <Label className="text-primary font-bold text-xs uppercase">Responsável</Label>
+                    <p className="text-2xl font-black text-primary">{selectedEvent?.data.group_id ? `Grupo ${selectedEvent.data.groups?.group_number}` : selectedEvent?.data.notes}</p>
                   </div>
                 </>
               )}
             </div>
-            <DialogFooter>
-              <Button onClick={() => setSelectedEvent(null)}>Fechar</Button>
+            <DialogFooter className="mt-6">
+              <Button onClick={() => setSelectedEvent(null)} className="w-full sm:w-auto">Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
