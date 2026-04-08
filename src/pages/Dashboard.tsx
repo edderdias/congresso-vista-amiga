@@ -20,11 +20,11 @@ export default function Dashboard() {
   }, []);
 
   const loadStats = async () => {
-    // 1. Total de Publicadores (exceto repreendidos e mudou)
+    // 1. Total de Publicadores (exceto mudou)
     const { count: totalPubs } = await supabase
       .from("publishers")
       .select("*", { count: "exact", head: true })
-      .not("status", "in", '("repreendido","mudou")');
+      .neq("status", "mudou");
 
     // 2. Publicadores Ativos (Ativos + Repreendidos)
     const { count: activePubs } = await supabase
@@ -93,7 +93,7 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { title: "Total de Publicadores", value: stats.totalPublishers, icon: Users, color: "text-primary", desc: "Exceto repreendidos/mudou" },
+    { title: "Total de Publicadores", value: stats.totalPublishers, icon: Users, color: "text-primary", desc: "Exceto mudou" },
     { title: "Publicadores Ativos", value: stats.activePublishers, icon: TrendingUp, color: "text-green-600", desc: "Ativos + Repreendidos" },
     { title: "Grupos", value: stats.totalGroups, icon: LayoutGrid, color: "text-orange-500", desc: "Grupos de serviço" },
     { title: "Territórios", value: stats.totalTerritories, icon: MapPin, color: "text-accent", desc: "Total cadastrado" },
