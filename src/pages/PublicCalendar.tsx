@@ -271,7 +271,7 @@ export default function PublicCalendar() {
                           </div>
                           <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
                             <span className="text-sm font-medium">Leitura da Bíblia</span>
-                            <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura da Bíblia")?.user_id || </span>
+                            <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura da Bíblia")?.user_id || selectedEvent.school?.find((s:any) => s.part_type === "Leitura da Bíblia"</span>
                           </div>
                         </div>
                       </div>
