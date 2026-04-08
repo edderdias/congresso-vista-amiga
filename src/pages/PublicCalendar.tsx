@@ -15,7 +15,7 @@ export default function PublicCalendar() {
   const [av, setAv] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
-  const [school, setSchool] = useState<any[]>([]);
+  const [school_assignments, setSchool] = useState<any[]>([]);
   const [speeches, setSpeeches] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
