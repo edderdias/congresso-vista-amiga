@@ -61,7 +61,6 @@ export default function PublicCalendar() {
   });
 
   const findDesig = (list: any[], type: string) => list.find(d => d.designation_type === type);
-  const findSchool = (list: any[], type: string) => list.find(s => s.part_type === type);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -272,7 +271,7 @@ export default function PublicCalendar() {
                           </div>
                           <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
                             <span className="text-sm font-medium">Leitura da Bíblia</span>
-                            <span className="text-sm font-bold">{getPubName(selectedEvent.school_assignments?.find((s: any) => s.part_type === "Leitura da Bíblia")?.student_id)}</span>
+                            <span className="text-sm font-bold">{getPubName(selectedEvent.school?.find((s: any) => s.part_type === "Leitura da Bíblia")?.student_id)}</span>
                           </div>
                         </div>
                       </div>
