@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
 import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -19,11 +21,12 @@ export default function Dashboard() {
   });
 
   const [theocraticData, setTheocraticData] = useState<any[]>([]);
+  const [prevMonthName, setPrevMonthName] = useState("");
 
   useEffect(() => {
     loadStats();
     loadTheocraticData();
-    loadCurrentMonthReports();
+    loadPreviousMonthReports();
   }, []);
 
   const loadStats = async () => {
@@ -53,10 +56,13 @@ export default function Dashboard() {
     });
   };
 
-  const loadCurrentMonthReports = async () => {
+  const loadPreviousMonthReports = async () => {
     const now = new Date();
-    const month = now.getMonth() + 1;
-    const year = now.getFullYear();
+    const prevMonthDate = subMonths(now, 1);
+    const month = prevMonthDate.getMonth() + 1;
+    const year = prevMonthDate.getFullYear();
+    
+    setPrevMonthName(format(prevMonthDate, "MMMM", { locale: ptBR }));
 
     const { data } = await supabase
       .from("preaching_reports")
@@ -159,9 +165,9 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Resumo de Relatórios do Mês
+            Resumo de Relatórios de <span className="capitalize">{prevMonthName}</span>
           </CardTitle>
-          <CardDescription>Dados consolidados por categoria de publicador</CardDescription>
+          <CardDescription>Dados consolidados do mês anterior</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
