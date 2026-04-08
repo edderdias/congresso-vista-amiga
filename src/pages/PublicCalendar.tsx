@@ -61,6 +61,7 @@ export default function PublicCalendar() {
   });
 
   const findDesig = (list: any[], type: string) => list.find(d => d.designation_type === type);
+  const findSchool = (list: any[], type: string) => list.find(s => s.part_type === type);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
