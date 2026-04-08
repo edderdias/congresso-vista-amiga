@@ -116,6 +116,8 @@ export default function PublicCalendar() {
                           const dSchool = school_assignments.filter(s => s.meeting_date === m.date);
                           const dSpeech = speeches.find(s => s.date === m.date);
                           
+                          console.log(`Dados dSchool para o dia ${m.date}:`, dSchool);
+
                           return (
                             <div key={m.id} onClick={() => setSelectedEvent({ 
                               type: 'meeting', 
