@@ -21,6 +21,7 @@ import AudioVideo from "./pages/AudioVideo";
 import Settings from "./pages/Settings";
 import Attendance from "./pages/Attendance";
 import Speeches from "./pages/Speeches";
+import MeetingPrint from "./pages/MeetingPrint";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/relatorio-publico" element={<PublicReport />} />
           <Route path="/relatorio-publico/:groupNumber" element={<PublicReport />} />
           <Route path="/calendario" element={<PublicCalendar />} />
+          <Route path="/print-meeting/:id" element={<MeetingPrint />} />
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />

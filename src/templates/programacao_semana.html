@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programação da Semana – Parque dos Condomínios</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a2744;
+    --gold: #c8a84b;
+    --red: #c0392b;
+    --amber: #d68910;
+    --teal: #1a6b6b;
+    --light: #f4f1eb;
+    --white: #ffffff;
+    --gray: #6b7280;
+    --border: #ddd5c0;
+    --shadow: 0 2px 16px rgba(26,39,68,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--light);
+    color: var(--navy);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── HEADER ── */
+  .page-header {
+    background: var(--navy);
+    color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 36px;
+    border-bottom: 3px solid var(--gold);
+  }
+  .page-header .congregation {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+  .page-header .doc-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+  }
+
+  /* ── WEEK BADGE ── */
+  .week-badge-wrap {
+    padding: 28px 36px 8px;
+  }
+  .week-badge {
+    display: inline-block;
+    background: var(--navy);
+    color: var(--white);
+    border-radius: 6px;
+    padding: 10px 22px 12px;
+    min-width: 200px;
+  }
+  .week-badge .label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.65;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .week-badge .dates {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  /* ── SECTIONS ── */
+  .content {
+    padding: 0 36px 40px;
+  }
+
+  .section {
+    margin-top: 32px;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  .section:nth-child(2) { animation-delay: 0.05s; }
+  .section:nth-child(3) { animation-delay: 0.10s; }
+  .section:nth-child(4) { animation-delay: 0.15s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    padding: 18px 24px 14px;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: 0.01em;
+  }
+
+  /* ── DESIGNAÇÕES MECÂNICAS ── */
+  .mec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .mec-col {
+    padding: 16px 24px;
+  }
+  .mec-col + .mec-col {
+    border-left: 1px solid var(--border);
+  }
+  .mec-subtitle {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--gray);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  /* Áudio e Vídeo table */
+  .av-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .av-table thead th {
+    background: var(--navy);
+    color: var(--white);
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .av-table thead th:first-child { border-radius: 4px 0 0 0; }
+  .av-table thead th:last-child  { border-radius: 0 4px 0 0; }
+
+  .av-table tbody tr:nth-child(odd) { background: #f9f7f3; }
+  .av-table tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #ece8df;
+  }
+  .day-badge {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--white);
+    margin-right: 4px;
+  }
+  .day-q { background: var(--teal); }
+  .day-d { background: var(--amber); }
+
+  /* Indicadores */
+  .ind-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .ind-table thead th {
+    background: var(--navy);
+    color: var(--white);
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .ind-table tbody tr:nth-child(odd) { background: #f9f7f3; }
+  .ind-table tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #ece8df;
+  }
+
+  /* Limpeza */
+  .limpeza-row {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .limpeza-block {}
+  .limpeza-badge-row {
+    display: flex;
+    gap: 0;
+    margin-top: 6px;
+  }
+  .badge-semanal {
+    background: #e8ece6;
+    color: var(--navy);
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px 0 0 0;
+    border: 1px solid #bbb;
+  }
+  .badge-pos {
+    background: #e8ece6;
+    color: var(--navy);
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 0 4px 0 0;
+    border: 1px solid #bbb;
+    border-left: none;
+  }
+  .badge-grupo {
+    background: var(--teal);
+    color: var(--white);
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 0 0 4px 4px;
+    text-align: center;
+  }
+  .limpeza-notice {
+    font-size: 12.5px;
+    color: var(--red);
+    max-width: 420px;
+    line-height: 1.55;
+    padding-top: 6px;
+  }
+  .limpeza-notice strong { font-weight: 700; }
+
+  /* ── REUNIÃO SECTIONS ── */
+  .reunion-header {
+    display: flex;
+    gap: 32px;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+  .reunion-header .field strong { font-weight: 700; margin-right: 4px; }
+
+  /* Category blocks inside meetings */
+  .cat-block {}
+  .cat-title {
+    padding: 8px 24px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+  .cat-red    { background: var(--red); }
+  .cat-amber  { background: var(--amber); }
+  .cat-navy   { background: var(--navy); }
+
+  .program-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+  .program-table tr {
+    border-bottom: 1px solid #ede9df;
+    transition: background 0.15s;
+  }
+  .program-table tr:last-child { border-bottom: none; }
+  .program-table tr:hover { background: #faf8f4; }
+  .program-table td {
+    padding: 9px 14px;
+    vertical-align: middle;
+  }
+  .td-time {
+    width: 60px;
+    color: var(--gray);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    padding-left: 24px;
+  }
+  .td-title { font-weight: 400; }
+  .td-title em {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--gray);
+    display: block;
+  }
+  .td-person {
+    text-align: right;
+    color: var(--navy);
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    padding-right: 24px;
+  }
+  .td-person .sub {
+    display: block;
+    font-weight: 400;
+    font-size: 11.5px;
+    color: var(--gray);
+  }
+
+  /* Dirigente / Leitor label row */
+  .label-row td {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gray);
+    background: #f4f1eb;
+    padding: 5px 14px;
+  }
+  .label-row .td-person { text-align: right; padding-right: 24px; }
+
+  /* ── FOOTER ── */
+  .page-footer {
+    text-align: center;
+    padding: 18px;
+    font-size: 11px;
+    color: var(--gray);
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.06em;
+    background: var(--white);
+  }
+
+  @media (max-width: 600px) {
+    .page-header { flex-direction: column; gap: 6px; text-align: center; padding: 12px 16px; }
+    .content { padding: 0 10px 30px; }
+    .week-badge-wrap { padding: 18px 10px 4px; }
+    .mec-grid { grid-template-columns: 1fr; }
+    .mec-col + .mec-col { border-left: none; border-top: 1px solid var(--border); }
+    .reunion-header { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="page-header">
+  <span class="congregation">Parque dos Condomínios</span>
+  <span class="doc-title">Programação da Semana</span>
+</header>
+
+<!-- WEEK BADGE -->
+<div class="week-badge-wrap">
+  <div class="week-badge">
+    <span class="label">Semana de</span>
+    <span class="dates">05 a 11 de Janeiro</span>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ══════════════════════════════════
+       DESIGNAÇÕES MECÂNICAS
+  ══════════════════════════════════ -->
+  <section class="section">
+    <div class="section-heading">Designações Mecânicas</div>
+
+    <div class="mec-grid">
+      <!-- Áudio e Vídeo -->
+      <div class="mec-col">
+        <div class="mec-subtitle">Áudio e Vídeo</div>
+        <table class="av-table">
+          <thead>
+            <tr>
+              <th>Operador</th>
+              <th>Microfones Volante</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="day-badge day-q">Q</span> Saimon B.</td>
+              <td>Arthur &nbsp;/&nbsp; Adriano F.</td>
+            </tr>
+            <tr>
+              <td><span class="day-badge day-d">D</span> Cleomárcio</td>
+              <td>Enzo &nbsp;/&nbsp; Tiago Andrade</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Indicadores -->
+      <div class="mec-col">
+        <div class="mec-subtitle">Indicadores</div>
+        <table class="ind-table">
+          <thead>
+            <tr>
+              <th>Interno e Palco</th>
+              <th>Externo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Eder D.</td>
+              <td>Fábio Marques</td>
+            </tr>
+            <tr>
+              <td>Filipe Conforti</td>
+              <td>Gutemberg T.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Limpeza -->
+    <div class="limpeza-row">
+      <div class="limpeza-block">
+        <div class="mec-subtitle">Limpeza</div>
+        <div class="limpeza-badge-row">
+          <span class="badge-semanal">Semanal</span>
+          <span class="badge-pos">Pós-Reunião</span>
+        </div>
+        <div class="badge-grupo">Grupo 1</div>
+      </div>
+      <p class="limpeza-notice">
+        <strong>Verifique com antecedência as designações.</strong>
+        Revise as orientações para a limpeza, áudio e vídeo e para indicadores antes de cumprir as designações.
+      </p>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════
+       REUNIÃO DE MEIO DE SEMANA
+  ══════════════════════════════════ -->
+  <section class="section">
+    <div class="section-heading">Reunião de Meio de Semana</div>
+
+    <div class="reunion-header">
+      <div class="field"><strong>Presidente:</strong> Jailson S.</div>
+      <div class="field"><strong>Orações:</strong> Jailson S. &nbsp;/&nbsp; Adriano F.</div>
+    </div>
+
+    <!-- TESOUROS DA PALAVRA DE DEUS -->
+    <div class="cat-block">
+      <div class="cat-title cat-red">Tesouros da Palavra de Deus</div>
+      <table class="program-table">
+        <tr>
+          <td class="td-time">10min</td>
+          <td class="td-title">"A recompensa dos que nos saqueiam"</td>
+          <td class="td-person">Carlos Brandão</td>
+        </tr>
+        <tr>
+          <td class="td-time">10min</td>
+          <td class="td-title">Joias Espirituais</td>
+          <td class="td-person">Josué S.</td>
+        </tr>
+        <tr>
+          <td class="td-time">04min</td>
+          <td class="td-title">Isa. 19:1-12</td>
+          <td class="td-person">Vinicius Matos</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- FAÇA SEU MELHOR NO MINISTÉRIO -->
+    <div class="cat-block">
+      <div class="cat-title cat-amber">Faça Seu Melhor no Ministério</div>
+      <table class="program-table">
+        <tr>
+          <td class="td-time">03min</td>
+          <td class="td-title">Iniciando Conversas</td>
+          <td class="td-person">Maria Ligia <span class="sub">Maria Heloise</span></td>
+        </tr>
+        <tr>
+          <td class="td-time">04min</td>
+          <td class="td-title">Cultivando o Interesse</td>
+          <td class="td-person">Suzy Brandão <span class="sub">Creonice Santos</span></td>
+        </tr>
+        <tr>
+          <td class="td-time">05min</td>
+          <td class="td-title">Discurso</td>
+          <td class="td-person">Heitor N.</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- NOSSA VIDA CRISTÃ -->
+    <div class="cat-block">
+      <div class="cat-title cat-navy">Nossa Vida Cristã</div>
+      <table class="program-table">
+        <tr>
+          <td class="td-time">10min</td>
+          <td class="td-title">'Lembre-se da Rocha de sua fortaleza'</td>
+          <td class="td-person">Cleomárcio</td>
+        </tr>
+        <tr>
+          <td class="td-time">05min</td>
+          <td class="td-title">Tire tempo todos os dias para aprender com os amigos de Jeová</td>
+          <td class="td-person">Marcelo S.</td>
+        </tr>
+        <tr class="label-row">
+          <td></td>
+          <td></td>
+          <td class="td-person">Dirigente &nbsp;&nbsp; Leitor</td>
+        </tr>
+        <tr>
+          <td class="td-time">30min</td>
+          <td class="td-title">Estudo Bíblico de Congregação</td>
+          <td class="td-person">Gabriel R. <span class="sub">Romilson Brandão</span></td>
+        </tr>
+      </table>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════
+       REUNIÃO DE FINAL DE SEMANA
+  ══════════════════════════════════ -->
+  <section class="section">
+    <div class="section-heading">Reunião de Final de Semana</div>
+
+    <div class="reunion-header">
+      <div class="field"><strong>Presidente:</strong> Carlito</div>
+      <div class="field"><strong>Oração:</strong> Carlito</div>
+    </div>
+
+    <table class="program-table">
+      <tr>
+        <td class="td-time">30min</td>
+        <td class="td-title">Seja honesto em tudo</td>
+        <td class="td-person">Manoelito, Sítio Santo Amaro</td>
+      </tr>
+      <tr class="label-row">
+        <td></td>
+        <td></td>
+        <td class="td-person">Leitor</td>
+      </tr>
+      <tr>
+        <td class="td-time">1h15min</td>
+        <td class="td-title">Estudo da revista A Sentinela</td>
+        <td class="td-person">Ian Glazer</td>
+      </tr>
+    </table>
+  </section>
+
+</div><!-- /content -->
+
+<footer class="page-footer">
+  Parque dos Condomínios — Programação da Semana
+</footer>
+
+</body>
+</html>

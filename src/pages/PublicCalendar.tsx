@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, parseISO, addMonths, subMonths, isSameMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, BookOpen, Mic2, User, Users, Heart, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Monitor, Brush, Info, BookOpen, Mic2, User, Users, Heart, Star, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export default function PublicCalendar() {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [designations, setDesignations] = useState<any[]>([]);
   const [school, setSchool] = useState<any[]>([]);
+  const [speeches, setSpeeches] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -28,13 +29,14 @@ export default function PublicCalendar() {
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
     try {
-      const [pubs, meets, clean, avDesig, theocratic, schoolDesig] = await Promise.all([
+      const [pubs, meets, clean, avDesig, theocratic, schoolDesig, speechesData] = await Promise.all([
         supabase.from("publishers").select("id, full_name"),
         supabase.from("meetings").select("*").gte("date", start).lte("date", end),
         supabase.from("cleaning_schedules").select("*, groups(group_number)").lte('start_date', end).gte('end_date', start),
         supabase.from("av_designations").select("*"),
         supabase.from("designations").select("*").gte("meeting_date", start).lte("meeting_date", end),
-        supabase.from("school_assignments").select("*").gte("meeting_date", start).lte("meeting_date", end)
+        supabase.from("school_assignments").select("*").gte("meeting_date", start).lte("meeting_date", end),
+        supabase.from("speeches").select("*").gte("date", start).lte("date", end)
       ]);
 
       setPublishers(pubs.data || []);
@@ -43,6 +45,7 @@ export default function PublicCalendar() {
       setAv(avDesig.data || []);
       setDesignations(theocratic.data || []);
       setSchool(schoolDesig.data || []);
+      setSpeeches(speechesData.data || []);
     } catch (error) {
       console.error("[PublicCalendar] Erro ao carregar dados:", error);
     } finally {
@@ -110,6 +113,7 @@ export default function PublicCalendar() {
                           const dAv = av.find(a => a.meeting_id === m.id);
                           const dTheocratic = designations.filter(d => d.meeting_date === m.date);
                           const dSchool = school.filter(s => s.meeting_date === m.date);
+                          const dSpeech = speeches.find(s => s.date === m.date);
                           
                           return (
                             <div key={m.id} onClick={() => setSelectedEvent({ 
@@ -117,7 +121,8 @@ export default function PublicCalendar() {
                               data: m, 
                               av: dAv,
                               designations: dTheocratic,
-                              school: dSchool
+                              school: dSchool,
+                              speech: dSpeech
                             })} className="p-2 rounded bg-blue-50 border border-blue-100 space-y-1 cursor-pointer hover:bg-blue-100 transition-colors">
                               <div className="text-[10px] font-bold text-blue-800 uppercase truncate">{m.type}</div>
                               {dAv && (
@@ -208,103 +213,135 @@ export default function PublicCalendar() {
                     </div>
                   </div>
 
-                  {/* Seção Tesouro da Palavra de Deus */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                      <Star className="h-5 w-5 text-amber-600" />
-                      <h3 className="font-bold text-amber-900">Tesouro da Palavra de Deus</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
-                        <span className="text-sm font-medium">Presidente</span>
-                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Presidente")?.user_id)}</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
-                        <span className="text-sm font-medium">Oração Inicial</span>
-                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Inicial")?.user_id)}</span>
-                      </div>
-                      <div className="bg-amber-50/50 p-2 rounded border border-amber-100">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-medium">Tesouro</span>
-                          <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Tesouro")?.user_id)}</span>
-                        </div>
-                        <p className="text-[10px] text-amber-700 italic">{findDesig(selectedEvent.designations, "Tesouro")?.notes || ""}</p>
-                      </div>
-                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
-                        <span className="text-sm font-medium">Joias Espirituais</span>
-                        <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Joias Espirituais")?.user_id)}</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
-                        <span className="text-sm font-medium">Leitura da Bíblia</span>
-                        <span className="text-sm font-bold">{getPubName(selectedEvent.school?.find((s: any) => s.part_type === "Leitura da Bíblia")?.student_id)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção Faça seu melhor no ministério */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                      <Users className="h-5 w-5 text-green-600" />
-                      <h3 className="font-bold text-green-900">Faça seu melhor no ministério</h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedEvent.school?.filter((s: any) => s.part_type !== "Leitura da Bíblia").map((s: any, idx: number) => (
-                        <div key={idx} className="bg-green-50/50 p-3 rounded border border-green-100 space-y-2">
-                          <div className="text-[10px] font-bold text-green-800 uppercase">Parte {idx + 1} - {s.part_type}</div>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">Estudante:</span>
-                              <span className="font-bold">{getPubName(s.student_id)}</span>
-                            </div>
-                            {s.assistant_id && (
-                              <div className="flex justify-between text-xs">
-                                <span className="text-muted-foreground">Ajudante:</span>
-                                <span className="font-bold">{getPubName(s.assistant_id)}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      {(!selectedEvent.school || selectedEvent.school.filter((s: any) => s.part_type !== "Leitura da Bíblia").length === 0) && (
-                        <p className="text-xs text-muted-foreground italic col-span-2">Nenhuma parte de estudante cadastrada.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Seção Nossa Vida Cristã */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                      <Heart className="h-5 w-5 text-red-600" />
-                      <h3 className="font-bold text-red-900">Nossa Vida Cristã</h3>
-                    </div>
+                  {/* Seção Reunião (Fim de Semana) ou Tesouro (Meio de Semana) */}
+                  {selectedEvent.data.type.includes("Final de Semana") || selectedEvent.data.type === "Especial" || selectedEvent.data.type === "Celebração" ? (
                     <div className="space-y-3">
-                      {selectedEvent.designations?.filter((d: any) => d.designation_type === "Nossa Vida Cristã").map((d: any, idx: number) => (
-                        <div key={idx} className="bg-red-50/50 p-2 rounded border border-red-100">
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium">{d.notes || "Nossa Vida Cristã"}</p>
-                            </div>
-                            <span className="text-sm font-bold whitespace-nowrap">{getPubName(d.user_id)}</span>
+                      <div className="flex items-center gap-2 border-b pb-2">
+                        <Users className="h-5 w-5 text-amber-600" />
+                        <h3 className="font-bold text-amber-900">Reunião</h3>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                          <span className="text-sm font-medium">Presidente</span>
+                          <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Presidente")?.user_id)}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                          <span className="text-sm font-medium">Oração Inicial</span>
+                          <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Inicial")?.user_id)}</span>
+                        </div>
+                        <div className="bg-amber-50/50 p-2 rounded border border-amber-100">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium">Discurso Público</span>
+                            <span className="text-sm font-bold">{selectedEvent.speech?.speaker || "-"}</span>
                           </div>
+                          <p className="text-[10px] text-amber-700 italic">{selectedEvent.speech?.title || ""}</p>
                         </div>
-                      ))}
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
-                          <span className="text-xs font-medium">Estudo de Livro</span>
-                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Estudo de Livro")?.user_id)}</span>
-                        </div>
-                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
-                          <span className="text-xs font-medium">Leitura do Livro</span>
-                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura do Livro")?.user_id)}</span>
-                        </div>
-                        <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center sm:col-span-2">
-                          <span className="text-xs font-medium">Oração Final</span>
-                          <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Final")?.user_id)}</span>
+                        <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                          <span className="text-sm font-medium">Leitor da Sentinela</span>
+                          <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura A Sentinela")?.user_id)}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 border-b pb-2">
+                          <Star className="h-5 w-5 text-amber-600" />
+                          <h3 className="font-bold text-amber-900">Tesouro da Palavra de Deus</h3>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                            <span className="text-sm font-medium">Presidente</span>
+                            <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Presidente")?.user_id)}</span>
+                          </div>
+                          <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                            <span className="text-sm font-medium">Oração Inicial</span>
+                            <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Inicial")?.user_id)}</span>
+                          </div>
+                          <div className="bg-amber-50/50 p-2 rounded border border-amber-100">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium">Tesouro</span>
+                              <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Tesouro")?.user_id)}</span>
+                            </div>
+                            <p className="text-[10px] text-amber-700 italic">{findDesig(selectedEvent.designations, "Tesouro")?.notes || ""}</p>
+                          </div>
+                          <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                            <span className="text-sm font-medium">Joias Espirituais</span>
+                            <span className="text-sm font-bold">{getPubName(findDesig(selectedEvent.designations, "Joias Espirituais")?.user_id)}</span>
+                          </div>
+                          <div className="flex justify-between items-center bg-amber-50/50 p-2 rounded border border-amber-100">
+                            <span className="text-sm font-medium">Leitura da Bíblia</span>
+                            <span className="text-sm font-bold">{getPubName(selectedEvent.school?.find((s: any) => s.part_type === "Leitura da Bíblia")?.student_id)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Seção Faça seu melhor no ministério */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 border-b pb-2">
+                          <Users className="h-5 w-5 text-green-600" />
+                          <h3 className="font-bold text-green-900">Faça seu melhor no ministério</h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedEvent.school?.filter((s: any) => s.part_type !== "Leitura da Bíblia").map((s: any, idx: number) => (
+                            <div key={idx} className="bg-green-50/50 p-3 rounded border border-green-100 space-y-2">
+                              <div className="text-[10px] font-bold text-green-800 uppercase">{s.part_type}</div>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-muted-foreground">Estudante:</span>
+                                  <span className="font-bold">{getPubName(s.student_id)}</span>
+                                </div>
+                                {s.assistant_id && (
+                                  <div className="flex justify-between text-xs">
+                                    <span className="text-muted-foreground">Ajudante:</span>
+                                    <span className="font-bold">{getPubName(s.assistant_id)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                          {(!selectedEvent.school || selectedEvent.school.filter((s: any) => s.part_type !== "Leitura da Bíblia").length === 0) && (
+                            <p className="text-xs text-muted-foreground italic col-span-2">Nenhuma parte de estudante cadastrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Seção Nossa Vida Cristã */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 border-b pb-2">
+                          <Heart className="h-5 w-5 text-red-600" />
+                          <h3 className="font-bold text-red-900">Nossa Vida Cristã</h3>
+                        </div>
+                        <div className="space-y-3">
+                          {selectedEvent.designations?.filter((d: any) => d.designation_type === "Nossa Vida Cristã").map((d: any, idx: number) => (
+                            <div key={idx} className="bg-red-50/50 p-2 rounded border border-red-100">
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{d.notes || "Nossa Vida Cristã"}</p>
+                                </div>
+                                <span className="text-sm font-bold whitespace-nowrap">{getPubName(d.user_id)}</span>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                            <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
+                              <span className="text-xs font-medium">Estudo de Livro</span>
+                              <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Estudo de Livro")?.user_id)}</span>
+                            </div>
+                            <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center">
+                              <span className="text-xs font-medium">Leitura do Livro</span>
+                              <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Leitura do Livro")?.user_id)}</span>
+                            </div>
+                            <div className="bg-red-50/50 p-2 rounded border border-red-100 flex justify-between items-center sm:col-span-2">
+                              <span className="text-xs font-medium">Oração Final</span>
+                              <span className="text-xs font-bold">{getPubName(findDesig(selectedEvent.designations, "Oração Final")?.user_id)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
