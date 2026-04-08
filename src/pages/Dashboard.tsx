@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
-import { Users, MapPin, LayoutGrid, TrendingUp } from "lucide-react";
+import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
@@ -12,32 +12,35 @@ export default function Dashboard() {
     totalGroups: 0,
   });
 
+  const [reportStats, setReportStats] = useState({
+    pub: { count: 0, studies: 0 },
+    aux: { count: 0, hours: 0, studies: 0 },
+    reg: { count: 0, hours: 0, studies: 0 }
+  });
+
   const [theocraticData, setTheocraticData] = useState<any[]>([]);
 
   useEffect(() => {
     loadStats();
     loadTheocraticData();
+    loadCurrentMonthReports();
   }, []);
 
   const loadStats = async () => {
-    // 1. Total de Publicadores (exceto mudou)
     const { count: totalPubs } = await supabase
       .from("publishers")
       .select("*", { count: "exact", head: true })
       .neq("status", "mudou");
 
-    // 2. Publicadores Ativos (Ativos + Repreendidos)
     const { count: activePubs } = await supabase
       .from("publishers")
       .select("*", { count: "exact", head: true })
       .in("status", ["active", "repreendido"]);
 
-    // 3. Territórios
     const { count: territoriesCount } = await supabase
       .from("territories")
       .select("*", { count: "exact", head: true });
 
-    // 4. Grupos
     const { count: groupsCount } = await supabase
       .from("groups")
       .select("*", { count: "exact", head: true });
@@ -50,8 +53,43 @@ export default function Dashboard() {
     });
   };
 
+  const loadCurrentMonthReports = async () => {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+
+    const { data } = await supabase
+      .from("preaching_reports")
+      .select("*")
+      .eq("month", month)
+      .eq("year", year);
+
+    if (data) {
+      const aggregated = data.reduce((acc, curr) => {
+        const status = curr.pioneer_status;
+        if (status === 'publicador') {
+          acc.pub.count++;
+          acc.pub.studies += curr.bible_studies || 0;
+        } else if (status === 'pioneiro_auxiliar') {
+          acc.aux.count++;
+          acc.aux.hours += curr.hours || 0;
+          acc.aux.studies += curr.bible_studies || 0;
+        } else if (status === 'pioneiro_regular') {
+          acc.reg.count++;
+          acc.reg.hours += curr.hours || 0;
+          acc.reg.studies += curr.bible_studies || 0;
+        }
+        return acc;
+      }, {
+        pub: { count: 0, studies: 0 },
+        aux: { count: 0, hours: 0, studies: 0 },
+        reg: { count: 0, hours: 0, studies: 0 }
+      });
+      setReportStats(aggregated);
+    }
+  };
+
   const loadTheocraticData = async () => {
-    // Buscamos dados dos últimos 12 meses para montar o ciclo Setembro-Agosto
     const { data } = await supabase
       .from("preaching_reports")
       .select("month, year, hours, bible_studies")
@@ -65,7 +103,6 @@ export default function Dashboard() {
         7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
       };
 
-      // Agrupar por mês/ano e somar
       const grouped = data.reduce((acc: any, curr) => {
         const key = `${curr.month}-${curr.year}`;
         if (!acc[key]) {
@@ -76,10 +113,7 @@ export default function Dashboard() {
         return acc;
       }, {});
 
-      // Transformar em array e ordenar pelo ciclo teocrático (Setembro a Agosto)
-      // Pegamos os dados mais recentes que se encaixam nesse ciclo
       const formatted = monthsOrder.map(m => {
-        // Tenta encontrar o dado para o mês 'm' no ano atual ou anterior dependendo do ciclo
         const entry = Object.values(grouped).find((item: any) => item.month === m);
         return {
           name: monthNames[m],
@@ -120,6 +154,78 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      <Card className="bg-slate-50/50 border-dashed">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Resumo de Relatórios do Mês
+          </CardTitle>
+          <CardDescription>Dados consolidados por categoria de publicador</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-3 p-4 bg-white rounded-lg border shadow-sm">
+              <div className="flex items-center gap-2 text-blue-600 font-bold border-b pb-2">
+                <Users className="h-4 w-4" />
+                <span>Publicadores</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Relatórios</p>
+                  <p className="text-xl font-bold">{reportStats.pub.count}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Estudos</p>
+                  <p className="text-xl font-bold">{reportStats.pub.studies}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4 bg-white rounded-lg border shadow-sm">
+              <div className="flex items-center gap-2 text-green-600 font-bold border-b pb-2">
+                <Clock className="h-4 w-4" />
+                <span>Pioneiros Auxiliares</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Relatórios</p>
+                  <p className="text-xl font-bold">{reportStats.aux.count}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Horas</p>
+                  <p className="text-xl font-bold">{reportStats.aux.hours}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Estudos</p>
+                  <p className="text-xl font-bold">{reportStats.aux.studies}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4 bg-white rounded-lg border shadow-sm">
+              <div className="flex items-center gap-2 text-amber-600 font-bold border-b pb-2">
+                <Star className="h-4 w-4" />
+                <span>Pioneiros Regulares</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Relatórios</p>
+                  <p className="text-xl font-bold">{reportStats.reg.count}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Horas</p>
+                  <p className="text-xl font-bold">{reportStats.reg.hours}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase">Estudos</p>
+                  <p className="text-xl font-bold">{reportStats.reg.studies}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
