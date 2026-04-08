@@ -29,14 +29,15 @@ export default function Groups() {
 
   const loadData = async () => {
     const { data: groupsData } = await supabase.from("groups").select("*").order("group_number");
-    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges, group_id");
+    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges, group_id, status");
     
     setPublishers(pubsData || []);
     setGroups(groupsData?.map(g => ({
       ...g,
       overseer_name: pubsData?.find(p => p.id === g.overseer_id)?.full_name || "-",
       assistant_name: pubsData?.find(p => p.id === g.assistant_id)?.full_name || "-",
-      count: pubsData?.filter(p => p.group_id === g.id).length || 0
+      count: pubsData?.filter(p => p.group_id === g.id).length || 0,
+      inactiveCount: pubsData?.filter(p => p.group_id === g.id && p.status === 'inactive').length || 0
     })) || []);
   };
 
@@ -136,6 +137,7 @@ export default function Groups() {
                   <TableHead>Ajudante</TableHead>
                   <TableHead>Saída de Campo</TableHead>
                   <TableHead>Publicadores</TableHead>
+                  <TableHead>Inativos</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -147,6 +149,7 @@ export default function Groups() {
                     <TableCell className="whitespace-nowrap">{g.assistant_name}</TableCell>
                     <TableCell className="whitespace-nowrap">{g.field_service_meeting || "-"}</TableCell>
                     <TableCell>{g.count}</TableCell>
+                    <TableCell className="text-red-600 font-medium">{g.inactiveCount}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                       <AlertDialog>
