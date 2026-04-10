@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 export default function Groups() {
   const [groups, setGroups] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -29,7 +32,7 @@ export default function Groups() {
 
   const loadData = async () => {
     const { data: groupsData } = await supabase.from("groups").select("*").order("group_number");
-    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges, group_id, status");
+    const { data: pubsData } = await supabase.from("publishers").select("id, full_name, privileges, group_id, status").order("full_name");
     
     setPublishers(pubsData || []);
     setGroups(groupsData?.map(g => ({
@@ -71,7 +74,13 @@ export default function Groups() {
     }
   };
 
+  const handleViewPublishers = (group: any) => {
+    setSelectedGroup(group);
+    setViewOpen(true);
+  };
+
   const eligible = publishers.filter(p => p.privileges?.some((pr: string) => pr === "Ancião" || pr === "Servo Ministérial"));
+  const groupPublishers = publishers.filter(p => p.group_id === selectedGroup?.id);
 
   return (
     <div className="space-y-6">
@@ -151,17 +160,22 @@ export default function Groups() {
                     <TableCell>{g.count}</TableCell>
                     <TableCell className="text-red-600 font-medium">{g.inactiveCount}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader><AlertDialogTitle>Excluir Grupo?</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir o grupo {g.group_number}?</AlertDialogDescription></AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Não</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(g.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Ver Publicadores" onClick={() => handleViewPublishers(g)}>
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(g.id); setFormData({group_number: g.group_number, overseer_id: g.overseer_id || "none", assistant_id: g.assistant_id || "none", meeting_time: g.field_service_meeting?.split(" - ")[0] || "", meeting_location: g.field_service_meeting?.split(" - ")[1] || ""}); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Excluir Grupo?</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir o grupo {g.group_number}?</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Não</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(g.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sim, Excluir</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -170,6 +184,50 @@ export default function Groups() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Publicadores - Grupo {selectedGroup?.group_number}</DialogTitle>
+            <DialogDescription>Lista de membros vinculados a este grupo.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              {groupPublishers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">Nenhum publicador neste grupo.</p>
+              ) : (
+                <div className="border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {groupPublishers.map(p => (
+                        <TableRow key={p.id}>
+                          <TableCell className={p.status === 'inactive' ? "text-red-600 font-bold" : "font-medium"}>
+                            {p.full_name}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={p.status === 'active' ? 'secondary' : p.status === 'inactive' ? 'destructive' : 'outline'}>
+                              {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
