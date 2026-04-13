@@ -39,8 +39,8 @@ export default function Groups() {
       ...g,
       overseer_name: pubsData?.find(p => p.id === g.overseer_id)?.full_name || "-",
       assistant_name: pubsData?.find(p => p.id === g.assistant_id)?.full_name || "-",
-      // Exclude 'mudou' from the count
-      count: pubsData?.filter(p => p.group_id === g.id && p.status !== 'mudou').length || 0,
+      // Exclude 'mudou' and 'inactive' from the main count
+      count: pubsData?.filter(p => p.group_id === g.id && p.status !== 'mudou' && p.status !== 'inactive').length || 0,
       inactiveCount: pubsData?.filter(p => p.group_id === g.id && p.status === 'inactive').length || 0
     })) || []);
   };
