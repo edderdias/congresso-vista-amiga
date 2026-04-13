@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, Lock, Unlock } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Lock, Unlock, History as HistoryIcon, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -54,11 +54,19 @@ export default function Speeches() {
     is_blocked: false
   });
 
+  // History State
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyMonth, setHistoryMonth] = useState("all");
+  const [historyYear, setHistoryYear] = useState(new Date().getFullYear().toString());
+  const [historyPage, setHistoryPage] = useState(1);
+
   useEffect(() => { 
     loadData(); 
     loadMeetings();
     loadOutlines();
-  }, [filterMonth, filterYear]);
+    loadHistory();
+  }, [filterMonth, filterYear, historyMonth, historyYear]);
 
   const loadMeetings = async () => {
     const { data } = await supabase
@@ -75,7 +83,6 @@ export default function Speeches() {
       .select("*");
     
     if (data) {
-      // Numerical sorting based on the number at the start of the title
       const sorted = [...data].sort((a, b) => {
         const numA = parseInt(a.title.split(' ')[0]) || 0;
         const numB = parseInt(b.title.split(' ')[0]) || 0;
@@ -101,6 +108,30 @@ export default function Speeches() {
       setData(speechesData || []);
     } catch (error: any) {
       toast.error(`Erro ao carregar discursos: ${error.message}`);
+    }
+  };
+
+  const loadHistory = async () => {
+    let query = supabase
+      .from("speeches")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (historyMonth !== "all") {
+      const start = `${historyYear}-${historyMonth}-01`;
+      const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
+      query = query.gte("date", start).lte("date", end);
+    } else {
+      const start = `${historyYear}-01-01`;
+      const end = `${historyYear}-12-31`;
+      query = query.gte("date", start).lte("date", end);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      toast.error("Erro ao carregar histórico");
+    } else {
+      setHistoryData(data || []);
     }
   };
 
@@ -130,6 +161,7 @@ export default function Speeches() {
       toast.success("Discurso salvo!");
       setOpen(false);
       loadData();
+      loadHistory();
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
@@ -140,7 +172,11 @@ export default function Speeches() {
   const handleSpeechDelete = async (id: string) => {
     const { error } = await supabase.from("speeches").delete().eq("id", id);
     if (error) toast.error("Erro ao excluir");
-    else { toast.success("Excluído!"); loadData(); }
+    else { 
+      toast.success("Excluído!"); 
+      loadData(); 
+      loadHistory();
+    }
   };
 
   const handleSpeechEdit = (item: any) => {
@@ -202,6 +238,17 @@ export default function Speeches() {
     outlinePage * ITEMS_PER_PAGE
   );
 
+  const filteredHistory = historyData.filter(h => 
+    h.speaker.toLowerCase().includes(historySearch.toLowerCase()) ||
+    h.title.toLowerCase().includes(historySearch.toLowerCase())
+  );
+
+  const totalHistoryPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
+  const paginatedHistory = filteredHistory.slice(
+    (historyPage - 1) * ITEMS_PER_PAGE,
+    historyPage * ITEMS_PER_PAGE
+  );
+
   const availableOutlines = outlines.filter(o => !o.is_blocked);
 
   const months = [
@@ -221,9 +268,10 @@ export default function Speeches() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+        <TabsList className="grid w-full max-w-[600px] grid-cols-3">
           <TabsTrigger value="speeches">Discursos</TabsTrigger>
           <TabsTrigger value="outlines">Esboços</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="speeches" className="space-y-4">
@@ -428,6 +476,77 @@ export default function Speeches() {
                 currentPage={outlinePage} 
                 totalPages={totalOutlinePages} 
                 onPageChange={setOutlinePage} 
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-end">
+            <div className="flex-1 w-full space-y-2">
+              <Label className="flex items-center gap-2"><Search className="h-4 w-4" /> Pesquisar</Label>
+              <Input 
+                placeholder="Pesquisar por orador ou tema..." 
+                value={historySearch}
+                onChange={(e) => {
+                  setHistorySearch(e.target.value);
+                  setHistoryPage(1);
+                }}
+              />
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <div className="space-y-2 flex-1 md:w-[140px]">
+                <Label className="flex items-center gap-2"><Filter className="h-4 w-4" /> Mês</Label>
+                <Select value={historyMonth} onValueChange={(v) => { setHistoryMonth(v); setHistoryPage(1); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {months.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 flex-1 md:w-[100px]">
+                <Label className="flex items-center gap-2"><Filter className="h-4 w-4" /> Ano</Label>
+                <Input type="number" value={historyYear} onChange={e => { setHistoryYear(e.target.value); setHistoryPage(1); }} />
+              </div>
+            </div>
+          </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <HistoryIcon className="h-5 w-5 text-primary" /> Histórico de Discursos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Orador</TableHead>
+                      <TableHead>Tema do Discurso</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedHistory.length === 0 ? (
+                      <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado no histórico.</TableCell></TableRow>
+                    ) : (
+                      paginatedHistory.map(item => (
+                        <TableRow key={item.id}>
+                          <TableCell className="whitespace-nowrap font-medium">{format(parseISO(item.date), "dd/MM/yyyy")}</TableCell>
+                          <TableCell className="font-bold">{item.speaker}</TableCell>
+                          <TableCell>{item.title}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls 
+                currentPage={historyPage} 
+                totalPages={totalHistoryPages} 
+                onPageChange={setHistoryPage} 
               />
             </CardContent>
           </Card>
