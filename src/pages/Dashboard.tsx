@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
-import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock } from "lucide-react";
+import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths } from "date-fns";
+import { format, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
@@ -21,12 +21,14 @@ export default function Dashboard() {
   });
 
   const [theocraticData, setTheocraticData] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [prevMonthName, setPrevMonthName] = useState("");
 
   useEffect(() => {
     loadStats();
     loadTheocraticData();
     loadPreviousMonthReports();
+    loadAttendanceData();
   }, []);
 
   const loadStats = async () => {
@@ -132,6 +134,59 @@ export default function Dashboard() {
     }
   };
 
+  const loadAttendanceData = async () => {
+    const { data } = await supabase
+      .from("attendance")
+      .select("*")
+      .order("date", { ascending: true });
+
+    if (data) {
+      const monthsOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
+      const monthNames: Record<number, string> = {
+        1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
+        7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
+      };
+
+      const grouped: Record<number, any> = {};
+      
+      data.forEach(curr => {
+        const date = parseISO(curr.date);
+        const m = date.getMonth() + 1;
+        const type = curr.type === "Meio de Semana" ? "mid" : "end";
+        
+        if (!grouped[m]) {
+          grouped[m] = { 
+            mid_in: [], mid_zoom: [], 
+            end_in: [], end_zoom: [] 
+          };
+        }
+        
+        if (type === "mid") {
+          grouped[m].mid_in.push(curr.in_person || 0);
+          grouped[m].mid_zoom.push(curr.zoom || 0);
+        } else {
+          grouped[m].end_in.push(curr.in_person || 0);
+          grouped[m].end_zoom.push(curr.zoom || 0);
+        }
+      });
+
+      const formatted = monthsOrder.map(m => {
+        const entry = grouped[m];
+        const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+        
+        return {
+          name: monthNames[m],
+          midIn: avg(entry?.mid_in || []),
+          midZoom: avg(entry?.mid_zoom || []),
+          endIn: avg(entry?.end_in || []),
+          endZoom: avg(entry?.end_zoom || []),
+        };
+      });
+
+      setAttendanceData(formatted);
+    }
+  };
+
   const cards = [
     { title: "Total de Publicadores", value: stats.totalPublishers, icon: Users, color: "text-primary", desc: "Exceto mudou" },
     { title: "Publicadores Ativos", value: stats.activePublishers, icon: TrendingUp, color: "text-green-600", desc: "Ativos + Repreendidos" },
@@ -232,6 +287,54 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Média Assistência: Meio de Semana
+            </CardTitle>
+            <CardDescription>Média mensal presencial vs zoom</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={attendanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar name="Presencial" dataKey="midIn" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar name="Zoom" dataKey="midZoom" fill="#93c5fd" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-purple-600" />
+              Média Assistência: Fim de Semana
+            </CardTitle>
+            <CardDescription>Média mensal presencial vs zoom</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={attendanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar name="Presencial" dataKey="endIn" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar name="Zoom" dataKey="endZoom" fill="#c4b5fd" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
