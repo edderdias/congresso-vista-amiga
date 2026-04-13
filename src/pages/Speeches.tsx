@@ -15,12 +15,15 @@ import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Outline {
   id: string;
   title: string;
   is_blocked: boolean;
 }
+
+const ITEMS_PER_PAGE = 10;
 
 export default function Speeches() {
   const [activeTab, setActiveTab] = useState("speeches");
@@ -45,6 +48,7 @@ export default function Speeches() {
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [editingOutlineId, setEditingOutlineId] = useState<string | null>(null);
   const [outlineSearch, setOutlineSearch] = useState("");
+  const [outlinePage, setOutlinePage] = useState(1);
   const [outlineFormData, setOutlineFormData] = useState({
     title: "",
     is_blocked: false
@@ -68,9 +72,17 @@ export default function Speeches() {
   const loadOutlines = async () => {
     const { data } = await supabase
       .from("outlines")
-      .select("*")
-      .order("title", { ascending: true });
-    setOutlines(data || []);
+      .select("*");
+    
+    if (data) {
+      // Numerical sorting based on the number at the start of the title
+      const sorted = [...data].sort((a, b) => {
+        const numA = parseInt(a.title.split(' ')[0]) || 0;
+        const numB = parseInt(b.title.split(' ')[0]) || 0;
+        return numA - numB;
+      });
+      setOutlines(sorted);
+    }
   };
 
   const loadData = async () => {
@@ -182,6 +194,12 @@ export default function Speeches() {
 
   const filteredOutlines = outlines.filter(o => 
     o.title.toLowerCase().includes(outlineSearch.toLowerCase())
+  );
+
+  const totalOutlinePages = Math.ceil(filteredOutlines.length / ITEMS_PER_PAGE);
+  const paginatedOutlines = filteredOutlines.slice(
+    (outlinePage - 1) * ITEMS_PER_PAGE,
+    outlinePage * ITEMS_PER_PAGE
   );
 
   const availableOutlines = outlines.filter(o => !o.is_blocked);
@@ -320,7 +338,10 @@ export default function Speeches() {
                 placeholder="Pesquisar esboço..." 
                 className="pl-9"
                 value={outlineSearch}
-                onChange={(e) => setOutlineSearch(e.target.value)}
+                onChange={(e) => {
+                  setOutlineSearch(e.target.value);
+                  setOutlinePage(1);
+                }}
               />
             </div>
             <Dialog open={outlineOpen} onOpenChange={(v) => { setOutlineOpen(v); if(!v) setEditingOutlineId(null); }}>
@@ -370,10 +391,10 @@ export default function Speeches() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOutlines.length === 0 ? (
+                    {paginatedOutlines.length === 0 ? (
                       <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum esboço encontrado.</TableCell></TableRow>
                     ) : (
-                      filteredOutlines.map(outline => (
+                      paginatedOutlines.map(outline => (
                         <TableRow key={outline.id}>
                           <TableCell className="font-medium">{outline.title}</TableCell>
                           <TableCell>
@@ -403,6 +424,11 @@ export default function Speeches() {
                   </TableBody>
                 </Table>
               </div>
+              <PaginationControls 
+                currentPage={outlinePage} 
+                totalPages={totalOutlinePages} 
+                onPageChange={setOutlinePage} 
+              />
             </CardContent>
           </Card>
         </TabsContent>
