@@ -39,7 +39,8 @@ export default function Groups() {
       ...g,
       overseer_name: pubsData?.find(p => p.id === g.overseer_id)?.full_name || "-",
       assistant_name: pubsData?.find(p => p.id === g.assistant_id)?.full_name || "-",
-      count: pubsData?.filter(p => p.group_id === g.id).length || 0,
+      // Exclude 'mudou' from the count
+      count: pubsData?.filter(p => p.group_id === g.id && p.status !== 'mudou').length || 0,
       inactiveCount: pubsData?.filter(p => p.group_id === g.id && p.status === 'inactive').length || 0
     })) || []);
   };
@@ -80,7 +81,8 @@ export default function Groups() {
   };
 
   const eligible = publishers.filter(p => p.privileges?.some((pr: string) => pr === "Ancião" || pr === "Servo Ministérial"));
-  const groupPublishers = publishers.filter(p => p.group_id === selectedGroup?.id);
+  // Exclude 'mudou' from the member list view
+  const groupPublishers = publishers.filter(p => p.group_id === selectedGroup?.id && p.status !== 'mudou');
 
   return (
     <div className="space-y-6">
