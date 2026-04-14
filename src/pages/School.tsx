@@ -71,7 +71,7 @@ export default function School() {
     const { data } = await supabase
       .from("meetings")
       .select("*")
-      .eq("type", "Meio de Semana")
+      .or('type.eq.Meio de Semana,type.eq.Visita do Viajante (Meio de Semana)')
       .order("date", { ascending: false });
     setMeetings(data || []);
   };
@@ -237,7 +237,7 @@ export default function School() {
   };
 
   const handleDeleteProgram = async (date: string) => {
-    const { error } = await supabase.from("school_assignments").delete().eq("meeting_date", date);
+    const { error } = await supabase.from("school_assignments").delete().eq("id", date);
     if (error) toast.error("Erro ao excluir programação");
     else {
       toast.success("Programação excluída!");

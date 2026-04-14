@@ -71,6 +71,7 @@ export default function Designations() {
     "Leitura do Livro": { user_id: "", notes: "" },
     "Oração Final": { user_id: "", notes: "" },
     "Leitura A Sentinela": { user_id: "", notes: "" },
+    "Discurso": { user_id: "", notes: "" },
   });
 
   const [vidaCristaParts, setVidaCristaParts] = useState<{ id?: string, min: string, tema: string, user_id: string }[]>([]);
@@ -127,6 +128,7 @@ export default function Designations() {
       "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
       "Leitura A Sentinela": { user_id: "", notes: "" },
+      "Discurso": { user_id: "", notes: "" },
     };
 
     const newVidaCrista: any[] = [];
@@ -239,6 +241,7 @@ export default function Designations() {
       "Leitura do Livro": { user_id: "", notes: "" },
       "Oração Final": { user_id: "", notes: "" },
       "Leitura A Sentinela": { user_id: "", notes: "" },
+      "Discurso": { user_id: "", notes: "" },
     });
     setVidaCristaParts([{ min: "", tema: "", user_id: "" }]);
   };
@@ -325,6 +328,8 @@ export default function Designations() {
   const isWeekend = selectedMeeting?.type.includes("Final de Semana") || 
                     selectedMeeting?.type === "Especial" || 
                     selectedMeeting?.type === "Celebração";
+
+  const isCircuitVisitMidweek = selectedMeeting?.type === "Visita do Viajante (Meio de Semana)";
 
   return (
     <div className="space-y-6">
@@ -462,26 +467,53 @@ export default function Designations() {
 
                       <div className="space-y-4 border-t pt-4">
                         <Label className="text-primary font-bold">Encerramento</Label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
-                            <Combobox 
-                              options={getPubByPrivilege("Dirigente Est. de Livro")} 
-                              value={formData["Estudo de Livro"].user_id} 
-                              onChange={(v) => setFormData({...formData, "Estudo de Livro": {...formData["Estudo de Livro"], user_id: v}})}
-                              placeholder="Pesquisar..."
-                            />
+                        
+                        {isCircuitVisitMidweek ? (
+                          <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Label className="text-blue-700 font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Discurso do Viajante</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Tema/Obs</Label>
+                                <Input 
+                                  placeholder="Tema do discurso" 
+                                  value={formData["Discurso"].notes} 
+                                  onChange={(e) => setFormData({...formData, "Discurso": {...formData["Discurso"], notes: e.target.value}})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-xs text-muted-foreground">Designado (Local)</Label>
+                                <Combobox 
+                                  options={getPubByPrivilege("Ancião")} 
+                                  value={formData["Discurso"].user_id} 
+                                  onChange={(v) => setFormData({...formData, "Discurso": {...formData["Discurso"], user_id: v}})}
+                                  placeholder="Pesquisar..."
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">Leitura do Livro</Label>
-                            <Combobox 
-                              options={getPubByPrivilege("Leitura do Livro")} 
-                              value={formData["Leitura do Livro"].user_id} 
-                              onChange={(v) => setFormData({...formData, "Leitura do Livro": {...formData["Leitura do Livro"], user_id: v}})}
-                              placeholder="Pesquisar..."
-                            />
+                        ) : (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
+                              <Combobox 
+                                options={getPubByPrivilege("Dirigente Est. de Livro")} 
+                                value={formData["Estudo de Livro"].user_id} 
+                                onChange={(v) => setFormData({...formData, "Estudo de Livro": {...formData["Estudo de Livro"], user_id: v}})}
+                                placeholder="Pesquisar..."
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Leitura do Livro</Label>
+                              <Combobox 
+                                options={getPubByPrivilege("Leitura do Livro")} 
+                                value={formData["Leitura do Livro"].user_id} 
+                                onChange={(v) => setFormData({...formData, "Leitura do Livro": {...formData["Leitura do Livro"], user_id: v}})}
+                                placeholder="Pesquisar..."
+                              />
+                            </div>
                           </div>
-                        </div>
+                        )}
+                        
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Oração Final</Label>
                           <Combobox 
