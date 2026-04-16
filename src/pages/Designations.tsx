@@ -268,9 +268,18 @@ export default function Designations() {
     setViewOpen(true);
   };
 
-  const getPubByPrivilege = (privilege: string) => {
+  const getPubByPrivilege = (privilege: string, currentId?: string) => {
+    // Coletar todos os IDs já selecionados no formulário
+    const selectedIds = new Set<string>();
+    Object.values(formData).forEach(d => { if (d.user_id) selectedIds.add(d.user_id); });
+    vidaCristaParts.forEach(p => { if (p.user_id) selectedIds.add(p.user_id); });
+
     return publishers
-      .filter(p => p.privileges?.includes(privilege))
+      .filter(p => {
+        const hasPriv = p.privileges?.includes(privilege);
+        const isNotUsedElsewhere = !selectedIds.has(p.id) || p.id === currentId;
+        return hasPriv && isNotUsedElsewhere;
+      })
       .map(p => ({ value: p.id, label: p.full_name }));
   };
 
@@ -379,7 +388,7 @@ export default function Designations() {
                         <div className="space-y-2">
                           <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
                           <Combobox 
-                            options={getPubByPrivilege("Presidência Vida e Ministério")} 
+                            options={getPubByPrivilege("Presidência Vida e Ministério", formData["Presidente"].user_id)} 
                             value={formData["Presidente"].user_id} 
                             onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
                             placeholder="Pesquisar..."
@@ -388,7 +397,7 @@ export default function Designations() {
                         <div className="space-y-2">
                           <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
                           <Combobox 
-                            options={getPubByPrivilege("Oração")} 
+                            options={getPubByPrivilege("Oração", formData["Oração Inicial"].user_id)} 
                             value={formData["Oração Inicial"].user_id} 
                             onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
                             placeholder="Pesquisar..."
@@ -410,7 +419,7 @@ export default function Designations() {
                           <div className="space-y-2">
                             <Label className="text-xs text-muted-foreground">Orador</Label>
                             <Combobox 
-                              options={getPubByPrivilege("Tesouro")} 
+                              options={getPubByPrivilege("Tesouro", formData["Tesouro"].user_id)} 
                               value={formData["Tesouro"].user_id} 
                               onChange={(v) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], user_id: v}})}
                               placeholder="Pesquisar..."
@@ -422,7 +431,7 @@ export default function Designations() {
                       <div className="space-y-2">
                         <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Joias Espirituais</Label>
                         <Combobox 
-                          options={getPubByPrivilege("Encontre Joias")} 
+                          options={getPubByPrivilege("Encontre Joias", formData["Joias Espirituais"].user_id)} 
                           value={formData["Joias Espirituais"].user_id} 
                           onChange={(v) => setFormData({...formData, "Joias Espirituais": {...formData["Joias Espirituais"], user_id: v}})}
                           placeholder="Pesquisar..."
@@ -450,7 +459,7 @@ export default function Designations() {
                             <div className="col-span-4 space-y-1">
                               <Label className="text-[10px]">Orador</Label>
                               <Combobox 
-                                options={getPubByPrivilege("Nossa Vida Cristã")} 
+                                options={getPubByPrivilege("Nossa Vida Cristã", part.user_id)} 
                                 value={part.user_id} 
                                 onChange={(v) => updateVidaCristaPart(index, "user_id", v)}
                                 placeholder="Pesquisar..."
@@ -483,7 +492,7 @@ export default function Designations() {
                               <div className="space-y-2">
                                 <Label className="text-xs text-muted-foreground">Designado (Local)</Label>
                                 <Combobox 
-                                  options={getPubByPrivilege("Ancião")} 
+                                  options={getPubByPrivilege("Ancião", formData["Discurso"].user_id)} 
                                   value={formData["Discurso"].user_id} 
                                   onChange={(v) => setFormData({...formData, "Discurso": {...formData["Discurso"], user_id: v}})}
                                   placeholder="Pesquisar..."
@@ -496,7 +505,7 @@ export default function Designations() {
                             <div className="space-y-2">
                               <Label className="text-xs text-muted-foreground">Estudo de Livro</Label>
                               <Combobox 
-                                options={getPubByPrivilege("Dirigente Est. de Livro")} 
+                                options={getPubByPrivilege("Dirigente Est. de Livro", formData["Estudo de Livro"].user_id)} 
                                 value={formData["Estudo de Livro"].user_id} 
                                 onChange={(v) => setFormData({...formData, "Estudo de Livro": {...formData["Estudo de Livro"], user_id: v}})}
                                 placeholder="Pesquisar..."
@@ -505,7 +514,7 @@ export default function Designations() {
                             <div className="space-y-2">
                               <Label className="text-xs text-muted-foreground">Leitura do Livro</Label>
                               <Combobox 
-                                options={getPubByPrivilege("Leitura do Livro")} 
+                                options={getPubByPrivilege("Leitura do Livro", formData["Leitura do Livro"].user_id)} 
                                 value={formData["Leitura do Livro"].user_id} 
                                 onChange={(v) => setFormData({...formData, "Leitura do Livro": {...formData["Leitura do Livro"], user_id: v}})}
                                 placeholder="Pesquisar..."
@@ -517,7 +526,7 @@ export default function Designations() {
                         <div className="space-y-2">
                           <Label className="text-xs text-muted-foreground">Oração Final</Label>
                           <Combobox 
-                            options={getPubByPrivilege("Oração")} 
+                            options={getPubByPrivilege("Oração", formData["Oração Final"].user_id)} 
                             value={formData["Oração Final"].user_id} 
                             onChange={(v) => setFormData({...formData, "Oração Final": {...formData["Oração Final"], user_id: v}})}
                             placeholder="Pesquisar..."
@@ -532,7 +541,7 @@ export default function Designations() {
                       <div className="space-y-2">
                         <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Presidente</Label>
                         <Combobox 
-                          options={getPubByPrivilege("Presidência Final de Semana")} 
+                          options={getPubByPrivilege("Presidência Final de Semana", formData["Presidente"].user_id)} 
                           value={formData["Presidente"].user_id} 
                           onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
                           placeholder="Pesquisar..."
@@ -541,7 +550,7 @@ export default function Designations() {
                       <div className="space-y-2">
                         <Label className="text-primary font-bold flex items-center gap-2"><Mic2 className="h-4 w-4" /> Oração Inicial</Label>
                         <Combobox 
-                          options={getPubByPrivilege("Oração")} 
+                          options={getPubByPrivilege("Oração", formData["Oração Inicial"].user_id)} 
                           value={formData["Oração Inicial"].user_id} 
                           onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
                           placeholder="Pesquisar..."
@@ -550,7 +559,7 @@ export default function Designations() {
                       <div className="space-y-2">
                         <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Leitor da Sentinela</Label>
                         <Combobox 
-                          options={getPubByPrivilege("Leitura A Sentinela")} 
+                          options={getPubByPrivilege("Leitura A Sentinela", formData["Leitura A Sentinela"].user_id)} 
                           value={formData["Leitura A Sentinela"].user_id} 
                           onChange={(v) => setFormData({...formData, "Leitura A Sentinela": {...formData["Leitura A Sentinela"], user_id: v}})}
                           placeholder="Pesquisar..."

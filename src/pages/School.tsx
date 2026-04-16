@@ -71,7 +71,7 @@ export default function School() {
     const { data } = await supabase
       .from("meetings")
       .select("*")
-      .or('type.eq.Meio de Semana,type.eq.Visita do Viajante (Meio de Semana)')
+      .in('type', ['Meio de Semana', 'Visita do Viajante (Meio de Semana)'])
       .order("date", { ascending: false });
     setMeetings(data || []);
   };
@@ -251,13 +251,23 @@ export default function School() {
     setMinistryParts([{ min: "", tema: "", student_id: "", assistant_id: "" }]);
   };
 
-  const getPubsByPrivilege = (privilege: string, gender?: string, excludeId?: string) => {
+  const getPubsByPrivilege = (privilege: string, gender?: string, currentId?: string) => {
+    // Coletar todos os IDs já selecionados no formulário
+    const selectedIds = new Set<string>();
+    if (bibleReading.student_id) selectedIds.add(bibleReading.student_id);
+    ministryParts.forEach(p => {
+      if (p.student_id) selectedIds.add(p.student_id);
+      if (p.assistant_id) selectedIds.add(p.assistant_id);
+    });
+
     return publishers
       .filter(p => {
         const hasPriv = p.privileges?.includes(privilege);
         const matchesGender = gender ? p.gender === gender : true;
-        const isNotExcluded = excludeId ? p.id !== excludeId : true;
-        return hasPriv && matchesGender && isNotExcluded;
+        // Permitir o ID atual (para que o Combobox mostre quem já está selecionado)
+        // Mas excluir outros IDs que já estão em uso
+        const isNotUsedElsewhere = !selectedIds.has(p.id) || p.id === currentId;
+        return hasPriv && matchesGender && isNotUsedElsewhere;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
   };
@@ -354,7 +364,7 @@ export default function School() {
                     <SelectContent>
                       {meetings.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
-                          {format(parseISO(m.date), "dd/MM/yyyy")}
+                          {format(parseISO(m.date), "dd/MM/yyyy")} - {m.type}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -366,7 +376,7 @@ export default function School() {
                     <div className="space-y-2">
                       <Label className="text-primary font-bold flex items-center gap-2"><BookOpen className="h-4 w-4" /> Leitura da Bíblia</Label>
                       <Combobox 
-                        options={getPubsByPrivilege("Parte de Estudante", "M")} 
+                        options={getPubsByPrivilege("Parte de Estudante", "M", bibleReading.student_id)} 
                         value={bibleReading.student_id} 
                         onChange={(v) => setBibleReading({...bibleReading, student_id: v})}
                         placeholder="Pesquisar estudante (M)..."
@@ -403,7 +413,7 @@ export default function School() {
                             <div className="space-y-1">
                               <Label className="text-[10px] flex items-center gap-1"><User size={10} /> Estudante</Label>
                               <Combobox 
-                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.assistant_id)} 
+                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.student_id)} 
                                 value={part.student_id} 
                                 onChange={(v) => updateMinistryPart(index, "student_id", v)}
                                 placeholder="Pesquisar estudante..."
@@ -412,7 +422,7 @@ export default function School() {
                             <div className="space-y-1">
                               <Label className="text-[10px] flex items-center gap-1"><Users size={10} /> Ajudante</Label>
                               <Combobox 
-                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.student_id)} 
+                                options={getPubsByPrivilege("Parte de Estudante", undefined, part.assistant_id)} 
                                 value={part.assistant_id} 
                                 onChange={(v) => updateMinistryPart(index, "assistant_id", v)}
                                 placeholder="Pesquisar ajudante..."
