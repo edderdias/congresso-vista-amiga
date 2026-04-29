@@ -87,7 +87,7 @@ export default function Designations() {
 
     const [desigRes, pubsRes, meetsRes] = await Promise.all([
       supabase.from("designations").select("*").gte("meeting_date", start).lte("meeting_date", end),
-      supabase.from("publishers").select("id, full_name, privileges, phone").eq("status", "active"),
+      supabase.from("publishers").select("id, full_name, privileges, phone").in("status", ["active", "repreendido"]),
       supabase.from("meetings").select("*").order("date", { ascending: false })
     ]);
 

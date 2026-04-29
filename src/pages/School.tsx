@@ -80,7 +80,7 @@ export default function School() {
     const { data: pubs } = await supabase
       .from("publishers")
       .select("id, full_name, privileges, gender, phone")
-      .eq("status", "active")
+      .in("status", ["active", "repreendido"])
       .order("full_name");
     setPublishers(pubs || []);
   };
