@@ -269,20 +269,28 @@ export default function Designations() {
   };
 
   const getPubByPrivilege = (privilege: string, currentId?: string, isPrayer?: boolean) => {
-    // Coletar todos os IDs já selecionados no formulário
+    // Coletar IDs já selecionados, mas ignorar as orações se estivermos preenchendo uma oração
     const selectedIds = new Set<string>();
+    
     Object.entries(formData).forEach(([type, d]) => { 
-      // Se for oração, não bloqueamos outros campos de oração
-      if (isPrayer && (type === "Oração Inicial" || type === "Oração Final")) return;
-      if (d.user_id) selectedIds.add(d.user_id); 
+      // Se for oração, permitimos repetir quem já tem outra parte
+      // Se NÃO for oração, não permitimos selecionar quem já está em outra parte (exceto orações)
+      if (d.user_id) {
+        if (type !== "Oração Inicial" && type !== "Oração Final") {
+          selectedIds.add(d.user_id);
+        }
+      }
     });
+    
     vidaCristaParts.forEach(p => { if (p.user_id) selectedIds.add(p.user_id); });
 
     return publishers
       .filter(p => {
         const hasPriv = p.privileges?.includes(privilege);
-        const isNotUsedElsewhere = !selectedIds.has(p.id) || p.id === currentId;
-        return hasPriv && isNotUsedElsewhere;
+        // Se for oração, permitimos qualquer um com o privilégio
+        // Se não for oração, verificamos se não está em uso em outras partes principais
+        const isAvailable = isPrayer || !selectedIds.has(p.id) || p.id === currentId;
+        return hasPriv && isAvailable;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
   };
