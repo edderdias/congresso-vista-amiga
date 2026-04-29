@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function AudioVideo() {
@@ -17,6 +18,10 @@ export default function AudioVideo() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
+  
+  const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
+
   const [formData, setFormData] = useState({
     operator_id: "none",
     video_operator_id: "none",
@@ -28,13 +33,20 @@ export default function AudioVideo() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filterMonth, filterYear]);
 
   const loadData = async () => {
     try {
+      const start = `${filterYear}-${filterMonth}-01`;
+      const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
+
       const [pubsResponse, meetingsResponse, avResponse] = await Promise.all([
         supabase.from("publishers").select("id, full_name, privileges"),
-        supabase.from("meetings").select("*").order("date", { ascending: false }),
+        supabase.from("meetings")
+          .select("*")
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: true }),
         supabase.from("av_designations").select("*")
       ]);
 
@@ -105,11 +117,27 @@ export default function AudioVideo() {
   const micPublishers = publishers.filter(p => p.privileges?.includes("Microfone Volante"));
   const indicatorPublishers = publishers.filter(p => p.privileges?.includes("Indicador"));
 
+  const months = [
+    { v: "01", l: "Janeiro" }, { v: "02", l: "Fevereiro" }, { v: "03", l: "Março" },
+    { v: "04", l: "Abril" }, { v: "05", l: "Maio" }, { v: "06", l: "Junho" },
+    { v: "07", l: "Julho" }, { v: "08", l: "Agosto" }, { v: "09", l: "Setembro" },
+    { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" }
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Áudio e Vídeo</h1>
-        <p className="text-muted-foreground">Gerencie as designações técnicas para as reuniões</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Áudio e Vídeo</h1>
+          <p className="text-muted-foreground">Gerencie as designações técnicas para as reuniões</p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>{months.map(m => <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>)}</SelectContent>
+          </Select>
+          <Input type="number" className="w-[100px]" value={filterYear} onChange={e => setFilterYear(e.target.value)} />
+        </div>
       </div>
 
       <Card>
@@ -136,7 +164,7 @@ export default function AudioVideo() {
                 {meetings.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhuma reunião cadastrada.
+                      Nenhuma reunião encontrada para este período.
                     </TableCell>
                   </TableRow>
                 ) : (
