@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor, BarChart3, Mic2, Star } from "lucide-react";
+import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor, BarChart3, Mic2 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -20,7 +20,6 @@ const allItems = [
   { id: "reports", title: "Relatórios", url: "/reports", icon: FileText },
   { id: "groups", title: "Grupos", url: "/groups", icon: Users },
   { id: "publishers", title: "Publicadores", url: "/publishers", icon: User },
-  { id: "pioneers", title: "Pioneiros", url: "/pioneers", icon: Star },
   { id: "meetings", title: "Reuniões", url: "/meetings", icon: Calendar },
   { id: "speeches", title: "Discursos", url: "/speeches", icon: Mic2 },
   { id: "attendance", title: "Assistência", url: "/attendance", icon: BarChart3 },
