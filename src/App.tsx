@@ -51,7 +51,7 @@ const App = () => (
           <Route path="/cleaning" element={<Layout><Cleaning /></Layout>} />
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
           <Route path="/school" element={<Layout><School /></Layout>} />
-          <Route path="/territories" element={<Layout><Territories /></Route>
+          <Route path="/territories" element={<Layout><Territories /></Layout>} />
           <Route path="/users" element={<Layout><Users /></Layout>} />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
           <Route path="*" element={<NotFound />} />
