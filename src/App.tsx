@@ -13,7 +13,6 @@ import Groups from "./pages/Groups";
 import Cleaning from "./pages/Cleaning";
 import School from "./pages/School";
 import Publishers from "./pages/Publishers";
-import Pioneers from "./pages/Pioneers";
 import Auth from "./pages/Auth";
 import PublicReport from "./pages/PublicReport";
 import PublicCalendar from "./pages/PublicCalendar";
@@ -43,7 +42,6 @@ const App = () => (
           <Route path="/reports" element={<Layout><Reports /></Layout>} />
           <Route path="/groups" element={<Layout><Groups /></Layout>} />
           <Route path="/publishers" element={<Layout><Publishers /></Layout>} />
-          <Route path="/pioneers" element={<Layout><Pioneers /></Layout>} />
           <Route path="/meetings" element={<Layout><Meetings /></Layout>} />
           <Route path="/audio-video" element={<Layout><AudioVideo /></Layout>} />
           <Route path="/attendance" element={<Layout><Attendance /></Layout>} />
