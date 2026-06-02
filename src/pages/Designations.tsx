@@ -76,22 +76,6 @@ export default function Designations() {
     setLoading(false);
   };
 
-  const checkDuplicate = (userId: string, type: string) => {
-    if (!settings?.prevent_duplicate_designations || !userId || userId === "") return false;
-    
-    // Orações são exceção
-    if (type === "Oração Inicial" || type === "Oração Final") return false;
-
-    const alreadyDesignated = Object.entries(formData).some(([t, d]) => t !== type && d.user_id === userId);
-    const inVidaCrista = vidaCristaParts.some(p => p.user_id === userId);
-
-    if (alreadyDesignated || inVidaCrista) {
-      toast.error("Participante já designado para outra parte nesta reunião!");
-      return true;
-    }
-    return false;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMeeting) return toast.error("Selecione a reunião");
@@ -203,14 +187,13 @@ export default function Designations() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Presidente</Label>
-                    <Combobox options={getPubByPrivilege("Presidência Vida e Ministério")} value={formData["Presidente"].user_id} onChange={v => !checkDuplicate(v, "Presidente") && setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})} />
+                    <Combobox options={getPubByPrivilege("Presidência Vida e Ministério")} value={formData["Presidente"].user_id} onChange={v => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})} />
                   </div>
                   <div className="space-y-2">
                     <Label>Oração Inicial</Label>
                     <Combobox options={getPubByPrivilege("Oração")} value={formData["Oração Inicial"].user_id} onChange={v => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})} />
                   </div>
                 </div>
-                {/* Outros campos seguem o mesmo padrão de checkDuplicate */}
               </div>
             )}
             <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>

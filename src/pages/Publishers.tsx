@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, MapPin, Search, Filter, Users, Star, Clock, UserMinus, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Search, Filter, Users, Star, Clock, UserMinus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { PublisherCard } from "@/components/PublisherCard";
 
 const SECTIONS = {
   reuniao: [
@@ -43,11 +42,6 @@ export default function Publishers() {
   const [filterStatus, setFilterStatus] = useState("default");
   const [filterPrivilege, setFilterPrivilege] = useState("all");
 
-  // Card State
-  const [cardOpen, setCardOpen] = useState(false);
-  const [selectedPubForCard, setSelectedPubForCard] = useState<any>(null);
-  const [pubReports, setPubReports] = useState<any[]>([]);
-
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
     privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none"
@@ -60,19 +54,6 @@ export default function Publishers() {
     const { data: pubsData } = await supabase.from("publishers").select("*").order("full_name");
     setGroups(groupsData || []);
     setPublishers(pubsData?.map(p => ({...p, group_number: groupsData?.find(g => g.id === p.group_id)?.group_number})) || []);
-  };
-
-  const handleViewCard = async (pub: any) => {
-    setSelectedPubForCard(pub);
-    const { data } = await supabase
-      .from("preaching_reports")
-      .select("*")
-      .eq("publisher_id", pub.id)
-      .order("year", { ascending: false })
-      .order("month", { ascending: false });
-    
-    setPubReports(data || []);
-    setCardOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,9 +155,6 @@ export default function Publishers() {
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
-                        <FileText className="h-4 w-4 text-blue-600" />
-                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
                         full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
                         gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
@@ -197,8 +175,6 @@ export default function Publishers() {
           <PaginationControls currentPage={currentPage} totalPages={Math.ceil(filtered.length/10)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
-
-      <PublisherCard publisher={selectedPubForCard} reports={pubReports} open={cardOpen} onOpenChange={setCardOpen} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
