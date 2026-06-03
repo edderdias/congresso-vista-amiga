@@ -51,6 +51,7 @@ export default function Designations() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [publishers, setPublishers] = useState<Publisher[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [settings, setSettings] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<GroupedProgram | null>(null);
@@ -78,7 +79,13 @@ export default function Designations() {
 
   useEffect(() => {
     loadData();
+    loadSettings();
   }, [filterMonth, filterYear]);
+
+  const loadSettings = async () => {
+    const { data } = await supabase.from("settings").select("*").single();
+    setSettings(data);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -269,30 +276,54 @@ export default function Designations() {
   };
 
   const getPubByPrivilege = (privilege: string, currentId?: string, isPrayer?: boolean) => {
-    // Coletar IDs já selecionados, mas ignorar as orações se estivermos preenchendo uma oração
     const selectedIds = new Set<string>();
     
-    Object.entries(formData).forEach(([type, d]) => { 
-      // Se for oração, permitimos repetir quem já tem outra parte
-      // Se NÃO for oração, não permitimos selecionar quem já está em outra parte (exceto orações)
-      if (d.user_id) {
-        if (type !== "Oração Inicial" && type !== "Oração Final") {
+    // Se a configuração de evitar duplicidade estiver ativa
+    if (settings?.prevent_duplicate_designations) {
+      Object.entries(formData).forEach(([type, d]) => { 
+        if (d.user_id && d.user_id !== currentId) {
+          // Orações geralmente podem ser repetidas se a pessoa já tem outra parte, 
+          // mas se a regra for estrita, bloqueamos tudo.
+          // Aqui vamos bloquear se não for oração ou se for a própria oração sendo editada.
           selectedIds.add(d.user_id);
         }
-      }
-    });
-    
-    vidaCristaParts.forEach(p => { if (p.user_id) selectedIds.add(p.user_id); });
+      });
+      vidaCristaParts.forEach(p => { if (p.user_id && p.user_id !== currentId) selectedIds.add(p.user_id); });
+    }
 
     return publishers
       .filter(p => {
         const hasPriv = p.privileges?.includes(privilege);
-        // Se for oração, permitimos qualquer um com o privilégio
-        // Se não for oração, verificamos se não está em uso em outras partes principais
-        const isAvailable = isPrayer || !selectedIds.has(p.id) || p.id === currentId;
-        return hasPriv && isAvailable;
+        const isAlreadyDesignated = selectedIds.has(p.id);
+        return hasPriv && !isAlreadyDesignated;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
+  };
+
+  const handleSelectChange = (type: string, val: string) => {
+    if (settings?.prevent_duplicate_designations && val) {
+      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => t !== type && d.user_id === val) || 
+                           vidaCristaParts.some(p => p.user_id === val);
+      
+      if (isAlreadyUsed) {
+        toast.error("Participante já designado para esta reunião!");
+        return;
+      }
+    }
+    setFormData({...formData, [type]: {...formData[type], user_id: val}});
+  };
+
+  const handleVidaCristaSelect = (index: number, val: string) => {
+    if (settings?.prevent_duplicate_designations && val) {
+      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => d.user_id === val) || 
+                           vidaCristaParts.some((p, i) => i !== index && p.user_id === val);
+      
+      if (isAlreadyUsed) {
+        toast.error("Participante já designado para esta reunião!");
+        return;
+      }
+    }
+    updateVidaCristaPart(index, "user_id", val);
   };
 
   const sendWhatsApp = (name: string, phone: string, date: string, type: string, notes?: string) => {
@@ -402,7 +433,7 @@ export default function Designations() {
                           <Combobox 
                             options={getPubByPrivilege("Presidência Vida e Ministério", formData["Presidente"].user_id)} 
                             value={formData["Presidente"].user_id} 
-                            onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
+                            onChange={(v) => handleSelectChange("Presidente", v)}
                             placeholder="Pesquisar..."
                           />
                         </div>
@@ -411,7 +442,7 @@ export default function Designations() {
                           <Combobox 
                             options={getPubByPrivilege("Oração", formData["Oração Inicial"].user_id, true)} 
                             value={formData["Oração Inicial"].user_id} 
-                            onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
+                            onChange={(v) => handleSelectChange("Oração Inicial", v)}
                             placeholder="Pesquisar..."
                           />
                         </div>
@@ -433,7 +464,7 @@ export default function Designations() {
                             <Combobox 
                               options={getPubByPrivilege("Tesouro", formData["Tesouro"].user_id)} 
                               value={formData["Tesouro"].user_id} 
-                              onChange={(v) => setFormData({...formData, "Tesouro": {...formData["Tesouro"], user_id: v}})}
+                              onChange={(v) => handleSelectChange("Tesouro", v)}
                               placeholder="Pesquisar..."
                             />
                           </div>
@@ -445,7 +476,7 @@ export default function Designations() {
                         <Combobox 
                           options={getPubByPrivilege("Encontre Joias", formData["Joias Espirituais"].user_id)} 
                           value={formData["Joias Espirituais"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Joias Espirituais": {...formData["Joias Espirituais"], user_id: v}})}
+                          onChange={(v) => handleSelectChange("Joias Espirituais", v)}
                           placeholder="Pesquisar..."
                         />
                       </div>
@@ -473,7 +504,7 @@ export default function Designations() {
                               <Combobox 
                                 options={getPubByPrivilege("Nossa Vida Cristã", part.user_id)} 
                                 value={part.user_id} 
-                                onChange={(v) => updateVidaCristaPart(index, "user_id", v)}
+                                onChange={(v) => handleVidaCristaSelect(index, v)}
                                 placeholder="Pesquisar..."
                               />
                             </div>
@@ -506,7 +537,7 @@ export default function Designations() {
                                 <Combobox 
                                   options={getPubByPrivilege("Ancião", formData["Discurso"].user_id)} 
                                   value={formData["Discurso"].user_id} 
-                                  onChange={(v) => setFormData({...formData, "Discurso": {...formData["Discurso"], user_id: v}})}
+                                  onChange={(v) => handleSelectChange("Discurso", v)}
                                   placeholder="Pesquisar..."
                                 />
                               </div>
@@ -519,7 +550,7 @@ export default function Designations() {
                               <Combobox 
                                 options={getPubByPrivilege("Dirigente Est. de Livro", formData["Estudo de Livro"].user_id)} 
                                 value={formData["Estudo de Livro"].user_id} 
-                                onChange={(v) => setFormData({...formData, "Estudo de Livro": {...formData["Estudo de Livro"], user_id: v}})}
+                                onChange={(v) => handleSelectChange("Estudo de Livro", v)}
                                 placeholder="Pesquisar..."
                               />
                             </div>
@@ -528,7 +559,7 @@ export default function Designations() {
                               <Combobox 
                                 options={getPubByPrivilege("Leitura do Livro", formData["Leitura do Livro"].user_id)} 
                                 value={formData["Leitura do Livro"].user_id} 
-                                onChange={(v) => setFormData({...formData, "Leitura do Livro": {...formData["Leitura do Livro"], user_id: v}})}
+                                onChange={(v) => handleSelectChange("Leitura do Livro", v)}
                                 placeholder="Pesquisar..."
                               />
                             </div>
@@ -540,7 +571,7 @@ export default function Designations() {
                           <Combobox 
                             options={getPubByPrivilege("Oração", formData["Oração Final"].user_id, true)} 
                             value={formData["Oração Final"].user_id} 
-                            onChange={(v) => setFormData({...formData, "Oração Final": {...formData["Oração Final"], user_id: v}})}
+                            onChange={(v) => handleSelectChange("Oração Final", v)}
                             placeholder="Pesquisar..."
                           />
                         </div>
@@ -555,7 +586,7 @@ export default function Designations() {
                         <Combobox 
                           options={getPubByPrivilege("Presidência Final de Semana", formData["Presidente"].user_id)} 
                           value={formData["Presidente"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Presidente": {...formData["Presidente"], user_id: v}})}
+                          onChange={(v) => handleSelectChange("Presidente", v)}
                           placeholder="Pesquisar..."
                         />
                       </div>
@@ -564,7 +595,7 @@ export default function Designations() {
                         <Combobox 
                           options={getPubByPrivilege("Oração", formData["Oração Inicial"].user_id, true)} 
                           value={formData["Oração Inicial"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Oração Inicial": {...formData["Oração Inicial"], user_id: v}})}
+                          onChange={(v) => handleSelectChange("Oração Inicial", v)}
                           placeholder="Pesquisar..."
                         />
                       </div>
@@ -573,7 +604,7 @@ export default function Designations() {
                         <Combobox 
                           options={getPubByPrivilege("Leitura A Sentinela", formData["Leitura A Sentinela"].user_id)} 
                           value={formData["Leitura A Sentinela"].user_id} 
-                          onChange={(v) => setFormData({...formData, "Leitura A Sentinela": {...formData["Leitura A Sentinela"], user_id: v}})}
+                          onChange={(v) => handleSelectChange("Leitura A Sentinela", v)}
                           placeholder="Pesquisar..."
                         />
                       </div>

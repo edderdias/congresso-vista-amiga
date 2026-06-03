@@ -47,6 +47,7 @@ export default function School() {
   const [data, setData] = useState<SchoolAssignment[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
@@ -65,7 +66,13 @@ export default function School() {
     loadData(); 
     loadPublishers();
     loadMeetings();
+    loadSettings();
   }, [filterMonth, filterYear]);
+
+  const loadSettings = async () => {
+    const { data } = await supabase.from("settings").select("*").single();
+    setSettings(data);
+  };
 
   const loadMeetings = async () => {
     const { data } = await supabase
@@ -252,24 +259,60 @@ export default function School() {
   };
 
   const getPubsByPrivilege = (privilege: string, gender?: string, currentId?: string) => {
-    // Coletar todos os IDs já selecionados no formulário
     const selectedIds = new Set<string>();
-    if (bibleReading.student_id) selectedIds.add(bibleReading.student_id);
-    ministryParts.forEach(p => {
-      if (p.student_id) selectedIds.add(p.student_id);
-      if (p.assistant_id) selectedIds.add(p.assistant_id);
-    });
+    
+    if (settings?.prevent_duplicate_students) {
+      if (bibleReading.student_id && bibleReading.student_id !== currentId) selectedIds.add(bibleReading.student_id);
+      ministryParts.forEach(p => {
+        if (p.student_id && p.student_id !== currentId) selectedIds.add(p.student_id);
+        if (p.assistant_id && p.assistant_id !== currentId) selectedIds.add(p.assistant_id);
+      });
+    }
 
     return publishers
       .filter(p => {
         const hasPriv = p.privileges?.includes(privilege);
         const matchesGender = gender ? p.gender === gender : true;
-        // Permitir o ID atual (para que o Combobox mostre quem já está selecionado)
-        // Mas excluir outros IDs que já estão em uso
-        const isNotUsedElsewhere = !selectedIds.has(p.id) || p.id === currentId;
-        return hasPriv && matchesGender && isNotUsedElsewhere;
+        const isAlreadyUsed = selectedIds.has(p.id);
+        return hasPriv && matchesGender && !isAlreadyUsed;
       })
       .map(p => ({ value: p.id, label: p.full_name }));
+  };
+
+  const handleBibleReadingChange = (val: string) => {
+    if (settings?.prevent_duplicate_students && val) {
+      const isAlreadyUsed = ministryParts.some(p => p.student_id === val || p.assistant_id === val);
+      if (isAlreadyUsed) {
+        toast.error("Participante já designado para este programa!");
+        return;
+      }
+    }
+    setBibleReading({...bibleReading, student_id: val});
+  };
+
+  const handleStudentChange = (index: number, val: string) => {
+    if (settings?.prevent_duplicate_students && val) {
+      const isAlreadyUsed = bibleReading.student_id === val || 
+                           ministryParts.some((p, i) => i !== index && (p.student_id === val || p.assistant_id === val));
+      if (isAlreadyUsed) {
+        toast.error("Participante já designado para este programa!");
+        return;
+      }
+    }
+    updateMinistryPart(index, "student_id", val);
+  };
+
+  const handleAssistantChange = (index: number, val: string) => {
+    if (settings?.prevent_duplicate_students && val) {
+      const isAlreadyUsed = bibleReading.student_id === val || 
+                           ministryParts.some((p, i) => i !== index && (p.student_id === val || p.assistant_id === val)) ||
+                           ministryParts[index].student_id === val;
+      if (isAlreadyUsed) {
+        toast.error("Participante já designado para este programa!");
+        return;
+      }
+    }
+    updateMinistryPart(index, "assistant_id", val);
   };
 
   const sendWhatsApp = (name: string, phone: string, date: string, part: string, assistant?: string) => {
@@ -378,7 +421,7 @@ export default function School() {
                       <Combobox 
                         options={getPubsByPrivilege("Parte de Estudante", "M", bibleReading.student_id)} 
                         value={bibleReading.student_id} 
-                        onChange={(v) => setBibleReading({...bibleReading, student_id: v})}
+                        onChange={handleBibleReadingChange}
                         placeholder="Pesquisar estudante (M)..."
                       />
                     </div>
@@ -415,7 +458,7 @@ export default function School() {
                               <Combobox 
                                 options={getPubsByPrivilege("Parte de Estudante", undefined, part.student_id)} 
                                 value={part.student_id} 
-                                onChange={(v) => updateMinistryPart(index, "student_id", v)}
+                                onChange={(v) => handleStudentChange(index, v)}
                                 placeholder="Pesquisar estudante..."
                               />
                             </div>
@@ -424,7 +467,7 @@ export default function School() {
                               <Combobox 
                                 options={getPubsByPrivilege("Parte de Estudante", undefined, part.assistant_id)} 
                                 value={part.assistant_id} 
-                                onChange={(v) => updateMinistryPart(index, "assistant_id", v)}
+                                onChange={(v) => handleAssistantChange(index, v)}
                                 placeholder="Pesquisar ajudante..."
                               />
                             </div>
