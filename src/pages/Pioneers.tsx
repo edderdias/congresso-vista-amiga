@@ -43,8 +43,14 @@ export default function Pioneers() {
 
     // Filtrar localmente para garantir precisão com o array do Postgres
     // Mesma lógica usada na tela de Publicadores para stats.regPioneers
-    const regularPioneers = (pubs || []).filter(p => 
-      p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
+    const regularPioneers = (pubs || []).filter(p => {
+      if (!p.privileges) return false;
+
+      const privString = typeof p.privileges === 'string' ? p.privileges : JSON.stringify(p.privileges);
+
+      return privString.toLowerCase().includes("pioneiro regular");
+    }
+      // p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
     );
 
     // 2. Buscar relatórios desde o início do ano de serviço (Setembro)
