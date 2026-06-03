@@ -220,14 +220,15 @@ export default function Reports() {
   ];
 
   const getDisplayData = () => {
+    const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
+    
     if (!showMissing) {
       return reports.filter(r => 
         r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
-    
+    // IDs de quem já relatou no mês e ano filtrados
     const reportedIds = new Set(
       reports
         .filter(r => r.month === targetMonth && r.year === filterYear)

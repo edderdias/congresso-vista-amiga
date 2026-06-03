@@ -98,11 +98,14 @@ export default function Dashboard() {
   };
 
   const loadTheocraticData = async () => {
+    const now = new Date();
+    let startYear = now.getFullYear();
+    if (now.getMonth() < 8) startYear--; // Ciclo começa em Setembro (mês 8 no JS)
+
     const { data } = await supabase
       .from("preaching_reports")
       .select("month, year, hours, bible_studies")
-      .order("year", { ascending: true })
-      .order("month", { ascending: true });
+      .or(`year.eq.${startYear},year.eq.${startYear + 1}`);
 
     if (data) {
       const monthsOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -122,7 +125,8 @@ export default function Dashboard() {
       }, {});
 
       const formatted = monthsOrder.map(m => {
-        const entry = Object.values(grouped).find((item: any) => item.month === m);
+        const targetYear = m >= 9 ? startYear : startYear + 1;
+        const entry = Object.values(grouped).find((item: any) => item.month === m && item.year === targetYear);
         return {
           name: monthNames[m],
           horas: entry ? (entry as any).hours : 0,
@@ -135,9 +139,15 @@ export default function Dashboard() {
   };
 
   const loadAttendanceData = async () => {
+    const now = new Date();
+    let startYear = now.getFullYear();
+    if (now.getMonth() < 8) startYear--;
+
     const { data } = await supabase
       .from("attendance")
       .select("*")
+      .gte("date", `${startYear}-09-01`)
+      .lte("date", `${startYear + 1}-08-31`)
       .order("date", { ascending: true });
 
     if (data) {
@@ -147,31 +157,35 @@ export default function Dashboard() {
         7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
       };
 
-      const grouped: Record<number, any> = {};
+      const grouped: Record<string, any> = {};
       
       data.forEach(curr => {
         const date = parseISO(curr.date);
         const m = date.getMonth() + 1;
+        const y = date.getFullYear();
+        const key = `${m}-${y}`;
         const type = curr.type === "Meio de Semana" ? "mid" : "end";
         
-        if (!grouped[m]) {
-          grouped[m] = { 
+        if (!grouped[key]) {
+          grouped[key] = { 
             mid_in: [], mid_zoom: [], 
             end_in: [], end_zoom: [] 
           };
         }
         
         if (type === "mid") {
-          grouped[m].mid_in.push(curr.in_person || 0);
-          grouped[m].mid_zoom.push(curr.zoom || 0);
+          grouped[key].mid_in.push(curr.in_person || 0);
+          grouped[key].mid_zoom.push(curr.zoom || 0);
         } else {
-          grouped[m].end_in.push(curr.in_person || 0);
-          grouped[m].end_zoom.push(curr.zoom || 0);
+          grouped[key].end_in.push(curr.in_person || 0);
+          grouped[key].end_zoom.push(curr.zoom || 0);
         }
       });
 
       const formatted = monthsOrder.map(m => {
-        const entry = grouped[m];
+        const targetYear = m >= 9 ? startYear : startYear + 1;
+        const key = `${m}-${targetYear}`;
+        const entry = grouped[key];
         const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
         
         return {
