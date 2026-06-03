@@ -76,7 +76,7 @@ export default function Reports() {
   const loadAllActivePublishers = async () => {
     const { data } = await supabase
       .from("publishers")
-      .select("*, groups(group_number)")
+      .select("*, groups:groups!publishers_group_id_fkey(group_number)")
       .in("status", ["active", "repreendido"])
       .order("full_name");
     setAllActivePublishers(data || []);
