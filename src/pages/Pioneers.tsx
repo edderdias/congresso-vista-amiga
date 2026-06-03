@@ -42,7 +42,7 @@ export default function Pioneers() {
     // 1. Buscar todos os publicadores que tenham "Pioneiro Regular" no array de privilégios
     const { data: pubs, error: pubsError } = await supabase
       .from("publishers")
-      .select("id, full_name, privileges, group_id, groups(group_number), status")
+      .select("id, full_name, privileges, group_id, groups!publishers_group_id_fkey(group_number), status")
       .neq("status", "mudou");
 
     if (pubsError) {
