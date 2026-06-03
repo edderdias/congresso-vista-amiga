@@ -8,18 +8,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, subMonths, isAfter, isBefore, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
-import { Star, TrendingUp, AlertCircle, CheckCircle2, Users } from "lucide-react";
+import { Star, TrendingUp, AlertCircle, CheckCircle2, Users, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function Pioneers() {
   const [pioneers, setPioneers] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [serviceYearLabel, setServiceYearLabel] = useState("");
+  const [filterMonth, setFilterMonth] = useState<string>((new Date().getMonth() + 1).toString());
+
+  const months = [
+    { v: "9", l: "Setembro" }, { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" },
+    { v: "1", l: "Janeiro" }, { v: "2", l: "Fevereiro" }, { v: "3", l: "Março" }, { v: "4", l: "Abril" },
+    { v: "5", l: "Maio" }, { v: "6", l: "Junho" }, { v: "7", l: "Julho" }, { v: "8", l: "Agosto" }
+  ];
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filterMonth]);
 
   const loadData = async () => {
     setLoading(true);
@@ -33,7 +42,7 @@ export default function Pioneers() {
     // 1. Buscar todos os publicadores que tenham "Pioneiro Regular" no array de privilégios
     const { data: pubs, error: pubsError } = await supabase
       .from("publishers")
-      .select("id, full_name, privileges, group_id, groups!publishers_group_id_fkey(group_number), status")
+      .select("id, full_name, privileges, group_id, groups(group_number), status")
       .neq("status", "mudou");
 
     if (pubsError) {
@@ -41,16 +50,8 @@ export default function Pioneers() {
       return setLoading(false);
     }
 
-    // Filtrar localmente para garantir precisão com o array do Postgres
-    // Mesma lógica usada na tela de Publicadores para stats.regPioneers
-    const regularPioneers = (pubs || []).filter(p => {
-      if (!p.privileges) return false;
-
-      const privString = typeof p.privileges === 'string' ? p.privileges : JSON.stringify(p.privileges);
-
-      return privString.toLowerCase().includes("pioneiro regular");
-    }
-      // p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
+    const regularPioneers = (pubs || []).filter(p => 
+      p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
     );
 
     // 2. Buscar relatórios desde o início do ano de serviço (Setembro)
@@ -59,13 +60,30 @@ export default function Pioneers() {
       .select("*")
       .or(`year.gt.${startYear},and(year.eq.${startYear},month.gte.9)`);
 
-    // 3. Calcular meses decorridos (Setembro até o mês atual)
-    const monthsCount = (now.getFullYear() - startYear) * 12 + (now.getMonth() - 8) + 1;
+    // 3. Calcular meses decorridos baseado no filtro (Setembro até o mês selecionado)
+    const selectedM = parseInt(filterMonth);
+    let monthsCount = 0;
+    if (selectedM >= 9) {
+      monthsCount = selectedM - 9 + 1;
+    } else {
+      monthsCount = (12 - 9) + selectedM + 1;
+    }
     const validMonthsCount = monthsCount > 0 ? monthsCount : 1;
 
-    // 4. Processar dados para a lista
+    // 4. Processar dados para a lista (filtrando relatórios até o mês/ano selecionado)
     const processedPioneers = regularPioneers.map(p => {
-      const pReports = reports?.filter(r => r.publisher_id === p.id) || [];
+      const pReports = (reports || []).filter(r => {
+        if (r.publisher_id !== p.id) return false;
+        const rYear = r.year;
+        const rMonth = r.month;
+        const targetYear = selectedM >= 9 ? startYear : startYear + 1;
+        
+        // Se o ano do relatório for menor que o ano alvo, ou se for o mesmo ano e mês menor/igual
+        if (rYear < targetYear) return true;
+        if (rYear === targetYear && rMonth <= selectedM) return true;
+        return false;
+      });
+
       const totalHours = pReports.reduce((acc, r) => acc + (r.hours || 0), 0);
       const totalStudies = pReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0);
       const avgHours = totalHours / validMonthsCount;
@@ -196,9 +214,26 @@ export default function Pioneers() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Lista de Acompanhamento</CardTitle>
-          <CardDescription>Média calculada de Setembro até o mês atual</CardDescription>
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <CardTitle>Lista de Acompanhamento</CardTitle>
+            <CardDescription>Média calculada de Setembro até o mês selecionado</CardDescription>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border">
+            <Label className="text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+              <Calendar className="h-3 w-3" /> Calcular até:
+            </Label>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map(m => (
+                  <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
