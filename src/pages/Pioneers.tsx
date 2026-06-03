@@ -44,6 +44,7 @@ export default function Pioneers() {
     // Filtrar localmente para garantir precisão com o array do Postgres
     // Mesma lógica usada na tela de Publicadores para stats.regPioneers
     const regularPioneers = (pubs || []).filter(p => {
+      console.log('Pioneiro ---> ' + p)
       if (!p.privileges) return false;
 
       const privString = typeof p.privileges === 'string' ? p.privileges : JSON.stringify(p.privileges);
