@@ -233,50 +233,53 @@ export default function Publishers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-bold">{p.full_name}</TableCell>
-                  <TableCell className="text-green-600 font-medium">{p.phone || "-"}</TableCell>
-                  <TableCell>{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {p.privileges?.slice(0, 2).map((priv: string) => (
-                        <Badge key={priv} variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">{priv}</Badge>
-                      ))}
-                      {p.privileges?.length > 2 && <Badge variant="outline" className="text-[10px]">+{p.privileges.length - 2}</Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn(
-                      "text-[10px] font-bold",
-                      p.status === 'active' ? "bg-green-500" : p.status === 'inactive' ? "bg-red-500" : "bg-slate-500"
-                    )}>
-                      {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status === 'repreendido' ? 'Repreendido' : 'Mudou'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" title="Mudar">
-                        <MapPin className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
-                        full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
-                        gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
-                      }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle></AlertDialogHeader>
-                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-red-600">Sim</AlertDialogAction></AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {paginated.map(p => {
+                const mainPrivileges = p.privileges?.filter((priv: string) => SECTIONS.privileges.includes(priv)) || [];
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-bold">{p.full_name}</TableCell>
+                    <TableCell className="text-green-600 font-medium">{p.phone || "-"}</TableCell>
+                    <TableCell>{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {mainPrivileges.slice(0, 2).map((priv: string) => (
+                          <Badge key={priv} variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">{priv}</Badge>
+                        ))}
+                        {mainPrivileges.length > 2 && <Badge variant="outline" className="text-[10px]">+{mainPrivileges.length - 2}</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={cn(
+                        "text-[10px] font-bold",
+                        p.status === 'active' ? "bg-green-500" : p.status === 'inactive' ? "bg-red-500" : "bg-slate-500"
+                      )}>
+                        {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status === 'repreendido' ? 'Repreendido' : 'Mudou'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Mudar">
+                          <MapPin className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
+                          full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
+                          gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
+                        }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-red-600">Sim</AlertDialogAction></AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           <PaginationControls currentPage={currentPage} totalPages={Math.ceil(filtered.length/10)} onPageChange={setCurrentPage} />
@@ -379,7 +382,7 @@ export default function Publishers() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Privilégios</h3>
+              <h3 className="text-lg font-bold text-blue-600 border-b-2 border-blue-100 pb-2 mb-4">Privilégios</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {SECTIONS.privileges.map(p => (
                   <div key={p} className="flex items-center space-x-3">
@@ -391,7 +394,7 @@ export default function Publishers() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Designações - Reunião</h3>
+              <h3 className="text-lg font-bold text-blue-600 border-b-2 border-blue-100 pb-2 mb-4">Designações - Reunião</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {SECTIONS.reuniao.map(p => (
                   <div key={p} className="flex items-center space-x-3">
@@ -404,7 +407,7 @@ export default function Publishers() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Atividades Mecânicas</h3>
+                <h3 className="text-lg font-bold text-blue-600 border-b-2 border-blue-100 pb-2 mb-4">Atividades Mecânicas</h3>
                 <div className="space-y-4">
                   {SECTIONS.mecanicas.map(p => (
                     <div key={p} className="flex items-center space-x-3">
@@ -415,7 +418,7 @@ export default function Publishers() {
                 </div>
               </div>
               <div className="space-y-4">
-                <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Pregação e Extras</h3>
+                <h3 className="text-lg font-bold text-blue-600 border-b-2 border-blue-100 pb-2 mb-4">Pregação e Extras</h3>
                 <div className="space-y-4">
                   {SECTIONS.pregacao.map(p => (
                     <div key={p} className="flex items-center space-x-3">
