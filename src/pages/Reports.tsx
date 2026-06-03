@@ -221,8 +221,9 @@ export default function Reports() {
 
   const getDisplayData = () => {
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
-    
-    if (!showMissing) {
+    console.log("Missing --> " + showMissing)
+    if (!showMissing) { 
+      console.log('Report ---> ' + reports)
       return reports.filter(r => 
         r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
