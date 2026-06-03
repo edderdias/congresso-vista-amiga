@@ -23,35 +23,40 @@ export default function Pioneers() {
   const loadData = async () => {
     setLoading(true);
     
-    // Determinar o início do ano de serviço (Setembro)
     const now = new Date();
     let startYear = now.getFullYear();
-    if (now.getMonth() < 8) startYear--; // Se estamos antes de Setembro, o ano começou no ano anterior
+    if (now.getMonth() < 8) startYear--; 
     
-    const startDate = new Date(startYear, 8, 1); // 1º de Setembro
     setServiceYearLabel(`${startYear}/${startYear + 1}`);
 
-    // 1. Buscar todos os Pioneiros Regulares
-    const { data: pubs } = await supabase
+    // 1. Buscar todos os publicadores que tenham "Pioneiro Regular" no array de privilégios
+    const { data: pubs, error: pubsError } = await supabase
       .from("publishers")
-      .select("id, full_name, group_id, groups(group_number)")
-      .contains("privileges", ["Pioneiro Regular"])
+      .select("id, full_name, privileges, group_id, groups(group_number)")
       .neq("status", "mudou");
 
-    if (!pubs) return setLoading(false);
+    if (pubsError) {
+      console.error("Erro ao buscar publicadores:", pubsError);
+      return setLoading(false);
+    }
 
-    // 2. Buscar relatórios desde Setembro
+    // Filtrar localmente para garantir precisão com o array do Postgres
+    const regularPioneers = (pubs || []).filter(p => 
+      p.privileges?.includes("Pioneiro Regular")
+    );
+
+    // 2. Buscar relatórios desde o início do ano de serviço (Setembro)
     const { data: reports } = await supabase
       .from("preaching_reports")
       .select("*")
       .or(`year.gt.${startYear},and(year.eq.${startYear},month.gte.9)`);
 
-    // 3. Calcular meses decorridos
+    // 3. Calcular meses decorridos (Setembro até o mês atual)
     const monthsCount = (now.getFullYear() - startYear) * 12 + (now.getMonth() - 8) + 1;
     const validMonthsCount = monthsCount > 0 ? monthsCount : 1;
 
     // 4. Processar dados para a lista
-    const processedPioneers = pubs.map(p => {
+    const processedPioneers = regularPioneers.map(p => {
       const pReports = reports?.filter(r => r.publisher_id === p.id) || [];
       const totalHours = pReports.reduce((acc, r) => acc + (r.hours || 0), 0);
       const totalStudies = pReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0);
@@ -68,7 +73,7 @@ export default function Pioneers() {
       };
     });
 
-    // 5. Processar dados para o gráfico (Progresso Mensal Geral)
+    // 5. Processar dados para o gráfico (Progresso Mensal Geral dos Pioneiros)
     const monthsOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
     const monthNames: Record<number, string> = {
       1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
@@ -77,7 +82,9 @@ export default function Pioneers() {
 
     const monthlyStats = monthsOrder.map(m => {
       const year = m >= 9 ? startYear : startYear + 1;
-      const monthReports = reports?.filter(r => r.month === m && r.year === year) || [];
+      // Apenas relatórios de quem é pioneiro regular
+      const pioneerIds = new Set(regularPioneers.map(p => p.id));
+      const monthReports = reports?.filter(r => r.month === m && r.year === year && pioneerIds.has(r.publisher_id)) || [];
       
       return {
         name: monthNames[m],
@@ -95,12 +102,17 @@ export default function Pioneers() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-          <Star className="h-8 w-8 text-amber-500 fill-amber-500" /> 
-          Pioneiros Regulares
-        </h1>
-        <p className="text-muted-foreground">Acompanhamento do ano de serviço {serviceYearLabel}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+            <Star className="h-8 w-8 text-amber-500 fill-amber-500" /> 
+            Pioneiros Regulares
+          </h1>
+          <p className="text-muted-foreground">Acompanhamento do ano de serviço {serviceYearLabel}</p>
+        </div>
+        <Badge variant="outline" className="text-sm py-1 px-3 border-amber-200 bg-amber-50 text-amber-700">
+          Média alvo: 50h / mês
+        </Badge>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -196,34 +208,42 @@ export default function Pioneers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pioneers.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-bold">{p.full_name}</TableCell>
-                    <TableCell>G{p.groups?.group_number || "-"}</TableCell>
-                    <TableCell className="text-center font-medium">{p.totalHours}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className={cn(
-                        "font-bold",
-                        p.avgHours >= 50 ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"
-                      )}>
-                        {p.avgHours.toFixed(1)}h
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-medium">{p.totalStudies}</TableCell>
-                    <TableCell className="text-center">{p.avgStudies.toFixed(1)}</TableCell>
-                    <TableCell className="text-right">
-                      {p.status === 'success' ? (
-                        <div className="flex items-center justify-end gap-1 text-green-600 font-bold text-sm">
-                          <CheckCircle2 className="h-4 w-4" /> Parabéns!
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-end gap-1 text-red-600 font-bold text-sm">
-                          <AlertCircle className="h-4 w-4" /> Atenção
-                        </div>
-                      )}
+                {pioneers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Nenhum pioneiro regular encontrado.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  pioneers.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-bold">{p.full_name}</TableCell>
+                      <TableCell>G{p.groups?.group_number || "-"}</TableCell>
+                      <TableCell className="text-center font-medium">{p.totalHours}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className={cn(
+                          "font-bold",
+                          p.avgHours >= 50 ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"
+                        )}>
+                          {p.avgHours.toFixed(1)}h
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-medium">{p.totalStudies}</TableCell>
+                      <TableCell className="text-center">{p.avgStudies.toFixed(1)}</TableCell>
+                      <TableCell className="text-right">
+                        {p.status === 'success' ? (
+                          <div className="flex items-center justify-end gap-1 text-green-600 font-bold text-sm">
+                            <CheckCircle2 className="h-4 w-4" /> Parabéns!
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1 text-red-600 font-bold text-sm">
+                            <AlertCircle className="h-4 w-4" /> Atenção
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
