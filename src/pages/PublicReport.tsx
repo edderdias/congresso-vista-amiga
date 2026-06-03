@@ -117,7 +117,7 @@ export default function PublicReport() {
     const { data: existingReports } = await supabase
       .from("preaching_reports")
       .select("id")
-      .eq("reporter_name", publisher.full_name)
+      .eq("publisher_id", publisher.id)
       .eq("month", parseInt(formData.month))
       .eq("year", formData.year);
 
@@ -134,6 +134,7 @@ export default function PublicReport() {
     else if (publisher.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
 
     const { error } = await supabase.from("preaching_reports").insert([{
+      publisher_id: publisher.id,
       reporter_name: publisher.full_name,
       group_id: group?.group_number,
       month: parseInt(formData.month),

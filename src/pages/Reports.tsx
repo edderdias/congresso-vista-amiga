@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ interface Report {
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
   reporter_name: string;
   group_id: number | null;
+  publisher_id: string | null;
   participated?: boolean;
 }
 
@@ -128,12 +131,11 @@ export default function Reports() {
     const group = groups.find(g => g.group_number === report.group_id);
     const groupId = group?.id || "";
     
-    const groupPubs = await loadPublishersByGroup(groupId);
-    const publisher = groupPubs.find(p => p.full_name === report.reporter_name);
+    await loadPublishersByGroup(groupId);
     
     setFormData({
       group_id: groupId,
-      publisher_id: publisher?.id || "",
+      publisher_id: report.publisher_id || "",
       month: report.month.toString(),
       year: report.year,
       hours: report.hours,
@@ -157,10 +159,13 @@ export default function Reports() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.publisher_id) return toast.error("Selecione um publicador");
+
     const publisher = publishers.find(p => p.id === formData.publisher_id);
     const group = groups.find(g => g.id === formData.group_id);
 
     const reportData = {
+      publisher_id: formData.publisher_id,
       reporter_name: publisher?.full_name,
       group_id: group?.group_number,
       month: parseInt(formData.month),
@@ -175,8 +180,13 @@ export default function Reports() {
       ? await supabase.from("preaching_reports").update(reportData).eq("id", editingReportId)
       : await supabase.from("preaching_reports").insert([reportData]);
 
-    if (error) toast.error("Erro ao salvar");
-    else {
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Este publicador já possui um relatório para este mês.");
+      } else {
+        toast.error("Erro ao salvar: " + error.message);
+      }
+    } else {
       toast.success("Relatório salvo!");
       setOpen(false);
       loadReports();
@@ -216,10 +226,11 @@ export default function Reports() {
 
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    const reportedNames = new Set(
+    // Usar IDs para verificar quem já relatou
+    const reportedIds = new Set(
       reports
         .filter(r => r.month === targetMonth && r.year === filterYear)
-        .map(r => r.reporter_name)
+        .map(r => r.publisher_id)
     );
     
     const missing = allActivePublishers.filter(p => {
@@ -231,7 +242,7 @@ export default function Reports() {
         matchesGroup = p.group_id === selectedGroup?.id;
       }
 
-      const hasNotReported = !reportedNames.has(p.full_name);
+      const hasNotReported = !reportedIds.has(p.id);
       return matchesSearch && matchesGroup && hasNotReported;
     }).map(p => ({
       id: p.id,
@@ -243,6 +254,7 @@ export default function Reports() {
       bible_studies: 0,
       notes: "Pendente",
       pioneer_status: "publicador" as any,
+      publisher_id: p.id,
       isMissing: true
     }));
 
@@ -339,7 +351,7 @@ export default function Reports() {
                 <Textarea value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} />
               </div>
 
-              <DialogFooter><Button type="submit" className="w-full sm:w-auto">Salvar</Button></DialogFooter>
+              <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -428,17 +440,17 @@ export default function Reports() {
                   </TableRow>
                 ) : (
                   paginatedData.map(r => (
-                    <TableRow key={r.id} className={showMissing ? "bg-red-50/30" : ""}>
+                    <TableRow key={r.id} className={r.isMissing ? "bg-red-50/30" : ""}>
                       <TableCell className="font-medium whitespace-nowrap">{r.reporter_name}</TableCell>
                       <TableCell className="whitespace-nowrap">Grupo {r.group_id}</TableCell>
                       <TableCell className="whitespace-nowrap">{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
-                      <TableCell>{showMissing ? "-" : r.hours}</TableCell>
-                      <TableCell>{showMissing ? "-" : r.bible_studies}</TableCell>
+                      <TableCell>{r.isMissing ? "-" : r.hours}</TableCell>
+                      <TableCell>{r.isMissing ? "-" : r.bible_studies}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                         {r.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        {!showMissing && (
+                        {!r.isMissing && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(r as Report)}><Pencil className="h-4 w-4" /></Button>
                             <AlertDialog>
