@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, MapPin, Search, Filter, Users, Star, Clock, UserMinus, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Search, Users, Star, Clock, UserMinus, FileText, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,10 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { PublisherCard } from "@/components/PublisherCard";
+import { differenceInYears, parseISO, isValid } from "date-fns";
 
 const SECTIONS = {
+  privileges: ["Ancião", "Servo Ministerial", "Pioneiro Regular", "Pioneiro Auxiliar", "Publicador Batizado", "Publicador não Batizado"],
   reuniao: [
     "Presidência Vida e Ministério", "Oração", "Tesouro", "Parte de Estudante", 
     "Encontre Joias", "Nossa Vida Cristã", "Necessidade Locais", 
@@ -28,8 +30,6 @@ const SECTIONS = {
   mecanicas: ["Indicador", "Microfone Volante", "Áudio e Vídeo"],
   pregacao: ["Limpeza", "Manutenção", "TPL"]
 };
-
-const PRIVILEGES = ["Ancião", "Servo Ministérial", "Pioneiro Regular", "Pioneiro Auxiliar", "Publicador Batizado", "Publicador não Batizado"];
 
 export default function Publishers() {
   const [publishers, setPublishers] = useState<any[]>([]);
@@ -113,38 +113,109 @@ export default function Publishers() {
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
 
+  const stats = {
+    total: publishers.filter(p => p.status !== 'mudou').length,
+    regPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Regular") && p.status !== 'mudou').length,
+    auxPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar") && p.status !== 'mudou').length,
+    inactive: publishers.filter(p => p.status === 'inactive').length
+  };
+
+  const calculateAge = (dateStr: string) => {
+    if (!dateStr) return null;
+    const date = parseISO(dateStr);
+    if (!isValid(date)) return null;
+    return differenceInYears(new Date(), date);
+  };
+
+  const togglePrivilege = (p: string) => {
+    setFormData(prev => ({
+      ...prev,
+      privileges: prev.privileges.includes(p) 
+        ? prev.privileges.filter(x => x !== p) 
+        : [...prev.privileges, p]
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Publicadores</h1>
-        <Button onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); setOpen(true); }}><Plus className="h-4 w-4 mr-2" /> Novo Publicador</Button>
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Publicadores</h1>
+          <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
+        </div>
+        <Button onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 mr-2" /> Novo Publicador
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-blue-50/50 border-blue-100">
+          <CardContent className="pt-4 flex items-center gap-4">
+            <div className="p-2 bg-blue-600 rounded-lg text-white"><Users size={20} /></div>
+            <div>
+              <p className="text-xs text-blue-600 font-bold uppercase">Publicadores</p>
+              <p className="text-2xl font-black text-blue-900">{stats.total}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50/50 border-amber-100">
+          <CardContent className="pt-4 flex items-center gap-4">
+            <div className="p-2 bg-amber-500 rounded-lg text-white"><Star size={20} /></div>
+            <div>
+              <p className="text-xs text-amber-600 font-bold uppercase">Pion. Regulares</p>
+              <p className="text-2xl font-black text-amber-900">{stats.regPioneers}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50/50 border-green-100">
+          <CardContent className="pt-4 flex items-center gap-4">
+            <div className="p-2 bg-green-500 rounded-lg text-white"><Clock size={20} /></div>
+            <div>
+              <p className="text-xs text-green-600 font-bold uppercase">Pion. Auxiliares</p>
+              <p className="text-2xl font-black text-green-900">{stats.auxPioneers}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-red-50/50 border-red-100">
+          <CardContent className="pt-4 flex items-center gap-4">
+            <div className="p-2 bg-red-500 rounded-lg text-white"><UserMinus size={20} /></div>
+            <div>
+              <p className="text-xs text-red-600 font-bold uppercase">Inativos</p>
+              <p className="text-2xl font-black text-red-900">{stats.inactive}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Input placeholder="Pesquisar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Pesquisar por nome..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            </div>
             <Select value={filterGroup} onValueChange={setFilterGroup}>
-              <SelectTrigger><SelectValue placeholder="Grupo" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Todos os Grupos" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Grupos</SelectItem>
                 {groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Padrão (Ativos/Repreendidos)" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">Ativos/Repreendidos</SelectItem>
+                <SelectItem value="default">Padrão (Ativos/Repreendidos)</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="active">Ativo</SelectItem>
                 <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="mudou">Mudou</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
-              <SelectTrigger><SelectValue placeholder="Privilégio" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Todos os Privilégios" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Privilégios</SelectItem>
-                {PRIVILEGES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {SECTIONS.privileges.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -154,8 +225,10 @@ export default function Publishers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>WhatsApp</TableHead>
                 <TableHead>Grupo</TableHead>
                 <TableHead>Privilégios</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -163,29 +236,41 @@ export default function Publishers() {
               {paginated.map(p => (
                 <TableRow key={p.id}>
                   <TableCell className="font-bold">{p.full_name}</TableCell>
+                  <TableCell className="text-green-600 font-medium">{p.phone || "-"}</TableCell>
                   <TableCell>{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {p.privileges?.slice(0, 2).map((priv: string) => (
-                        <Badge key={priv} variant="secondary" className="text-[10px]">{priv}</Badge>
+                        <Badge key={priv} variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-200">{priv}</Badge>
                       ))}
                       {p.privileges?.length > 2 && <Badge variant="outline" className="text-[10px]">+{p.privileges.length - 2}</Badge>}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <Badge className={cn(
+                      "text-[10px] font-bold",
+                      p.status === 'active' ? "bg-green-500" : p.status === 'inactive' ? "bg-red-500" : "bg-slate-500"
+                    )}>
+                      {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status === 'repreendido' ? 'Repreendido' : 'Mudou'}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" title="Mudar">
+                        <MapPin className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
-                        <FileText className="h-4 w-4 text-blue-600" />
+                        <FileText className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
                         full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
                         gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
                       }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                       <AlertDialog>
-                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
+                        <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader><AlertDialogTitle>Excluir?</AlertDialogTitle></AlertDialogHeader>
-                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)}>Sim</AlertDialogAction></AlertDialogFooter>
+                          <AlertDialogFooter><AlertDialogCancel>Não</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(p.id)} className="bg-red-600">Sim</AlertDialogAction></AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
@@ -201,36 +286,78 @@ export default function Publishers() {
       <PublisherCard publisher={selectedPubForCard} reports={pubReports} open={cardOpen} onOpenChange={setCardOpen} />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <DialogHeader><DialogTitle>{editingId ? "Editar" : "Novo"} Publicador</DialogTitle></DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Nome</Label><Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required /></div>
-              <div className="space-y-2"><Label>Telefone</Label><Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Nascimento</Label><Input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Batismo</Label><Input type="date" value={formData.baptism_date} onChange={e => setFormData({...formData, baptism_date: e.target.value})} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="space-y-8 py-4">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-blue-900">{editingId ? "Editar" : "Novo"} Publicador</DialogTitle>
+            </DialogHeader>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Sexo</Label>
-                <RadioGroup value={formData.gender} onValueChange={v => setFormData({...formData, gender: v})} className="flex gap-4">
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="M" id="m" /><Label htmlFor="m">M</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="F" id="f" /><Label htmlFor="f">F</Label></div>
-                </RadioGroup>
+                <Label className="text-blue-900 font-bold">Nome</Label>
+                <Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required className="border-blue-100 focus:border-blue-300" />
               </div>
               <div className="space-y-2">
-                <Label>Esperança</Label>
-                <RadioGroup value={formData.hope} onValueChange={v => setFormData({...formData, hope: v})} className="flex gap-4">
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="anointed" id="a" /><Label htmlFor="a">Ungido</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="other_sheep" id="o" /><Label htmlFor="o">Outras Ovelhas</Label></div>
+                <Label className="text-blue-900 font-bold">Telefone</Label>
+                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="border-blue-100 focus:border-blue-300" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label className="text-blue-900 font-bold">Data de Nascimento</Label>
+                  <Input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="border-blue-100" />
+                </div>
+                <div className="pb-2 text-sm text-muted-foreground">
+                  {calculateAge(formData.birth_date)} anos
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label className="text-blue-900 font-bold">Data de Batismo</Label>
+                  <Input type="date" value={formData.baptism_date} onChange={e => setFormData({...formData, baptism_date: e.target.value})} className="border-blue-100" />
+                </div>
+                <div className="pb-2 text-sm text-muted-foreground">
+                  {calculateAge(formData.baptism_date)} anos de batismo
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-blue-900 font-bold">Sexo</Label>
+                <RadioGroup value={formData.gender} onValueChange={v => setFormData({...formData, gender: v})} className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="M" id="m" className="text-blue-600 border-blue-200" />
+                    <Label htmlFor="m" className="cursor-pointer">Masculino</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="F" id="f" className="text-blue-600 border-blue-200" />
+                    <Label htmlFor="f" className="cursor-pointer">Feminino</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-blue-900 font-bold">Esperança</Label>
+                <RadioGroup value={formData.hope} onValueChange={v => setFormData({...formData, hope: v})} className="flex gap-6">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="anointed" id="a" className="text-blue-600 border-blue-200" />
+                    <Label htmlFor="a" className="cursor-pointer">Ungido</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="other_sheep" id="o" className="text-blue-600 border-blue-200" />
+                    <Label htmlFor="o" className="cursor-pointer">Outras Ovelhas</Label>
+                  </div>
                 </RadioGroup>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label>Grupo</Label>
+                <Label className="text-blue-900 font-bold">Grupo</Label>
                 <Select value={formData.group_id} onValueChange={v => setFormData({...formData, group_id: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="border-blue-100"><SelectValue placeholder="Selecione o grupo" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
                     {groups.map(g => <SelectItem key={g.id} value={g.id}>Grupo {g.group_number}</SelectItem>)}
@@ -238,29 +365,71 @@ export default function Publishers() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label className="text-blue-900 font-bold">Status</Label>
                 <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="border-blue-100"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Ativo</SelectItem>
                     <SelectItem value="inactive">Inativo</SelectItem>
                     <SelectItem value="repreendido">Repreendido</SelectItem>
+                    <SelectItem value="mudou">Mudou</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Privilégios</Label>
-              <div className="grid grid-cols-3 gap-2 border p-3 rounded bg-slate-50">
-                {PRIVILEGES.map(p => (
-                  <div key={p} className="flex items-center space-x-2">
-                    <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={(v) => setFormData({...formData, privileges: v ? [...formData.privileges, p] : formData.privileges.filter(x => x !== p)})} />
-                    <Label htmlFor={p} className="text-xs">{p}</Label>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Privilégios</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SECTIONS.privileges.map(p => (
+                  <div key={p} className="flex items-center space-x-3">
+                    <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePrivilege(p)} className="border-blue-200 data-[state=checked]:bg-blue-500" />
+                    <Label htmlFor={p} className="text-sm cursor-pointer">{p}</Label>
                   </div>
                 ))}
               </div>
             </div>
-            <DialogFooter><Button type="submit">Salvar</Button></DialogFooter>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Designações - Reunião</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SECTIONS.reuniao.map(p => (
+                  <div key={p} className="flex items-center space-x-3">
+                    <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePrivilege(p)} className="border-blue-200 data-[state=checked]:bg-blue-500" />
+                    <Label htmlFor={p} className="text-sm cursor-pointer">{p}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Atividades Mecânicas</h3>
+                <div className="space-y-4">
+                  {SECTIONS.mecanicas.map(p => (
+                    <div key={p} className="flex items-center space-x-3">
+                      <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePrivilege(p)} className="border-blue-200 data-[state=checked]:bg-blue-500" />
+                      <Label htmlFor={p} className="text-sm cursor-pointer">{p}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-blue-400 border-b border-blue-50 pb-1">Pregação e Extras</h3>
+                <div className="space-y-4">
+                  {SECTIONS.pregacao.map(p => (
+                    <div key={p} className="flex items-center space-x-3">
+                      <Checkbox id={p} checked={formData.privileges.includes(p)} onCheckedChange={() => togglePrivilege(p)} className="border-blue-200 data-[state=checked]:bg-blue-500" />
+                      <Label htmlFor={p} className="text-sm cursor-pointer">{p}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-6 border-t">
+              <Button type="submit" className="w-full md:w-auto bg-blue-600 hover:bg-blue-700">Salvar Alterações</Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
