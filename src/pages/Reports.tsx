@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Report {
   id: string;
@@ -57,7 +58,7 @@ export default function Reports() {
     hours: 0,
     bible_studies: 0,
     notes: "",
-    participated: false,
+    participated: true,
     pioneer_status: "publicador" as any,
   });
 
@@ -141,7 +142,7 @@ export default function Reports() {
       hours: report.hours,
       bible_studies: report.bible_studies,
       notes: report.notes || "",
-      participated: report.hours > 0 || report.bible_studies > 0 || !!report.participated,
+      participated: report.participated !== undefined ? report.participated : (report.hours > 0 || report.bible_studies > 0),
       pioneer_status: report.pioneer_status,
     });
     
@@ -174,6 +175,7 @@ export default function Reports() {
       bible_studies: formData.bible_studies,
       notes: formData.notes,
       pioneer_status: formData.pioneer_status,
+      participated: formData.participated
     };
 
     const { error } = editingReportId 
@@ -203,7 +205,7 @@ export default function Reports() {
       hours: 0,
       bible_studies: 0,
       notes: "",
-      participated: false,
+      participated: true,
       pioneer_status: "publicador" as any,
     });
   };
@@ -226,7 +228,6 @@ export default function Reports() {
 
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    // Usar IDs para verificar quem já relatou
     const reportedIds = new Set(
       reports
         .filter(r => r.month === targetMonth && r.year === filterYear)
@@ -255,7 +256,8 @@ export default function Reports() {
       notes: "Pendente",
       pioneer_status: "publicador" as any,
       publisher_id: p.id,
-      isMissing: true
+      isMissing: true,
+      participated: false
     }));
 
     return missing;
@@ -441,7 +443,12 @@ export default function Reports() {
                 ) : (
                   paginatedData.map(r => (
                     <TableRow key={r.id} className={r.isMissing ? "bg-red-50/30" : ""}>
-                      <TableCell className="font-medium whitespace-nowrap">{r.reporter_name}</TableCell>
+                      <TableCell className={cn(
+                        "font-medium whitespace-nowrap",
+                        !r.isMissing && r.participated === false && "text-red-600 font-bold"
+                      )}>
+                        {r.reporter_name}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">Grupo {r.group_id}</TableCell>
                       <TableCell className="whitespace-nowrap">{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
                       <TableCell>{r.isMissing ? "-" : r.hours}</TableCell>

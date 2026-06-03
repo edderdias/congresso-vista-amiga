@@ -26,7 +26,7 @@ export default function PublicReport() {
   const [formData, setFormData] = useState({
     month: "",
     year: new Date().getFullYear(),
-    participated: false,
+    participated: true,
     bible_studies: 0,
     hours: 0,
     notes: ""
@@ -113,7 +113,6 @@ export default function PublicReport() {
       return;
     }
 
-    // Verificação de duplicidade
     const { data: existingReports } = await supabase
       .from("preaching_reports")
       .select("id")
@@ -142,7 +141,8 @@ export default function PublicReport() {
       hours: formData.hours,
       bible_studies: formData.bible_studies,
       notes: formData.notes,
-      pioneer_status: pioneerStatus
+      pioneer_status: pioneerStatus,
+      participated: formData.participated
     }]);
 
     setLoading(false);

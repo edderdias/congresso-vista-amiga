@@ -9,6 +9,7 @@ import { format, startOfMonth, subMonths, isAfter, isBefore, parseISO } from "da
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
 import { Star, TrendingUp, AlertCircle, CheckCircle2, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function Pioneers() {
   const [pioneers, setPioneers] = useState<any[]>([]);
@@ -42,7 +43,7 @@ export default function Pioneers() {
 
     // Filtrar localmente para garantir precisão com o array do Postgres
     const regularPioneers = (pubs || []).filter(p => 
-      p.privileges?.includes("Pioneiro Regular")
+      p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
     );
 
     // 2. Buscar relatórios desde o início do ano de serviço (Setembro)
@@ -82,7 +83,6 @@ export default function Pioneers() {
 
     const monthlyStats = monthsOrder.map(m => {
       const year = m >= 9 ? startYear : startYear + 1;
-      // Apenas relatórios de quem é pioneiro regular
       const pioneerIds = new Set(regularPioneers.map(p => p.id));
       const monthReports = reports?.filter(r => r.month === m && r.year === year && pioneerIds.has(r.publisher_id)) || [];
       
