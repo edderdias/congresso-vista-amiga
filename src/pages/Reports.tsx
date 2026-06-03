@@ -220,14 +220,20 @@ export default function Reports() {
   ];
 
   const getDisplayData = () => {
-    const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
-    console.log("Missing --> " + JSON.stringify(reports))
-    if (!showMissing) { 
-      console.log('Report ---> ' + reports)
+
+    if (!showMissing) {
       return reports.filter(r => 
-        r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      r.reporter_name?.toLowerCase().includes(searchTerm.toLowerCase()));
     }
+
+    const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
+    
+    // if (!showMissing) { 
+    
+    //   return reports.filter(r => 
+    //     r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
+    //   );
+    // }
 
     // IDs de quem já relatou no mês e ano filtrados
     const reportedIds = new Set(
@@ -241,8 +247,9 @@ export default function Reports() {
       
       let matchesGroup = true;
       if (filterGroup !== "all") {
-        const selectedGroup = groups.find(g => g.group_number.toString() === filterGroup);
-        matchesGroup = p.group_id === selectedGroup?.id;
+        // const selectedGroup = groups.find(g => g.group_number.toString() === filterGroup);
+        // matchesGroup = p.group_id === selectedGroup?.id;
+        matchesGroup = p.groups?.group_number?.toString() === filterGroup;
       }
 
       const hasNotReported = !reportedIds.has(p.id);
