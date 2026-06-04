@@ -511,7 +511,7 @@ export default function Reports() {
                               size="icon" 
                               className="text-green-600"
                               title="Lembrar via WhatsApp"
-                              onClick={() => sendWhatsAppReminder(r.reporter_name, (r as any).phone)}
+                              onClick={() => sendWhatsAppReminder(r.reporter_name, (r as any).phone, r.group_id)}
                             >
                               <MessageCircle className="h-4 w-4" />
                             </Button>
