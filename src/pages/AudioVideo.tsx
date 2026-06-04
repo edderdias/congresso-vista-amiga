@@ -185,6 +185,9 @@ export default function AudioVideo() {
                         <TableCell>{getPubName(d?.stage_id)}</TableCell>
                         <TableCell>{getPubName(d?.external_indicator_id)}</TableCell>
                         <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" title="Visualizar" onClick={() => handleViewProgram(program)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
                             {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
                             {d ? "Editar" : "Designar"}
