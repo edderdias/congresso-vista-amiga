@@ -18,7 +18,7 @@ export default function AudioVideo() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
-
+  
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
 
@@ -51,7 +51,7 @@ export default function AudioVideo() {
       ]);
 
       if (pubsResponse.data) setPublishers(pubsResponse.data);
-
+      
       if (meetingsResponse.data) {
         const meetingsWithAv = meetingsResponse.data.map(m => ({
           ...m,
@@ -96,7 +96,7 @@ export default function AudioVideo() {
     const { error } = await supabase
       .from("av_designations")
       .upsert(payload, { onConflict: 'meeting_id' });
-
+    
     setLoading(false);
     if (error) {
       toast.error("Erro ao salvar designação: " + error.message);
@@ -184,18 +184,12 @@ export default function AudioVideo() {
                         <TableCell>{getPubName(d?.mic_2_id)}</TableCell>
                         <TableCell>{getPubName(d?.stage_id)}</TableCell>
                         <TableCell>{getPubName(d?.external_indicator_id)}</TableCell>
-                       
-                          <TableCell className="text-right whitespace-nowrap">
-                            <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="icon" title="Visualizar" >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
-                                {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
-                                {d ? "Editar" : "Designar"}
-                              </Button>
-                            </div>
-                          </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
+                            {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                            {d ? "Editar" : "Designar"}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -221,7 +215,7 @@ export default function AudioVideo() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Áudio</Label>
-                  <Select value={formData.operator_id} onValueChange={v => setFormData({ ...formData, operator_id: v })}>
+                  <Select value={formData.operator_id} onValueChange={v => setFormData({...formData, operator_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
@@ -231,7 +225,7 @@ export default function AudioVideo() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Monitor className="h-4 w-4" /> Operador de Vídeo</Label>
-                  <Select value={formData.video_operator_id} onValueChange={v => setFormData({ ...formData, video_operator_id: v })}>
+                  <Select value={formData.video_operator_id} onValueChange={v => setFormData({...formData, video_operator_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
@@ -244,7 +238,7 @@ export default function AudioVideo() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 1</Label>
-                  <Select value={formData.mic_1_id} onValueChange={v => setFormData({ ...formData, mic_1_id: v })}>
+                  <Select value={formData.mic_1_id} onValueChange={v => setFormData({...formData, mic_1_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
@@ -254,7 +248,7 @@ export default function AudioVideo() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Mic className="h-4 w-4" /> Microfone 2</Label>
-                  <Select value={formData.mic_2_id} onValueChange={v => setFormData({ ...formData, mic_2_id: v })}>
+                  <Select value={formData.mic_2_id} onValueChange={v => setFormData({...formData, mic_2_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
@@ -267,7 +261,7 @@ export default function AudioVideo() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Palco</Label>
-                  <Select value={formData.stage_id} onValueChange={v => setFormData({ ...formData, stage_id: v })}>
+                  <Select value={formData.stage_id} onValueChange={v => setFormData({...formData, stage_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
@@ -277,7 +271,7 @@ export default function AudioVideo() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Indicador Externo</Label>
-                  <Select value={formData.external_indicator_id} onValueChange={v => setFormData({ ...formData, external_indicator_id: v })}>
+                  <Select value={formData.external_indicator_id} onValueChange={v => setFormData({...formData, external_indicator_id: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Nenhum</SelectItem>
