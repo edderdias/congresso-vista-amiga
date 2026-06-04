@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, FileCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, FileCheck, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -232,13 +232,6 @@ export default function Reports() {
 
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    // if (!showMissing) { 
-    
-    //   return reports.filter(r => 
-    //     r.reporter_name.toLowerCase().includes(searchTerm.toLowerCase())
-    //   );
-    // }
-
     // IDs de quem já relatou no mês e ano filtrados
     const reportedIds = new Set(
       reports
@@ -251,8 +244,6 @@ export default function Reports() {
       
       let matchesGroup = true;
       if (filterGroup !== "all") {
-        // const selectedGroup = groups.find(g => g.group_number.toString() === filterGroup);
-        // matchesGroup = p.group_id === selectedGroup?.id;
         matchesGroup = p.groups?.group_number?.toString() === filterGroup;
       }
 
@@ -422,6 +413,20 @@ export default function Reports() {
             <div className="flex items-center space-x-2 pb-2">
               <Checkbox id="missing" checked={showMissing} onCheckedChange={(v) => setShowMissing(!!v)} />
               <Label htmlFor="missing" className="font-bold text-red-600 cursor-pointer">Falta relatar</Label>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  loadReports();
+                  loadGroups();
+                  loadAllActivePublishers();
+                  toast.success("Dados atualizados!");
+                }}
+                className="ml-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar
+              </Button>
             </div>
           </div>
           
