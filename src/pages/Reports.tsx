@@ -68,6 +68,10 @@ export default function Reports() {
     loadAllActivePublishers();
   }, [filterMonth, filterGroup, filterYear]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterMonth, filterGroup, filterYear, showMissing]);
+
   const loadGroups = async () => {
     const { data } = await supabase.from("groups").select("*").order("group_number");
     setGroups(data || []);
