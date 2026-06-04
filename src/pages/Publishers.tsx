@@ -103,6 +103,20 @@ export default function Publishers() {
     else { toast.success("Excluído"); loadData(); }
   };
 
+  const handleStatusMudou = async (id: string) => {
+    const { error } = await supabase
+      .from("publishers")
+      .update({ status: 'mudou' })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao atualizar status");
+    } else {
+      toast.success("Status atualizado para 'Mudou'");
+      loadData();
+    }
+  };
+
   const filtered = publishers.filter(p => {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGroup = filterGroup === "all" || p.group_id === filterGroup;
@@ -258,9 +272,28 @@ export default function Publishers() {
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="Mudar">
-                          <MapPin className="h-4 w-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" title="Mudou-se">
+                              <MapPin className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar mudança?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Deseja marcar {p.full_name} como "Mudou"? Ele deixará de aparecer na lista padrão e nas estatísticas ativas.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleStatusMudou(p.id)} className="bg-blue-600">
+                                Confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                         <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
                           <FileText className="h-4 w-4" />
                         </Button>
