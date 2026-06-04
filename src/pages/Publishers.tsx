@@ -222,6 +222,7 @@ export default function Publishers() {
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="active">Ativo</SelectItem>
                 <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="mudou">Repreendido</SelectItem>
                 <SelectItem value="mudou">Mudou</SelectItem>
               </SelectContent>
             </Select>
