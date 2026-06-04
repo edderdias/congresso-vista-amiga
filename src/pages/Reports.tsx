@@ -272,11 +272,11 @@ export default function Reports() {
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const sendWhatsAppReminder = (name: string, phone: string) => {
+  const sendWhatsAppReminder = (name: string, phone: string, grupo: string) => {
     if (!phone) return toast.error("Publicador sem telefone cadastrado");
     const cleanPhone = phone.replace(/\D/g, "");
     const text = encodeURIComponent(`Olá, ${name}, ainda não identificamos seu relatório no sistema. Quando puder nos envie. Obrigado!
-    https://parquedoscondominios.netlify.app/relatorio-publico/${}
+    https://parquedoscondominios.netlify.app/relatorio-publico/${grupo}
     `);
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${text}`, "_blank");
   };
