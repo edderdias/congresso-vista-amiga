@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, Search, FileCheck, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, FileCheck, RefreshCw, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -261,7 +261,8 @@ export default function Reports() {
       pioneer_status: "publicador" as any,
       publisher_id: p.id,
       isMissing: true,
-      participated: false
+      participated: false,
+      phone: p.phone
     }));
 
     return missing;
@@ -270,6 +271,13 @@ export default function Reports() {
   const filteredData = getDisplayData();
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
   const paginatedData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const sendWhatsAppReminder = (name: string, phone: string) => {
+    if (!phone) return toast.error("Publicador sem telefone cadastrado");
+    const cleanPhone = phone.replace(/\D/g, "");
+    const text = encodeURIComponent(`Olá, ${name}, ainda não identificamos seu relatório no sistema. Quando puder nos envie. Obrigado!`);
+    window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${text}`, "_blank");
+  };
 
   return (
     <div className="space-y-6">
@@ -475,7 +483,7 @@ export default function Reports() {
                         {r.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        {!r.isMissing && (
+                        {!r.isMissing ? (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(r as Report)}><Pencil className="h-4 w-4" /></Button>
                             <AlertDialog>
@@ -494,6 +502,18 @@ export default function Reports() {
                               </AlertDialogContent>
                             </AlertDialog>
                           </>
+                        ) : (
+                          (r as any).phone && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-green-600"
+                              title="Lembrar via WhatsApp"
+                              onClick={() => sendWhatsAppReminder(r.reporter_name, (r as any).phone)}
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          )
                         )}
                       </TableCell>
                     </TableRow>
