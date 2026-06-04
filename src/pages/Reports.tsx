@@ -276,6 +276,7 @@ export default function Reports() {
     if (!phone) return toast.error("Publicador sem telefone cadastrado");
     const cleanPhone = phone.replace(/\D/g, "");
     const text = encodeURIComponent(`Olá, ${name}, ainda não identificamos seu relatório no sistema. Quando puder nos envie. Obrigado!
+    
     https://parquedoscondominios.netlify.app/relatorio-publico/${grupo}
     `);
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${text}`, "_blank");
