@@ -275,7 +275,9 @@ export default function Reports() {
   const sendWhatsAppReminder = (name: string, phone: string) => {
     if (!phone) return toast.error("Publicador sem telefone cadastrado");
     const cleanPhone = phone.replace(/\D/g, "");
-    const text = encodeURIComponent(`Olá, ${name}, ainda não identificamos seu relatório no sistema. Quando puder nos envie. Obrigado!`);
+    const text = encodeURIComponent(`Olá, ${name}, ainda não identificamos seu relatório no sistema. Quando puder nos envie. Obrigado!
+    
+    `);
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${text}`, "_blank");
   };
 
