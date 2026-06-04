@@ -224,6 +224,7 @@ export default function Publishers() {
                 <SelectItem value="inactive">Inativo</SelectItem>
                 <SelectItem value="repreendido">Repreendido</SelectItem>
                 <SelectItem value="mudou">Mudou</SelectItem>
+                
               </SelectContent>
             </Select>
             <Select value={filterPrivilege} onValueChange={setFilterPrivilege}>
