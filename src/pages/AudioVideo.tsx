@@ -157,7 +157,7 @@ export default function AudioVideo() {
                   <TableHead>Mic 2</TableHead>
                   <TableHead>Palco</TableHead>
                   <TableHead>Ind. Externo</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
