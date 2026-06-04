@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Monitor, Mic, User, MapPin } from "lucide-react";
+import { Plus, Pencil, Monitor, Mic, User, MapPin, Eye, Info, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,10 @@ export default function AudioVideo() {
   const [meetings, setMeetings] = useState<any[]>([]);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
+  const [selectedMeetingForView, setSelectedMeetingForView] = useState<any>(null);
   
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "MM"));
   const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString());
@@ -41,7 +43,7 @@ export default function AudioVideo() {
       const end = format(endOfMonth(parseISO(start)), "yyyy-MM-dd");
 
       const [pubsResponse, meetingsResponse, avResponse] = await Promise.all([
-        supabase.from("publishers").select("id, full_name, privileges"),
+        supabase.from("publishers").select("id, full_name, privileges, phone"),
         supabase.from("meetings")
           .select("*")
           .gte("date", start)
@@ -79,6 +81,11 @@ export default function AudioVideo() {
     setOpen(true);
   };
 
+  const handleView = (meeting: any) => {
+    setSelectedMeetingForView(meeting);
+    setViewOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -111,6 +118,26 @@ export default function AudioVideo() {
     if (!id || id === "none") return "-";
     const pub = publishers.find(p => p.id === id);
     return pub ? pub.full_name : "-";
+  };
+
+  const getPubPhone = (id: string) => {
+    if (!id || id === "none") return null;
+    const pub = publishers.find(p => p.id === id);
+    return pub?.phone || null;
+  };
+
+  const sendWhatsApp = (name: string, phone: string, date: string, type: string) => {
+    if (!phone) return toast.error("Publicador sem telefone cadastrado");
+    
+    const cleanPhone = phone.replace(/\D/g, "");
+    const formattedDate = format(parseISO(date), "dd/MM/yyyy");
+    
+    let message = `Olá *${name}*, você foi designado para a seguinte parte na reunião de *${formattedDate}*:\n\n`;
+    message += `📌 *Designação:* ${type}\n`;
+    message += `\nPor favor, confirme o recebimento desta mensagem. Obrigado!`;
+    
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
   };
 
   const avPublishers = publishers.filter(p => p.privileges?.includes("Áudio e Vídeo") || p.privileges?.includes("Áudio e Video"));
@@ -185,10 +212,15 @@ export default function AudioVideo() {
                         <TableCell>{getPubName(d?.stage_id)}</TableCell>
                         <TableCell>{getPubName(d?.external_indicator_id)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
-                            {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
-                            {d ? "Editar" : "Designar"}
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" title="Visualizar" onClick={() => handleView(m)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDesignate(m)}>
+                              {d ? <Pencil className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                              {d ? "Editar" : "Designar"}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -288,6 +320,63 @@ export default function AudioVideo() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" /> Detalhes de Áudio e Vídeo
+            </DialogTitle>
+            <DialogDescription>
+              {selectedMeetingForView && (
+                <>Reunião de {format(parseISO(selectedMeetingForView.date), "dd/MM/yyyy")} ({selectedMeetingForView.type})</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedMeetingForView && selectedMeetingForView.av_designations?.[0] && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { label: "Operador de Áudio", id: selectedMeetingForView.av_designations[0].operator_id },
+                  { label: "Operador de Vídeo", id: selectedMeetingForView.av_designations[0].video_operator_id },
+                  { label: "Microfone 1", id: selectedMeetingForView.av_designations[0].mic_1_id },
+                  { label: "Microfone 2", id: selectedMeetingForView.av_designations[0].mic_2_id },
+                  { label: "Palco", id: selectedMeetingForView.av_designations[0].stage_id },
+                  { label: "Indicador Externo", id: selectedMeetingForView.av_designations[0].external_indicator_id },
+                ].filter(item => item.id).map((item, i) => (
+                  <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground uppercase">{item.label}</span>
+                      <span className="text-sm font-bold">{getPubName(item.id)}</span>
+                    </div>
+                    {getPubPhone(item.id) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-green-600 border-green-200 hover:bg-green-50 h-8"
+                        onClick={() => sendWhatsApp(getPubName(item.id), getPubPhone(item.id)!, selectedMeetingForView.date, item.label)}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" /> Notificar
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {!selectedMeetingForView?.av_designations?.[0] && (
+            <div className="py-8 text-center text-muted-foreground">
+              Nenhuma designação lançada para esta reunião.
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button onClick={() => setViewOpen(false)}>Fechar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
