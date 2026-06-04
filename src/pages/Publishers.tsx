@@ -267,7 +267,7 @@ export default function Publishers() {
                     <TableCell>
                       <Badge className={cn(
                         "text-[10px] font-bold",
-                        p.status === 'active' ? "bg-green-500" : p.status === 'inactive' ? "bg-red-500" : "bg-slate-500"
+                        p.status === 'active' ? "bg-green-500" : p.status === 'inactive' || 'repreendido' ? "bg-red-500" : "bg-slate-500"
                       )}>
                         {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status === 'repreendido' ? 'Repreendido' : 'Mudou'}
                       </Badge>
