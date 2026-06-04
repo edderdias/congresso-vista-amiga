@@ -409,7 +409,7 @@ export default function Publishers() {
                     <SelectItem value="inactive">Inativo</SelectItem>
                     <SelectItem value="repreendido">Repreendido</SelectItem>
                     <SelectItem value="mudou">Mudou</SelectItem>
-                    <SelectItem value="mudou">Mudou</SelectItem>
+                    <SelectItem value="removido">Removido</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
