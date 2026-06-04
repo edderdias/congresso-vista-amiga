@@ -23,8 +23,8 @@ import { differenceInYears, parseISO, isValid } from "date-fns";
 const SECTIONS = {
   privileges: ["Ancião", "Servo Ministerial", "Pioneiro Regular", "Pioneiro Auxiliar", "Publicador Batizado", "Publicador não Batizado"],
   reuniao: [
-    "Presidência Vida e Ministério", "Oração", "Tesouro", "Parte de Estudante",
-    "Encontre Joias", "Nossa Vida Cristã", "Necessidade Locais",
+    "Presidência Vida e Ministério", "Oração", "Tesouro", "Parte de Estudante", 
+    "Encontre Joias", "Nossa Vida Cristã", "Necessidade Locais", 
     "Dirigente Est. de Livro", "Leitura do Livro", "Presidência Final de Semana", "Leitura A Sentinela"
   ],
   mecanicas: ["Indicador", "Microfone Volante", "Áudio e Vídeo"],
@@ -37,7 +37,7 @@ export default function Publishers() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGroup, setFilterGroup] = useState("all");
   const [filterStatus, setFilterStatus] = useState("default");
@@ -59,7 +59,7 @@ export default function Publishers() {
     const { data: groupsData } = await supabase.from("groups").select("*").order("group_number");
     const { data: pubsData } = await supabase.from("publishers").select("*").order("full_name");
     setGroups(groupsData || []);
-    setPublishers(pubsData?.map(p => ({ ...p, group_number: groupsData?.find(g => g.id === p.group_id)?.group_number })) || []);
+    setPublishers(pubsData?.map(p => ({...p, group_number: groupsData?.find(g => g.id === p.group_id)?.group_number})) || []);
   };
 
   const handleViewCard = async (pub: any) => {
@@ -70,14 +70,14 @@ export default function Publishers() {
       .eq("publisher_id", pub.id)
       .order("year", { ascending: false })
       .order("month", { ascending: false });
-
+    
     setPubReports(data || []);
     setCardOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
+    const payload = { 
       full_name: formData.full_name,
       phone: formData.phone || null,
       birth_date: formData.birth_date || null,
@@ -89,7 +89,7 @@ export default function Publishers() {
       group_id: formData.group_id === "none" ? null : formData.group_id
     };
 
-    const { error } = editingId
+    const { error } = editingId 
       ? await supabase.from("publishers").update(payload).eq("id", editingId)
       : await supabase.from("publishers").insert([payload]);
 
@@ -128,9 +128,9 @@ export default function Publishers() {
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
 
   const stats = {
-    total: publishers.filter(p => p.status !== 'mudou').length,
-    regPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Regular") && p.status !== 'mudou').length,
-    auxPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar") && p.status !== 'mudou').length,
+    total: publishers.filter(p => !['mudou', 'removido'].includes(p.status)).length,
+    regPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Regular") && !['mudou', 'removido'].includes(p.status)).length,
+    auxPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar") && !['mudou', 'removido'].includes(p.status)).length,
     inactive: publishers.filter(p => p.status === 'inactive').length
   };
 
@@ -144,8 +144,8 @@ export default function Publishers() {
   const togglePrivilege = (p: string) => {
     setFormData(prev => ({
       ...prev,
-      privileges: prev.privileges.includes(p)
-        ? prev.privileges.filter(x => x !== p)
+      privileges: prev.privileges.includes(p) 
+        ? prev.privileges.filter(x => x !== p) 
         : [...prev.privileges, p]
     }));
   };
@@ -157,7 +157,7 @@ export default function Publishers() {
           <h1 className="text-3xl font-bold text-foreground">Publicadores</h1>
           <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
         </div>
-        <Button onClick={() => { setEditingId(null); setFormData({ full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none" }); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none"}); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" /> Novo Publicador
         </Button>
       </div>
@@ -265,19 +265,11 @@ export default function Publishers() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        className={cn(
-                          "text-[10px] font-bold",
-                          p.status === 'active' ? "bg-green-500" :
-                            ['inactive', 'repreendido', 'removido'].includes(p.status) ? "bg-red-500" :
-                              "bg-slate-500"
-                        )}
-                      >
-                        {p.status === 'active' ? 'Ativo' :
-                          p.status === 'inactive' ? 'Inativo' :
-                            p.status === 'repreendido' ? 'Repreendido' :
-                              p.status === 'removido' ? 'Removido' :
-                                'Mudou'}
+                      <Badge className={cn(
+                        "text-[10px] font-bold",
+                        p.status === 'active' ? "bg-green-500" : p.status === 'inactive' ? "bg-red-500" : "bg-slate-500"
+                      )}>
+                        {p.status === 'active' ? 'Ativo' : p.status === 'inactive' ? 'Inativo' : p.status === 'repreendido' ? 'Repreendido' : p.status === 'removido' ? 'Removido' : 'Mudou'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
@@ -307,12 +299,10 @@ export default function Publishers() {
                         <Button variant="ghost" size="icon" title="Cartão S-21" onClick={() => handleViewCard(p)}>
                           <FileText className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          setEditingId(p.id); setFormData({
-                            full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
-                            gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
-                          }); setOpen(true);
-                        }}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
+                          full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
+                          gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none"
+                        }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                           <AlertDialogContent>
@@ -327,7 +317,7 @@ export default function Publishers() {
               })}
             </TableBody>
           </Table>
-          <PaginationControls currentPage={currentPage} totalPages={Math.ceil(filtered.length / 10)} onPageChange={setCurrentPage} />
+          <PaginationControls currentPage={currentPage} totalPages={Math.ceil(filtered.length/10)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 
@@ -339,15 +329,15 @@ export default function Publishers() {
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-blue-900">{editingId ? "Editar" : "Novo"} Publicador</DialogTitle>
             </DialogHeader>
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-blue-900 font-bold">Nome</Label>
-                <Input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} required className="border-blue-100 focus:border-blue-300" />
+                <Input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} required className="border-blue-100 focus:border-blue-300" />
               </div>
               <div className="space-y-2">
                 <Label className="text-blue-900 font-bold">Telefone</Label>
-                <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="border-blue-100 focus:border-blue-300" />
+                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="border-blue-100 focus:border-blue-300" />
               </div>
             </div>
 
@@ -355,7 +345,7 @@ export default function Publishers() {
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div className="space-y-2">
                   <Label className="text-blue-900 font-bold">Data de Nascimento</Label>
-                  <Input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="border-blue-100" />
+                  <Input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="border-blue-100" />
                 </div>
                 <div className="pb-2 text-sm text-muted-foreground">
                   {calculateAge(formData.birth_date)} anos
@@ -364,7 +354,7 @@ export default function Publishers() {
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div className="space-y-2">
                   <Label className="text-blue-900 font-bold">Data de Batismo</Label>
-                  <Input type="date" value={formData.baptism_date} onChange={e => setFormData({ ...formData, baptism_date: e.target.value })} className="border-blue-100" />
+                  <Input type="date" value={formData.baptism_date} onChange={e => setFormData({...formData, baptism_date: e.target.value})} className="border-blue-100" />
                 </div>
                 <div className="pb-2 text-sm text-muted-foreground">
                   {calculateAge(formData.baptism_date)} anos de batismo
@@ -375,7 +365,7 @@ export default function Publishers() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <Label className="text-blue-900 font-bold">Sexo</Label>
-                <RadioGroup value={formData.gender} onValueChange={v => setFormData({ ...formData, gender: v })} className="flex gap-6">
+                <RadioGroup value={formData.gender} onValueChange={v => setFormData({...formData, gender: v})} className="flex gap-6">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="M" id="m" className="text-blue-600 border-blue-200" />
                     <Label htmlFor="m" className="cursor-pointer">Masculino</Label>
@@ -388,7 +378,7 @@ export default function Publishers() {
               </div>
               <div className="space-y-3">
                 <Label className="text-blue-900 font-bold">Esperança</Label>
-                <RadioGroup value={formData.hope} onValueChange={v => setFormData({ ...formData, hope: v })} className="flex gap-6">
+                <RadioGroup value={formData.hope} onValueChange={v => setFormData({...formData, hope: v})} className="flex gap-6">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="anointed" id="a" className="text-blue-600 border-blue-200" />
                     <Label htmlFor="a" className="cursor-pointer">Ungido</Label>

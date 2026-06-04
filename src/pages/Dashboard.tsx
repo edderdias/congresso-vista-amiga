@@ -35,7 +35,7 @@ export default function Dashboard() {
     const { count: totalPubs } = await supabase
       .from("publishers")
       .select("*", { count: "exact", head: true })
-      .neq("status", "mudou");
+      .not("status", "in", '("mudou","removido")');
 
     const { count: activePubs } = await supabase
       .from("publishers")
@@ -202,7 +202,7 @@ export default function Dashboard() {
   };
 
   const cards = [
-    { title: "Total de Publicadores", value: stats.totalPublishers, icon: Users, color: "text-primary", desc: "Exceto mudou" },
+    { title: "Total de Publicadores", value: stats.totalPublishers, icon: Users, color: "text-primary", desc: "Exceto mudou/removido" },
     { title: "Publicadores Ativos", value: stats.activePublishers, icon: TrendingUp, color: "text-green-600", desc: "Ativos + Repreendidos" },
     { title: "Grupos", value: stats.totalGroups, icon: LayoutGrid, color: "text-orange-500", desc: "Grupos de serviço" },
     { title: "Territórios", value: stats.totalTerritories, icon: MapPin, color: "text-accent", desc: "Total cadastrado" },
