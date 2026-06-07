@@ -164,7 +164,7 @@ export default function Dashboard() {
         const m = date.getMonth() + 1;
         const y = date.getFullYear();
         const key = `${m}-${y}`;
-        const type = curr.type === "Meio de Semana" ? "mid" : "end";
+        const type = curr.type.includes("Meio de Semana") ? "mid" : "end";
         
         if (!grouped[key]) {
           grouped[key] = { 

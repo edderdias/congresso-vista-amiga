@@ -104,7 +104,6 @@ export default function Attendance() {
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
-    // Tenta encontrar a reunião correspondente pela data e tipo
     const meeting = meetings.find(m => m.date === item.date && m.type === item.type);
     setFormData({
       meeting_id: meeting?.id || "",
@@ -123,8 +122,8 @@ export default function Attendance() {
     });
   };
 
-  const midweek = data.filter(d => d.type === "Meio de Semana");
-  const weekend = data.filter(d => d.type === "Final de Semana");
+  const midweek = data.filter(d => d.type.includes("Meio de Semana"));
+  const weekend = data.filter(d => d.type.includes("Final de Semana") || d.type === "Especial" || d.type === "Celebração");
 
   const totalMidweek = midweek.reduce((acc, curr) => acc + curr.total, 0);
   const avgMidweek = midweek.length > 0 ? Math.round(totalMidweek / midweek.length) : 0;
