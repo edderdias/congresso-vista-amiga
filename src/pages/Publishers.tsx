@@ -254,7 +254,18 @@ export default function Publishers() {
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-bold">{p.full_name}</TableCell>
-                    <TableCell className="text-green-600 font-medium">{p.phone || "-"}</TableCell>
+                    <TableCell className="text-green-600 font-medium">
+                      {p.phone ? (
+                        <a 
+                          href={`https://wa.me/55${p.phone.replace(/\D/g, "")}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {p.phone}
+                        </a>
+                      ) : "-"}
+                    </TableCell>
                     <TableCell>{p.group_number ? `Grupo ${p.group_number}` : "-"}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
