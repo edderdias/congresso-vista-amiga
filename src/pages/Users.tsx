@@ -31,6 +31,7 @@ const PAGES = [
   { id: "reports", name: "Relatórios" },
   { id: "groups", name: "Grupos" },
   { id: "publishers", name: "Publicadores" },
+  { id: "pioneers", name: "Pioneiros" },
   { id: "meetings", name: "Reuniões" },
   { id: "speeches", name: "Discursos" },
   { id: "attendance", name: "Assistência" },
@@ -39,6 +40,7 @@ const PAGES = [
   { id: "designations", name: "Designações" },
   { id: "school", name: "Escola" },
   { id: "territories", name: "Territórios" },
+  { id: "transport", name: "Transporte" },
   { id: "users", name: "Gerenciar Usuários" },
   { id: "settings", name: "Configurações" },
 ];

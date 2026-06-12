@@ -61,7 +61,7 @@ export default function Transport() {
   const loadArrangements = async () => {
     const { data, error } = await supabase
       .from("transport_arrangements")
-      .select("*, transport_members(count)")
+      .select("*, transport_members(count), transport_daily_costs(*)")
       .order("start_date", { ascending: false });
     
     if (error) toast.error("Erro ao carregar arranjos");
@@ -285,7 +285,8 @@ export default function Transport() {
                   <TableRow>
                     <TableHead>Evento</TableHead>
                     <TableHead>Período</TableHead>
-                    <TableHead>Valor Total?</TableHead>
+                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Valor por Dia</TableHead>
                     <TableHead>Pessoas</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -293,7 +294,7 @@ export default function Transport() {
                 <TableBody>
                   {arrangements.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum arranjo cadastrado.</TableCell>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum arranjo cadastrado.</TableCell>
                     </TableRow>
                   ) : (
                     arrangements.map(arr => (
@@ -308,9 +309,16 @@ export default function Transport() {
                           }
                         </TableCell>
                         <TableCell>
-                          <Badge variant={arr.is_total_value ? "default" : "secondary"}>
-                            {arr.is_total_value ? "Sim" : "Não"}
-                          </Badge>
+                          {arr.is_total_value ? `R$ ${arr.total_price?.toFixed(2)}` : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {!arr.is_total_value ? (
+                            <div className="text-xs space-y-1">
+                              {arr.transport_daily_costs?.map((c: any) => (
+                                <div key={c.id}>{format(parseISO(c.date), "dd/MM")}: R$ {c.cost.toFixed(2)}</div>
+                              ))}
+                            </div>
+                          ) : "-"}
                         </TableCell>
                         <TableCell>{arr.transport_members?.[0]?.count || 0}</TableCell>
                         <TableCell className="text-right">
