@@ -23,6 +23,7 @@ import Settings from "./pages/Settings";
 import Attendance from "./pages/Attendance";
 import Speeches from "./pages/Speeches";
 import MeetingPrint from "./pages/MeetingPrint";
+import Transport from "./pages/Transport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/designations" element={<Layout><Designations /></Layout>} />
           <Route path="/school" element={<Layout><School /></Layout>} />
           <Route path="/territories" element={<Layout><Territories /></Layout>} />
+          <Route path="/transport" element={<Layout><Transport /></Layout>} />
           <Route path="/users" element={<Layout><Users /></Layout>} />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor, BarChart3, Mic2, Star } from "lucide-react";
+import { LayoutDashboard, FileText, Users, MapPin, Settings, LogOut, Brush, BookOpen, Award, User, Calendar, Monitor, BarChart3, Mic2, Star, Bus } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -29,6 +29,7 @@ const allItems = [
   { id: "designations", title: "Designações", url: "/designations", icon: Award },
   { id: "school", title: "Escola", url: "/school", icon: BookOpen },
   { id: "territories", title: "Territórios", url: "/territories", icon: MapPin },
+  { id: "transport", title: "Transporte", url: "/transport", icon: Bus },
   { id: "users", title: "Gerenciar Usuários", url: "/users", icon: Settings },
   { id: "settings", title: "Configurações", url: "/settings", icon: Settings },
 ];
