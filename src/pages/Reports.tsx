@@ -25,6 +25,7 @@ interface Report {
   year: number;
   hours: number;
   credits?: number;
+  displayNotes?: string;
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
@@ -32,6 +33,8 @@ interface Report {
   group_id: number | null;
   publisher_id: string | null;
   participated?: boolean;
+  isMissing?: boolean;
+  phone?: string;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -99,6 +102,19 @@ export default function Reports() {
     return data || [];
   };
 
+  const parseReportNotes = (rawNotes: string | null) => {
+    let credits = 0;
+    let cleanNotes = rawNotes || "";
+    if (rawNotes) {
+      const match = rawNotes.match(/\[Créditos:\s*(\d+)\]/i);
+      if (match) {
+        credits = parseInt(match[1], 10) || 0;
+        cleanNotes = rawNotes.replace(/\[Créditos:\s*\d+\]\s*/gi, "").trim();
+      }
+    }
+    return { credits, cleanNotes };
+  };
+
   const loadReports = async () => {
     let query = supabase
       .from("preaching_reports")
@@ -119,7 +135,15 @@ export default function Reports() {
     if (error) {
       toast.error("Erro ao carregar relatórios");
     } else {
-      setReports(data || []);
+      const formatted = (data || []).map(r => {
+        const { credits, cleanNotes } = parseReportNotes(r.notes);
+        return {
+          ...r,
+          credits,
+          displayNotes: cleanNotes
+        };
+      });
+      setReports(formatted);
     }
   };
 
@@ -140,16 +164,18 @@ export default function Reports() {
     
     await loadPublishersByGroup(groupId);
     
+    const { credits, cleanNotes } = parseReportNotes(report.notes);
+
     setFormData({
       group_id: groupId,
       publisher_id: report.publisher_id || "",
       month: report.month.toString(),
       year: report.year,
       hours: report.hours || 0,
-      credits: report.credits || 0,
+      credits: credits,
       bible_studies: report.bible_studies || 0,
-      notes: report.notes || "",
-      participated: report.participated !== undefined ? report.participated : ((report.hours || 0) + (report.credits || 0) > 0 || report.bible_studies > 0),
+      notes: cleanNotes,
+      participated: report.participated !== undefined ? report.participated : ((report.hours || 0) + credits > 0 || report.bible_studies > 0),
       pioneer_status: report.pioneer_status,
     });
     
@@ -172,6 +198,11 @@ export default function Reports() {
     const publisher = publishers.find(p => p.id === formData.publisher_id);
     const group = groups.find(g => g.id === formData.group_id);
 
+    let finalNotes = formData.notes ? formData.notes.trim() : "";
+    if (formData.credits > 0) {
+      finalNotes = `[Créditos: ${formData.credits}] ${finalNotes}`.trim();
+    }
+
     const reportData = {
       publisher_id: formData.publisher_id,
       reporter_name: publisher?.full_name,
@@ -179,9 +210,8 @@ export default function Reports() {
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
-      credits: formData.credits,
       bible_studies: formData.bible_studies,
-      notes: formData.notes,
+      notes: finalNotes || null,
       pioneer_status: formData.pioneer_status,
       participated: formData.participated
     };
@@ -229,15 +259,14 @@ export default function Reports() {
   ];
 
   const getDisplayData = () => {
-
     if (!showMissing) {
       return reports.filter(r => 
-      r.reporter_name?.toLowerCase().includes(searchTerm.toLowerCase()));
+        r.reporter_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     const targetMonth = filterMonth === "all" ? (new Date().getMonth() + 1) : parseInt(filterMonth);
     
-    // IDs de quem já relatou no mês e ano filtrados
     const reportedIds = new Set(
       reports
         .filter(r => r.month === targetMonth && r.year === filterYear)
@@ -262,6 +291,7 @@ export default function Reports() {
       year: filterYear,
       hours: 0,
       credits: 0,
+      displayNotes: "Pendente",
       bible_studies: 0,
       notes: "Pendente",
       pioneer_status: "publicador" as any,
@@ -497,7 +527,7 @@ export default function Reports() {
                       <TableCell className="font-bold">{r.isMissing ? "-" : ((r.hours || 0) + (r.credits || 0))}</TableCell>
                       <TableCell>{r.isMissing ? "-" : r.bible_studies}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                        {r.notes || "-"}
+                        {r.displayNotes || r.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         {!r.isMissing ? (
@@ -526,7 +556,7 @@ export default function Reports() {
                               size="icon" 
                               className="text-green-600"
                               title="Lembrar via WhatsApp"
-                              onClick={() => sendWhatsAppReminder(r.reporter_name, (r as any).phone, r.group_id)}
+                              onClick={() => sendWhatsAppReminder(r.reporter_name, (r as any).phone, r.group_id ? r.group_id.toString() : "")}
                             >
                               <MessageCircle className="h-4 w-4" />
                             </Button>

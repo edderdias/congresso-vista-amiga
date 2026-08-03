@@ -133,6 +133,11 @@ export default function PublicReport() {
     if (publisher.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
     else if (publisher.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
 
+    let finalNotes = formData.notes ? formData.notes.trim() : "";
+    if (formData.credits > 0) {
+      finalNotes = `[Créditos: ${formData.credits}] ${finalNotes}`.trim();
+    }
+
     const { error } = await supabase.from("preaching_reports").insert([{
       publisher_id: publisher.id,
       reporter_name: publisher.full_name,
@@ -140,9 +145,8 @@ export default function PublicReport() {
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
-      credits: formData.credits,
       bible_studies: formData.bible_studies,
-      notes: formData.notes,
+      notes: finalNotes || null,
       pioneer_status: pioneerStatus,
       participated: formData.participated
     }]);
