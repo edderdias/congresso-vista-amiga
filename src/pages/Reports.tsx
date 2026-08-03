@@ -25,7 +25,7 @@ interface Report {
   year: number;
   hours: number;
   credits?: number;
-  displayNotes?: string;
+  total_hours?: number;
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
@@ -103,16 +103,11 @@ export default function Reports() {
   };
 
   const parseReportNotes = (rawNotes: string | null) => {
-    let credits = 0;
     let cleanNotes = rawNotes || "";
     if (rawNotes) {
-      const match = rawNotes.match(/\[Créditos:\s*(\d+)\]/i);
-      if (match) {
-        credits = parseInt(match[1], 10) || 0;
-        cleanNotes = rawNotes.replace(/\[Créditos:\s*\d+\]\s*/gi, "").trim();
-      }
+      cleanNotes = rawNotes.replace(/\[Créditos:\s*\d+\]\s*/gi, "").trim();
     }
-    return { credits, cleanNotes };
+    return cleanNotes;
   };
 
   const loadReports = async () => {
@@ -135,15 +130,7 @@ export default function Reports() {
     if (error) {
       toast.error("Erro ao carregar relatórios");
     } else {
-      const formatted = (data || []).map(r => {
-        const { credits, cleanNotes } = parseReportNotes(r.notes);
-        return {
-          ...r,
-          credits,
-          displayNotes: cleanNotes
-        };
-      });
-      setReports(formatted);
+      setReports(data || []);
     }
   };
 
@@ -164,7 +151,7 @@ export default function Reports() {
     
     await loadPublishersByGroup(groupId);
     
-    const { credits, cleanNotes } = parseReportNotes(report.notes);
+    const cleanNotes = parseReportNotes(report.notes);
 
     setFormData({
       group_id: groupId,
@@ -172,10 +159,10 @@ export default function Reports() {
       month: report.month.toString(),
       year: report.year,
       hours: report.hours || 0,
-      credits: credits,
+      credits: report.credits || 0,
       bible_studies: report.bible_studies || 0,
       notes: cleanNotes,
-      participated: report.participated !== undefined ? report.participated : ((report.hours || 0) + credits > 0 || report.bible_studies > 0),
+      participated: report.participated !== undefined ? report.participated : ((report.hours || 0) + (report.credits || 0) > 0 || report.bible_studies > 0),
       pioneer_status: report.pioneer_status,
     });
     
@@ -198,10 +185,9 @@ export default function Reports() {
     const publisher = publishers.find(p => p.id === formData.publisher_id);
     const group = groups.find(g => g.id === formData.group_id);
 
-    let finalNotes = formData.notes ? formData.notes.trim() : "";
-    if (formData.credits > 0) {
-      finalNotes = `[Créditos: ${formData.credits}] ${finalNotes}`.trim();
-    }
+    const hoursVal = Number(formData.hours || 0);
+    const creditsVal = Number(formData.credits || 0);
+    const totalHoursVal = hoursVal + creditsVal;
 
     const reportData = {
       publisher_id: formData.publisher_id,
@@ -209,9 +195,11 @@ export default function Reports() {
       group_id: group?.group_number,
       month: parseInt(formData.month),
       year: formData.year,
-      hours: formData.hours,
+      hours: hoursVal,
+      credits: creditsVal,
+      total_hours: totalHoursVal,
       bible_studies: formData.bible_studies,
-      notes: finalNotes || null,
+      notes: formData.notes ? formData.notes.trim() : null,
       pioneer_status: formData.pioneer_status,
       participated: formData.participated
     };
@@ -227,7 +215,7 @@ export default function Reports() {
         toast.error("Erro ao salvar: " + error.message);
       }
     } else {
-      toast.success("Relatório salvo!");
+      toast.success("Relatório salvo com sucesso!");
       setOpen(false);
       loadReports();
     }
@@ -291,7 +279,7 @@ export default function Reports() {
       year: filterYear,
       hours: 0,
       credits: 0,
-      displayNotes: "Pendente",
+      total_hours: 0,
       bible_studies: 0,
       notes: "Pendente",
       pioneer_status: "publicador" as any,
@@ -524,10 +512,12 @@ export default function Reports() {
                       <TableCell className="whitespace-nowrap">{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
                       <TableCell>{r.isMissing ? "-" : (r.hours || 0)}</TableCell>
                       <TableCell>{r.isMissing ? "-" : (r.credits || 0)}</TableCell>
-                      <TableCell className="font-bold">{r.isMissing ? "-" : ((r.hours || 0) + (r.credits || 0))}</TableCell>
+                      <TableCell className="font-bold">
+                        {r.isMissing ? "-" : (r.total_hours !== undefined && r.total_hours !== null ? r.total_hours : ((r.hours || 0) + (r.credits || 0)))}
+                      </TableCell>
                       <TableCell>{r.isMissing ? "-" : r.bible_studies}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                        {r.displayNotes || r.notes || "-"}
+                        {r.notes || "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         {!r.isMissing ? (
@@ -566,7 +556,7 @@ export default function Reports() {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
+              TableBody>
             </Table>
           </div>
           <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
