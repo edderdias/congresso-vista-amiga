@@ -556,7 +556,7 @@ export default function Reports() {
                     </TableRow>
                   ))
                 )}
-              TableBody>
+              </TableBody>
             </Table>
           </div>
           <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
