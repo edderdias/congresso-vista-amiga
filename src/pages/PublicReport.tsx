@@ -298,8 +298,8 @@ export default function PublicReport() {
               </Label>
             </div>
 
-            <div className={cn("grid gap-3", isRegularPioneer ? "grid-cols-3" : "grid-cols-2")}>
-              <div className="space-y-2">
+            <div className={cn("grid gap-3 items-start", isRegularPioneer ? "grid-cols-3" : "grid-cols-2")}>
+              <div className="space-y-1">
                 <Label htmlFor="hours">Horas</Label>
                 <Input 
                   id="hours"
@@ -310,9 +310,25 @@ export default function PublicReport() {
                   value={formData.hours}
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
+                <p className="text-[11px] text-muted-foreground leading-tight mt-1">
+                  Se for pioneiro auxiliar, regular, especial ou missionario em campo
+                </p>
               </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="studies">Estudos Bíblicos</Label>
+                <Input 
+                  id="studies"
+                  type="number" 
+                  min="0"
+                  className="w-full"
+                  value={formData.bible_studies}
+                  onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})}
+                />
+              </div>
+
               {isRegularPioneer && (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="credits">Créditos</Label>
                   <Input 
                     id="credits"
@@ -325,17 +341,6 @@ export default function PublicReport() {
                   />
                 </div>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="studies">Estudos</Label>
-                <Input 
-                  id="studies"
-                  type="number" 
-                  min="0"
-                  className="w-full"
-                  value={formData.bible_studies}
-                  onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})}
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
