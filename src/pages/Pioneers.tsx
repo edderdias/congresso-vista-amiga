@@ -35,9 +35,10 @@ export default function Pioneers() {
     
     const now = new Date();
     let startYear = now.getFullYear();
-    if (now.getMonth() < 8) startYear--; 
+    if (now.getMonth() < 8) startYear--; // Se antes de Setembro, o ano de serviço começou em Setembro do ano anterior
+    const endYear = startYear + 1;
     
-    setServiceYearLabel(`${startYear}/${startYear + 1}`);
+    setServiceYearLabel(`${startYear}/${endYear}`);
 
     // 1. Buscar todos os publicadores que tenham "Pioneiro Regular" no array de privilégios
     const { data: pubs, error: pubsError } = await supabase
@@ -54,32 +55,30 @@ export default function Pioneers() {
       p.privileges && Array.isArray(p.privileges) && p.privileges.includes("Pioneiro Regular")
     );
 
-    // 2. Buscar relatórios desde o início do ano de serviço (Setembro)
+    // 2. Buscar relatórios estritamente dentro do ano de serviço (Setembro do ano de início a Agosto do ano final)
     const { data: reports } = await supabase
       .from("preaching_reports")
       .select("*")
-      .or(`year.gt.${startYear},and(year.eq.${startYear},month.gte.9)`);
+      .or(`and(year.eq.${startYear},month.gte.9),and(year.eq.${endYear},month.lte.8)`);
 
-    // 3. Calcular meses decorridos baseado no filtro (Setembro até o mês selecionado)
+    // 3. Calcular meses decorridos no ano de serviço até o mês selecionado
     const selectedM = parseInt(filterMonth);
-    let monthsCount = 0;
-    if (selectedM >= 9) {
-      monthsCount = selectedM - 9 + 1;
-    } else {
-      monthsCount = (12 - 9) + selectedM + 1;
-    }
+    const monthsCount = selectedM >= 9 ? (selectedM - 8) : (4 + selectedM);
     const validMonthsCount = monthsCount > 0 ? monthsCount : 1;
+    const targetFilterYear = selectedM >= 9 ? startYear : endYear;
 
-    // 4. Processar dados para a lista (filtrando relatórios até o mês/ano selecionado)
+    // 4. Processar dados para a lista de pioneiros
     const processedPioneers = regularPioneers.map(p => {
       const pReports = (reports || []).filter(r => {
         if (r.publisher_id !== p.id) return false;
-        const rYear = r.year;
-        const rMonth = r.month;
-        const targetYear = selectedM >= 9 ? startYear : startYear + 1;
-        
-        if (rYear < targetYear) return true;
-        if (rYear === targetYear && rMonth <= selectedM) return true;
+
+        // Verificar se pertence ao ano de serviço atual
+        const isCurrentServiceYear = (r.year === startYear && r.month >= 9) || (r.year === endYear && r.month <= 8);
+        if (!isCurrentServiceYear) return false;
+
+        // Filtrar até o mês selecionado no filtro
+        if (r.year < targetFilterYear) return true;
+        if (r.year === targetFilterYear && r.month <= selectedM) return true;
         return false;
       });
 
@@ -106,7 +105,7 @@ export default function Pioneers() {
       };
     });
 
-    // 5. Processar dados para o gráfico (Progresso Mensal Geral dos Pioneiros)
+    // 5. Processar dados para o gráfico (Setembro do ano inicial até Agosto do ano final)
     const monthsOrder = [9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8];
     const monthNames: Record<number, string> = {
       1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
@@ -114,7 +113,7 @@ export default function Pioneers() {
     };
 
     const monthlyStats = monthsOrder.map(m => {
-      const year = m >= 9 ? startYear : startYear + 1;
+      const year = m >= 9 ? startYear : endYear;
       const pioneerIds = new Set(regularPioneers.map(p => p.id));
       const monthReports = reports?.filter(r => r.month === m && r.year === year && pioneerIds.has(r.publisher_id)) || [];
       
