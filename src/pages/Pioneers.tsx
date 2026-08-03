@@ -78,19 +78,26 @@ export default function Pioneers() {
         const rMonth = r.month;
         const targetYear = selectedM >= 9 ? startYear : startYear + 1;
         
-        // Se o ano do relatório for menor que o ano alvo, ou se for o mesmo ano e mês menor/igual
         if (rYear < targetYear) return true;
         if (rYear === targetYear && rMonth <= selectedM) return true;
         return false;
       });
 
-      const totalHours = pReports.reduce((acc, r) => acc + (r.hours || 0), 0);
+      const totalCredits = pReports.reduce((acc, r) => acc + (r.credits || 0), 0);
+      const totalHours = pReports.reduce((acc, r) => {
+        const reportTotal = r.total_hours !== null && r.total_hours !== undefined 
+          ? r.total_hours 
+          : ((r.hours || 0) + (r.credits || 0));
+        return acc + reportTotal;
+      }, 0);
+
       const totalStudies = pReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0);
       const avgHours = totalHours / validMonthsCount;
       const avgStudies = totalStudies / validMonthsCount;
 
       return {
         ...p,
+        totalCredits,
         totalHours,
         totalStudies,
         avgHours,
@@ -113,7 +120,12 @@ export default function Pioneers() {
       
       return {
         name: monthNames[m],
-        horas: monthReports.reduce((acc, r) => acc + (r.hours || 0), 0),
+        horas: monthReports.reduce((acc, r) => {
+          const reportTotal = r.total_hours !== null && r.total_hours !== undefined 
+            ? r.total_hours 
+            : ((r.hours || 0) + (r.credits || 0));
+          return acc + reportTotal;
+        }, 0),
         estudos: monthReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0)
       };
     });
@@ -242,6 +254,7 @@ export default function Pioneers() {
                 <TableRow>
                   <TableHead>Pioneiro</TableHead>
                   <TableHead>Grupo</TableHead>
+                  <TableHead className="text-center">Total Crédito</TableHead>
                   <TableHead className="text-center">Total Horas</TableHead>
                   <TableHead className="text-center">Média Horas</TableHead>
                   <TableHead className="text-center">Total Estudos</TableHead>
@@ -252,7 +265,7 @@ export default function Pioneers() {
               <TableBody>
                 {pioneers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum pioneiro regular encontrado.
                     </TableCell>
                   </TableRow>
@@ -261,6 +274,7 @@ export default function Pioneers() {
                     <TableRow key={p.id}>
                       <TableCell className="font-bold">{p.full_name}</TableCell>
                       <TableCell>G{p.groups?.group_number || "-"}</TableCell>
+                      <TableCell className="text-center font-medium">{p.totalCredits}</TableCell>
                       <TableCell className="text-center font-medium">{p.totalHours}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className={cn(
