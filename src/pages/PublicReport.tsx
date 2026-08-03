@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function PublicReport() {
   const { groupNumber } = useParams();
@@ -33,6 +34,9 @@ export default function PublicReport() {
     notes: ""
   });
 
+  const selectedPublisher = publishers.find(p => p.id === selectedPublisherId);
+  const isRegularPioneer = selectedPublisher?.privileges?.includes("Pioneiro Regular") || false;
+
   useEffect(() => {
     checkAuth();
     calculateDefaultDate();
@@ -44,6 +48,12 @@ export default function PublicReport() {
       setFormData(prev => ({ ...prev, participated: true }));
     }
   }, [formData.hours, formData.credits, formData.bible_studies]);
+
+  useEffect(() => {
+    if (!isRegularPioneer && formData.credits > 0) {
+      setFormData(prev => ({ ...prev, credits: 0 }));
+    }
+  }, [selectedPublisherId, isRegularPioneer]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -104,15 +114,24 @@ export default function PublicReport() {
       return;
     }
 
-    setLoading(true);
-    const publisher = publishers.find(p => p.id === selectedPublisherId);
+    const publisher = selectedPublisher;
     const group = groups.find(g => g.id === selectedGroupId);
 
     if (!publisher) {
-      setLoading(false);
       toast.error("Publicador não encontrado.");
       return;
     }
+
+    const hoursVal = Number(formData.hours || 0);
+    const creditsVal = isRegularPioneer ? Number(formData.credits || 0) : 0;
+    const totalHoursVal = hoursVal + creditsVal;
+
+    if (totalHoursVal > 55) {
+      toast.error("A soma de Horas e Créditos não pode ultrapassar 55 horas.");
+      return;
+    }
+
+    setLoading(true);
 
     const { data: existingReports } = await supabase
       .from("preaching_reports")
@@ -132,10 +151,6 @@ export default function PublicReport() {
     let pioneerStatus: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular" = "publicador";
     if (publisher.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
     else if (publisher.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
-
-    const hoursVal = Number(formData.hours || 0);
-    const creditsVal = Number(formData.credits || 0);
-    const totalHoursVal = hoursVal + creditsVal;
 
     const { error } = await supabase.from("preaching_reports").insert([{
       publisher_id: publisher.id,
@@ -283,29 +298,33 @@ export default function PublicReport() {
               </Label>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className={cn("grid gap-3", isRegularPioneer ? "grid-cols-3" : "grid-cols-2")}>
               <div className="space-y-2">
                 <Label htmlFor="hours">Horas</Label>
                 <Input 
                   id="hours"
                   type="number" 
                   min="0"
+                  max="55"
                   className="w-full"
                   value={formData.hours}
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="credits">Créditos</Label>
-                <Input 
-                  id="credits"
-                  type="number" 
-                  min="0"
-                  className="w-full"
-                  value={formData.credits}
-                  onChange={e => setFormData({...formData, credits: parseInt(e.target.value) || 0})}
-                />
-              </div>
+              {isRegularPioneer && (
+                <div className="space-y-2">
+                  <Label htmlFor="credits">Créditos</Label>
+                  <Input 
+                    id="credits"
+                    type="number" 
+                    min="0"
+                    max="55"
+                    className="w-full"
+                    value={formData.credits}
+                    onChange={e => setFormData({...formData, credits: parseInt(e.target.value) || 0})}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="studies">Estudos</Label>
                 <Input 
