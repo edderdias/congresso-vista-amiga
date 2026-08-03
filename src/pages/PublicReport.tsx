@@ -29,6 +29,7 @@ export default function PublicReport() {
     participated: true,
     bible_studies: 0,
     hours: 0,
+    credits: 0,
     notes: ""
   });
 
@@ -39,10 +40,10 @@ export default function PublicReport() {
   }, [groupNumber]);
 
   useEffect(() => {
-    if (formData.hours > 0 || formData.bible_studies > 0) {
+    if (formData.hours > 0 || formData.credits > 0 || formData.bible_studies > 0) {
       setFormData(prev => ({ ...prev, participated: true }));
     }
-  }, [formData.hours, formData.bible_studies]);
+  }, [formData.hours, formData.credits, formData.bible_studies]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -139,6 +140,7 @@ export default function PublicReport() {
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
+      credits: formData.credits,
       bible_studies: formData.bible_studies,
       notes: formData.notes,
       pioneer_status: pioneerStatus,
@@ -276,18 +278,7 @@ export default function PublicReport() {
               </Label>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="studies">Estudos Bíblicos</Label>
-                <Input 
-                  id="studies"
-                  type="number" 
-                  min="0"
-                  className="w-full"
-                  value={formData.bible_studies}
-                  onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})}
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="hours">Horas</Label>
                 <Input 
@@ -298,9 +289,28 @@ export default function PublicReport() {
                   value={formData.hours}
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
                 />
-                <p className="text-[10px] text-muted-foreground leading-tight">
-                  Se for pioneiro auxiliar, regular, especial ou missionario em campo
-                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credits">Créditos</Label>
+                <Input 
+                  id="credits"
+                  type="number" 
+                  min="0"
+                  className="w-full"
+                  value={formData.credits}
+                  onChange={e => setFormData({...formData, credits: parseInt(e.target.value) || 0})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="studies">Estudos</Label>
+                <Input 
+                  id="studies"
+                  type="number" 
+                  min="0"
+                  className="w-full"
+                  value={formData.bible_studies}
+                  onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})}
+                />
               </div>
             </div>
 

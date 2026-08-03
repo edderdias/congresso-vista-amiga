@@ -24,6 +24,7 @@ interface Report {
   month: number;
   year: number;
   hours: number;
+  credits?: number;
   bible_studies: number;
   notes: string | null;
   pioneer_status: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular";
@@ -56,6 +57,7 @@ export default function Reports() {
     month: (new Date().getMonth() + 1).toString(),
     year: new Date().getFullYear(),
     hours: 0,
+    credits: 0,
     bible_studies: 0,
     notes: "",
     participated: true,
@@ -143,10 +145,11 @@ export default function Reports() {
       publisher_id: report.publisher_id || "",
       month: report.month.toString(),
       year: report.year,
-      hours: report.hours,
-      bible_studies: report.bible_studies,
+      hours: report.hours || 0,
+      credits: report.credits || 0,
+      bible_studies: report.bible_studies || 0,
       notes: report.notes || "",
-      participated: report.participated !== undefined ? report.participated : (report.hours > 0 || report.bible_studies > 0),
+      participated: report.participated !== undefined ? report.participated : ((report.hours || 0) + (report.credits || 0) > 0 || report.bible_studies > 0),
       pioneer_status: report.pioneer_status,
     });
     
@@ -176,6 +179,7 @@ export default function Reports() {
       month: parseInt(formData.month),
       year: formData.year,
       hours: formData.hours,
+      credits: formData.credits,
       bible_studies: formData.bible_studies,
       notes: formData.notes,
       pioneer_status: formData.pioneer_status,
@@ -207,6 +211,7 @@ export default function Reports() {
       month: (new Date().getMonth() + 1).toString(),
       year: new Date().getFullYear(),
       hours: 0,
+      credits: 0,
       bible_studies: 0,
       notes: "",
       participated: true,
@@ -256,6 +261,7 @@ export default function Reports() {
       month: targetMonth,
       year: filterYear,
       hours: 0,
+      credits: 0,
       bible_studies: 0,
       notes: "Pendente",
       pioneer_status: "publicador" as any,
@@ -334,14 +340,18 @@ export default function Reports() {
                 <Label htmlFor="part">Participou no ministério?</Label>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Horas</Label>
-                  <Input type="number" value={formData.hours} onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})} />
+                  <Input type="number" min="0" value={formData.hours} onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Créditos</Label>
+                  <Input type="number" min="0" value={formData.credits} onChange={e => setFormData({...formData, credits: parseInt(e.target.value) || 0})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Estudos</Label>
-                  <Input type="number" value={formData.bible_studies} onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})} />
+                  <Input type="number" min="0" value={formData.bible_studies} onChange={e => setFormData({...formData, bible_studies: parseInt(e.target.value) || 0})} />
                 </div>
               </div>
 
@@ -457,6 +467,8 @@ export default function Reports() {
                   <TableHead>Grupo</TableHead>
                   <TableHead>Mês/Ano</TableHead>
                   <TableHead>Horas</TableHead>
+                  <TableHead>Créditos</TableHead>
+                  <TableHead>Total Horas</TableHead>
                   <TableHead>Estudos</TableHead>
                   <TableHead>Observação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -465,7 +477,7 @@ export default function Reports() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhum registro encontrado para os filtros selecionados.
                     </TableCell>
                   </TableRow>
@@ -480,7 +492,9 @@ export default function Reports() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">Grupo {r.group_id}</TableCell>
                       <TableCell className="whitespace-nowrap">{monthOptions.find(m => m.value === r.month.toString())?.label} / {r.year}</TableCell>
-                      <TableCell>{r.isMissing ? "-" : r.hours}</TableCell>
+                      <TableCell>{r.isMissing ? "-" : (r.hours || 0)}</TableCell>
+                      <TableCell>{r.isMissing ? "-" : (r.credits || 0)}</TableCell>
+                      <TableCell className="font-bold">{r.isMissing ? "-" : ((r.hours || 0) + (r.credits || 0))}</TableCell>
                       <TableCell>{r.isMissing ? "-" : r.bible_studies}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                         {r.notes || "-"}
