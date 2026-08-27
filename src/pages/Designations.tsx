@@ -47,6 +47,10 @@ interface GroupedProgram {
 
 const ITEMS_PER_PAGE = 10;
 
+// Orações (inicial/final) são isentas da regra de não repetir orador/participante na mesma reunião
+const PRAYER_TYPES = ["Oração Inicial", "Oração Final"];
+const isPrayerType = (type: string) => PRAYER_TYPES.includes(type);
+
 export default function Designations() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [publishers, setPublishers] = useState<Publisher[]>([]);
@@ -277,14 +281,11 @@ export default function Designations() {
 
   const getPubByPrivilege = (privilege: string, currentId?: string, isPrayer?: boolean) => {
     const selectedIds = new Set<string>();
-    
-    // Se a configuração de evitar duplicidade estiver ativa
-    if (settings?.prevent_duplicate_designations) {
-      Object.entries(formData).forEach(([type, d]) => { 
-        if (d.user_id && d.user_id !== currentId) {
-          // Orações geralmente podem ser repetidas se a pessoa já tem outra parte, 
-          // mas se a regra for estrita, bloqueamos tudo.
-          // Aqui vamos bloquear se não for oração ou se for a própria oração sendo editada.
+
+    // Se a configuração de evitar duplicidade estiver ativa (orações são isentas dessa regra)
+    if (settings?.prevent_duplicate_designations && !isPrayer) {
+      Object.entries(formData).forEach(([type, d]) => {
+        if (d.user_id && d.user_id !== currentId && !isPrayerType(type)) {
           selectedIds.add(d.user_id);
         }
       });
@@ -301,10 +302,11 @@ export default function Designations() {
   };
 
   const handleSelectChange = (type: string, val: string) => {
-    if (settings?.prevent_duplicate_designations && val) {
-      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => t !== type && d.user_id === val) || 
+    // Orações (inicial/final) podem repetir orador/participante, então ficam fora da validação
+    if (settings?.prevent_duplicate_designations && val && !isPrayerType(type)) {
+      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => t !== type && !isPrayerType(t) && d.user_id === val) ||
                            vidaCristaParts.some(p => p.user_id === val);
-      
+
       if (isAlreadyUsed) {
         toast.error("Participante já designado para esta reunião!");
         return;
@@ -315,7 +317,7 @@ export default function Designations() {
 
   const handleVidaCristaSelect = (index: number, val: string) => {
     if (settings?.prevent_duplicate_designations && val) {
-      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => d.user_id === val) || 
+      const isAlreadyUsed = Object.entries(formData).some(([t, d]) => !isPrayerType(t) && d.user_id === val) ||
                            vidaCristaParts.some((p, i) => i !== index && p.user_id === val);
       
       if (isAlreadyUsed) {
