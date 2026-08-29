@@ -161,7 +161,8 @@ export default function Cleaning() {
             <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}><ChevronRight className="h-4 w-4" /></Button>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
+          <div className="min-w-[700px]">
           <div className="grid grid-cols-7 border-b bg-slate-50/50">
             {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => <div key={day} className="py-2 text-center text-xs font-bold text-muted-foreground border-r">{day}</div>)}
           </div>
@@ -201,6 +202,7 @@ export default function Cleaning() {
                 </div>
               );
             })}
+          </div>
           </div>
         </CardContent>
       </Card>

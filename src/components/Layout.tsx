@@ -82,19 +82,21 @@ export function Layout({ children }: LayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar userProfile={profile} />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border bg-card flex items-center px-4">
-            <SidebarTrigger />
-            <div className="ml-auto flex items-center gap-4">
-              <span className="text-sm font-medium text-muted-foreground">
-                Olá, {profile.full_name}
+        <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:px-4">
+            <SidebarTrigger className="h-9 w-9" />
+            <span className="font-semibold sm:hidden">Congregação</span>
+            <div className="ml-auto flex min-w-0 items-center gap-4">
+              <span className="truncate text-sm font-medium text-muted-foreground">
+                <span className="hidden sm:inline">Olá, </span>
+                {profile.full_name}
               </span>
             </div>
           </header>
-          <main className="flex-1 p-6 bg-background overflow-auto">
+          <main className="flex-1 overflow-auto bg-background p-4 sm:p-6">
             {children}
           </main>
-          <footer className="p-4 border-t bg-card text-center text-xs text-muted-foreground">
+          <footer className="border-t bg-card p-4 text-center text-xs text-muted-foreground">
             © Copyright 2026 Eder Dias | Desenvolvido por Eder Dias
           </footer>
         </div>

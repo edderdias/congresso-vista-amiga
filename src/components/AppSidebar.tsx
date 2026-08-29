@@ -39,11 +39,17 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ userProfile }: AppSidebarProps) {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const navigate = useNavigate();
-  const collapsed = state === "collapsed";
+  const collapsed = state === "collapsed" && !isMobile;
+
+  // No celular, fecha o menu (Sheet) ao navegar ou sair.
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   const handleLogout = async () => {
+    closeOnMobile();
     const { error } = await supabase.auth.signOut();
     if (error) toast.error("Erro ao sair");
     else navigate("/auth");
@@ -55,20 +61,20 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
   });
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarContent>
         <div className="p-4 border-b border-sidebar-border">
           {!collapsed && <h2 className="text-xl font-bold text-sidebar-foreground">Congregação</h2>}
         </div>
-        
+
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === "/"} className={({ isActive }) => isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50"}>
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <NavLink to={item.url} end={item.url === "/"} onClick={closeOnMobile} className={({ isActive }) => isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "hover:bg-sidebar-accent/50"}>
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>

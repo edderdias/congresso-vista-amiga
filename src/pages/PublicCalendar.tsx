@@ -78,7 +78,8 @@ export default function PublicCalendar() {
         </div>
 
         <Card className="shadow-xl border-none overflow-hidden">
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
+            <div className="min-w-[820px]">
             <div className="grid grid-cols-7 bg-primary text-primary-foreground">
               {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(d => (
                 <div key={d} className="py-3 text-center text-sm font-bold border-r border-primary-foreground/20 last:border-0">{d}</div>
@@ -166,6 +167,7 @@ export default function PublicCalendar() {
                   );
                 })
               )}
+            </div>
             </div>
           </CardContent>
         </Card>
