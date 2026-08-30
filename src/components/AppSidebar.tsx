@@ -63,7 +63,7 @@ export function AppSidebar({ userProfile }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="p-4 pt-[calc(1rem+env(safe-area-inset-top))] border-b border-sidebar-border">
           {!collapsed && <h2 className="text-xl font-bold text-sidebar-foreground">Congregação</h2>}
         </div>
 

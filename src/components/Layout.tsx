@@ -83,7 +83,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex min-h-screen w-full">
         <AppSidebar userProfile={profile} />
         <div className="flex flex-1 flex-col min-w-0 overflow-x-hidden">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card px-3 sm:px-4">
+          <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-card px-3 pt-[env(safe-area-inset-top)] sm:px-4">
             <SidebarTrigger className="h-9 w-9" />
             <span className="font-semibold sm:hidden">Congregação</span>
             <div className="ml-auto flex min-w-0 items-center gap-4">
@@ -96,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
           <main className="flex-1 overflow-auto bg-background p-4 sm:p-6">
             {children}
           </main>
-          <footer className="border-t bg-card p-4 text-center text-xs text-muted-foreground">
+          <footer className="border-t bg-card p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground">
             © Copyright 2026 Eder Dias | Desenvolvido por Eder Dias
           </footer>
         </div>
