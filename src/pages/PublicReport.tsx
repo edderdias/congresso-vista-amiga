@@ -126,7 +126,7 @@ export default function PublicReport() {
     const creditsVal = isRegularPioneer ? Number(formData.credits || 0) : 0;
     const totalHoursVal = hoursVal + creditsVal;
 
-    if (totalHoursVal > 55) {
+    if (creditsVal > 0 && totalHoursVal > 55) {
       toast.error("A soma de Horas e Créditos não pode ultrapassar 55 horas.");
       return;
     }
@@ -303,9 +303,8 @@ export default function PublicReport() {
                 <Label htmlFor="hours">Horas</Label>
                 <Input 
                   id="hours"
-                  type="number" 
+                  type="number"
                   min="0"
-                  max="55"
                   className="w-full"
                   value={formData.hours}
                   onChange={e => setFormData({...formData, hours: parseInt(e.target.value) || 0})}
