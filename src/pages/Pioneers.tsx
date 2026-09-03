@@ -8,10 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, subMonths, isAfter, isBefore, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
-import { Star, TrendingUp, AlertCircle, CheckCircle2, Users, Calendar } from "lucide-react";
+import { Star, TrendingUp, AlertCircle, CheckCircle2, Users, Calendar, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { dedupeReports, reportTotalHours } from "@/lib/reports";
 
 export default function Pioneers() {
   const [pioneers, setPioneers] = useState<any[]>([]);
@@ -19,6 +22,21 @@ export default function Pioneers() {
   const [loading, setLoading] = useState(true);
   const [serviceYearLabel, setServiceYearLabel] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>((new Date().getMonth() + 1).toString());
+  const [filterName, setFilterName] = useState("");
+
+  const currentServiceYearStart = (() => {
+    const now = new Date();
+    let s = now.getFullYear();
+    if (now.getMonth() < 8) s--;
+    return s;
+  })();
+
+  const [filterServiceYear, setFilterServiceYear] = useState<string>(currentServiceYearStart.toString());
+
+  const serviceYearOptions = Array.from({ length: 6 }, (_, i) => {
+    const s = currentServiceYearStart - i;
+    return { v: s.toString(), l: `${s}/${s + 1}` };
+  });
 
   const months = [
     { v: "9", l: "Setembro" }, { v: "10", l: "Outubro" }, { v: "11", l: "Novembro" }, { v: "12", l: "Dezembro" },
@@ -28,16 +46,14 @@ export default function Pioneers() {
 
   useEffect(() => {
     loadData();
-  }, [filterMonth]);
+  }, [filterMonth, filterServiceYear]);
 
   const loadData = async () => {
     setLoading(true);
-    
-    const now = new Date();
-    let startYear = now.getFullYear();
-    if (now.getMonth() < 8) startYear--; // Se antes de Setembro, o ano de serviço começou em Setembro do ano anterior
+
+    const startYear = parseInt(filterServiceYear);
     const endYear = startYear + 1;
-    
+
     setServiceYearLabel(`${startYear}/${endYear}`);
 
     // 1. Buscar todos os publicadores que tenham "Pioneiro Regular" no array de privilégios
@@ -56,10 +72,20 @@ export default function Pioneers() {
     );
 
     // 2. Buscar relatórios estritamente dentro do ano de serviço (Setembro do ano de início a Agosto do ano final)
-    const { data: reports } = await supabase
-      .from("preaching_reports")
-      .select("*")
-      .or(`and(year.eq.${startYear},month.gte.9),and(year.eq.${endYear},month.lte.8)`);
+    //    Busca só os relatórios dos pioneiros: puxar os da congregação inteira
+    //    passava do limite de 1000 linhas por resposta do Supabase e cortava
+    //    meses silenciosamente, deixando a soma menor que a do cartão.
+    const pioneerIds = regularPioneers.map(p => p.id);
+    const { data: rawReports } = pioneerIds.length
+      ? await supabase
+          .from("preaching_reports")
+          .select("*")
+          .in("publisher_id", pioneerIds)
+          .or(`and(year.eq.${startYear},month.gte.9),and(year.eq.${endYear},month.lte.8)`)
+      : { data: [] as any[] };
+
+    // Um lançamento por mês, igual ao cartão do publicador
+    const reports = dedupeReports(rawReports || []);
 
     // 3. Calcular meses decorridos no ano de serviço até o mês selecionado
     const selectedM = parseInt(filterMonth);
@@ -83,12 +109,7 @@ export default function Pioneers() {
       });
 
       const totalCredits = pReports.reduce((acc, r) => acc + (r.credits || 0), 0);
-      const totalHours = pReports.reduce((acc, r) => {
-        const reportTotal = r.total_hours !== null && r.total_hours !== undefined 
-          ? r.total_hours 
-          : ((r.hours || 0) + (r.credits || 0));
-        return acc + reportTotal;
-      }, 0);
+      const totalHours = pReports.reduce((acc, r) => acc + reportTotalHours(r), 0);
 
       const totalStudies = pReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0);
       const avgHours = totalHours / validMonthsCount;
@@ -119,12 +140,7 @@ export default function Pioneers() {
       
       return {
         name: monthNames[m],
-        horas: monthReports.reduce((acc, r) => {
-          const reportTotal = r.total_hours !== null && r.total_hours !== undefined 
-            ? r.total_hours 
-            : ((r.hours || 0) + (r.credits || 0));
-          return acc + reportTotal;
-        }, 0),
+        horas: monthReports.reduce((acc, r) => acc + reportTotalHours(r), 0),
         estudos: monthReports.reduce((acc, r) => acc + (r.bible_studies || 0), 0)
       };
     });
@@ -133,6 +149,15 @@ export default function Pioneers() {
     setChartData(monthlyStats);
     setLoading(false);
   };
+
+  // Busca por nome ignorando acentos e maiúsculas ("jose" acha "José")
+  const normalizeName = (value: string) =>
+    value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+  const nameQuery = normalizeName(filterName.trim());
+  const filteredPioneers = nameQuery
+    ? pioneers.filter(p => normalizeName(p.full_name || "").includes(nameQuery))
+    : pioneers;
 
   if (loading) return <div className="p-8 text-center">Carregando dados dos pioneiros...</div>;
 
@@ -146,9 +171,35 @@ export default function Pioneers() {
           </h1>
           <p className="text-muted-foreground">Acompanhamento do ano de serviço {serviceYearLabel}</p>
         </div>
-        <Badge variant="outline" className="text-sm py-1 px-3 border-amber-200 bg-amber-50 text-amber-700">
-          Média alvo: 50h / mês
-        </Badge>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border">
+            <Label className="text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+              <Calendar className="h-3 w-3" /> Ano letivo:
+            </Label>
+            <Select
+              value={filterServiceYear}
+              onValueChange={(v) => {
+                setFilterServiceYear(v);
+                // Anos anteriores já estão completos: calcular o ano de serviço inteiro
+                setFilterMonth(v === currentServiceYearStart.toString()
+                  ? (new Date().getMonth() + 1).toString()
+                  : "8");
+              }}
+            >
+              <SelectTrigger className="w-[120px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceYearOptions.map(y => (
+                  <SelectItem key={y.v} value={y.v}>{y.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="outline" className="text-sm py-1 px-3 border-amber-200 bg-amber-50 text-amber-700">
+            Média alvo: 50h / mês
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -228,22 +279,48 @@ export default function Pioneers() {
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <CardTitle>Lista de Acompanhamento</CardTitle>
-            <CardDescription>Média calculada de Setembro até o mês selecionado</CardDescription>
+            <CardDescription>
+              Média calculada de Setembro até o mês selecionado
+              {nameQuery && ` — mostrando ${filteredPioneers.length} de ${pioneers.length} pioneiros`}
+            </CardDescription>
           </div>
-          <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border">
-            <Label className="text-xs font-bold flex items-center gap-1 whitespace-nowrap">
-              <Calendar className="h-3 w-3" /> Calcular até:
-            </Label>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger className="w-[140px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map(m => (
-                  <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="relative w-full sm:w-[220px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar pelo nome do pioneiro"
+                value={filterName}
+                onChange={e => setFilterName(e.target.value)}
+                className="h-9 pl-9 pr-9 text-xs"
+              />
+              {filterName && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFilterName("")}
+                  title="Limpar filtro"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border">
+              <Label className="text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+                <Calendar className="h-3 w-3" /> Calcular até:
+              </Label>
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map(m => (
+                    <SelectItem key={m.v} value={m.v}>{m.l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -262,14 +339,16 @@ export default function Pioneers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pioneers.length === 0 ? (
+                {filteredPioneers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhum pioneiro regular encontrado.
+                      {nameQuery
+                        ? `Nenhum pioneiro encontrado com "${filterName.trim()}".`
+                        : "Nenhum pioneiro regular encontrado."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  pioneers.map((p) => (
+                  filteredPioneers.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-bold">{p.full_name}</TableCell>
                       <TableCell>G{p.groups?.group_number || "-"}</TableCell>

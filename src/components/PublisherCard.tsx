@@ -3,27 +3,49 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { dedupeReports, reportTotalHours } from "@/lib/reports";
 
 interface PublisherCardProps {
   publisher: any;
   reports: any[];
+  /** Ano em que o ano de serviço começa (Setembro deste ano a Agosto do seguinte). */
+  serviceYearStart: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function PublisherCard({ publisher, reports, open, onOpenChange }: PublisherCardProps) {
+/** Marca "X" feita com borda + texto: imprime mesmo sem "gráficos de plano de fundo". */
+function Mark({ checked }: { checked: boolean }) {
+  return (
+    <span className="mx-auto flex h-[15px] w-[15px] items-center justify-center border border-black text-[11px] font-black leading-none">
+      {checked ? "X" : ""}
+    </span>
+  );
+}
+
+/** Remove o marcador legado "[Créditos: N]" que ficava embutido na observação. */
+const cleanNotes = (raw?: string | null) =>
+  (raw || "").replace(/\[Créditos:\s*\d+\]\s*/gi, "").trim();
+
+/**
+ * Participou no campo: vale o campo explícito do relatório, porque o publicador
+ * comum apenas marca "participei", sem informar horas. Relatórios antigos sem
+ * o campo caem no cálculo por horas/estudos.
+ */
+const didParticipate = (r: any) => {
+  if (!r) return false;
+  if (r.participated !== null && r.participated !== undefined) return !!r.participated;
+  return reportTotalHours(r) > 0 || (r.bible_studies || 0) > 0;
+};
+
+export function PublisherCard({ publisher, reports, serviceYearStart, open, onOpenChange }: PublisherCardProps) {
   if (!publisher) return null;
 
-  // Determinar o ano de serviço atual (Setembro a Agosto)
-  const now = new Date();
-  let startYear = now.getFullYear();
-  if (now.getMonth() < 8) startYear--; // Se estamos antes de Setembro, o ano começou no ano anterior
+  // Ano de serviço escolhido ao abrir o cartão: Setembro deste ano a Agosto do seguinte
+  const startYear = serviceYearStart;
 
   const months = [
     { name: "Setembro", month: 9 }, { name: "Outubro", month: 10 }, { name: "Novembro", month: 11 }, { name: "Dezembro", month: 12 },
@@ -31,14 +53,49 @@ export function PublisherCard({ publisher, reports, open, onOpenChange }: Publis
     { name: "Maio", month: 5 }, { name: "Junho", month: 6 }, { name: "Julho", month: 7 }, { name: "Agosto", month: 8 }
   ];
 
+  /**
+   * Pioneiro auxiliar é mês a mês: normalmente vem do próprio relatório, pois
+   * pode ser auxiliar em um mês e não no outro. Quando o relatório é antigo e
+   * não tem pioneer_status, usa o período cadastrado no publicador (tempo
+   * indeterminado ou até o mês final).
+   */
+  const isAuxPioneer = (report: any, month: number, year: number) => {
+    if (!report) return false;
+    if (report.pioneer_status) return report.pioneer_status === "pioneiro_auxiliar";
+
+    if (!publisher.privileges?.includes("Pioneiro Auxiliar")) return false;
+    if (publisher.aux_pioneer_mode === "mes_final" && publisher.aux_pioneer_end_month) {
+      const [endYear, endMonth] = publisher.aux_pioneer_end_month.split("-").map(Number);
+      if (!endYear || !endMonth) return true;
+      return year * 12 + month <= endYear * 12 + endMonth;
+    }
+    return true;
+  };
+
+  // Um lançamento por mês, igual à página de Pioneiros
+  const monthlyReports = dedupeReports(reports || []);
+
   const serviceYearReports = months.map(m => {
     const year = m.month >= 9 ? startYear : startYear + 1;
-    const report = reports.find(r => r.month === m.month && r.year === year);
-    return { ...m, report };
+    const report = monthlyReports.find(r => r.month === m.month && r.year === year);
+    return {
+      ...m,
+      year,
+      report,
+      participated: didParticipate(report),
+      studies: report?.bible_studies || 0,
+      auxPioneer: isAuxPioneer(report, m.month, year),
+      hours: reportTotalHours(report),
+      credits: report?.credits || 0,
+      notes: cleanNotes(report?.notes)
+    };
   });
 
-  const totalHours = serviceYearReports.reduce((acc, m) => acc + (m.report?.hours || 0), 0);
-  const totalStudies = serviceYearReports.reduce((acc, m) => acc + (m.report?.bible_studies || 0), 0);
+  const totalHours = serviceYearReports.reduce((acc, m) => acc + m.hours, 0);
+  const totalStudies = serviceYearReports.reduce((acc, m) => acc + m.studies, 0);
+  const totalCredits = serviceYearReports.reduce((acc, m) => acc + m.credits, 0);
+  const participatedMonths = serviceYearReports.filter(m => m.participated).length;
+  const auxPioneerMonths = serviceYearReports.filter(m => m.auxPioneer).length;
 
   const handlePrint = () => {
     window.print();
@@ -46,23 +103,42 @@ export function PublisherCard({ publisher, reports, open, onOpenChange }: Publis
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto print:p-0 print:max-w-none print:shadow-none print:border-none">
+      <DialogContent className="publisher-card-dialog max-w-4xl max-h-[95vh] overflow-y-auto">
         <DialogHeader className="print:hidden">
           <div className="flex justify-between items-center pr-8">
             <DialogTitle className="text-xl font-bold">Cartão de Registro de Publicador</DialogTitle>
             <Button variant="outline" size="sm" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" /> Imprimir
+              <Printer className="h-4 w-4 mr-2" /> Imprimir / Salvar PDF
             </Button>
           </div>
         </DialogHeader>
-        
-        <div className="space-y-6 py-4 font-sans text-sm print:m-0">
+
+        <div className="space-y-6 py-4 font-sans text-sm">
           <style>{`
             @media print {
-              body * { visibility: hidden; }
-              .print-content, .print-content * { visibility: visible; }
-              .print-content { position: absolute; left: 0; top: 0; width: 100%; }
+              @page { size: A4 portrait; margin: 10mm; }
+              html, body { background: #fff !important; }
+              /* O diálogo é renderizado fora do #root, então dá para tirar o app da impressão */
+              #root { display: none !important; }
+              /* Esconde o overlay escuro e tudo que não faz parte do cartão */
+              body * { visibility: hidden !important; }
+              .print-content, .print-content * { visibility: visible !important; }
               .print-hidden { display: none !important; }
+              .publisher-card-dialog {
+                position: static !important;
+                transform: none !important;
+                display: block !important;
+                width: 100% !important;
+                max-width: none !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+              }
+              .print-content { width: 100% !important; }
+              table { page-break-inside: auto; }
+              tr { page-break-inside: avoid; break-inside: avoid; }
             }
           `}</style>
 
@@ -107,44 +183,58 @@ export function PublisherCard({ publisher, reports, open, onOpenChange }: Publis
                 <TableHeader className="bg-slate-100 border-b-2 border-black">
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-[120px] font-black text-black border-r border-black">ANO: {startYear}/{startYear + 1}</TableHead>
-                    <TableHead className="text-center font-black text-black border-r border-black">Participou</TableHead>
-                    <TableHead className="text-center font-black text-black border-r border-black">Estudos</TableHead>
-                    <TableHead className="text-center font-black text-black border-r border-black">P. Aux</TableHead>
-                    <TableHead className="text-center font-black text-black border-r border-black">Horas</TableHead>
+                    <TableHead className="w-[70px] text-center font-black text-black border-r border-black">Participou</TableHead>
+                    <TableHead className="w-[60px] text-center font-black text-black border-r border-black">Estudos</TableHead>
+                    <TableHead className="w-[55px] text-center font-black text-black border-r border-black">P. Aux</TableHead>
+                    <TableHead className="w-[60px] text-center font-black text-black border-r border-black">Horas</TableHead>
                     <TableHead className="font-black text-black">Observações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {serviceYearReports.map((m, i) => (
                     <TableRow key={i} className="h-9 border-b border-slate-300 hover:bg-transparent">
-                      <TableCell className="font-bold bg-slate-50 border-r border-black">{m.name}</TableCell>
-                      <TableCell className="text-center border-r border-black">
-                        <div className="flex justify-center">
-                          <Checkbox checked={!!m.report?.hours || !!m.report?.bible_studies || m.report?.notes?.toLowerCase().includes("participou")} disabled className="border-black" />
-                        </div>
+                      <TableCell className="font-bold bg-slate-50 border-r border-black">
+                        {m.name} <span className="text-[9px] font-normal text-slate-500">/{String(m.year).slice(-2)}</span>
                       </TableCell>
-                      <TableCell className="text-center font-bold border-r border-black">{m.report?.bible_studies || ""}</TableCell>
                       <TableCell className="text-center border-r border-black">
-                        <div className="flex justify-center">
-                          <Checkbox checked={m.report?.pioneer_status === 'pioneiro_auxiliar'} disabled className="border-black" />
-                        </div>
+                        <Mark checked={m.participated} />
                       </TableCell>
-                      <TableCell className="text-center font-bold border-r border-black">{m.report?.hours || ""}</TableCell>
+                      <TableCell className="text-center font-bold border-r border-black">{m.studies || ""}</TableCell>
+                      <TableCell className="text-center border-r border-black">
+                        <Mark checked={m.auxPioneer} />
+                      </TableCell>
+                      <TableCell className="text-center font-bold border-r border-black leading-tight">
+                        {m.hours || ""}
+                        {m.credits > 0 && (
+                          <span className="block text-[8px] font-normal text-slate-500">
+                            {m.report?.hours || 0}+{m.credits}c
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-[11px] leading-tight">
-                        {m.report?.notes || ""}
+                        {m.notes}
                       </TableCell>
                     </TableRow>
                   ))}
-                  <TableRow className="bg-slate-100 font-black border-t-2 border-black">
-                    <TableCell className="text-right border-r border-black" colSpan={2}>TOTAIS:</TableCell>
+                  <TableRow className="bg-slate-100 font-black border-t-2 border-black hover:bg-slate-100">
+                    <TableCell className="text-right border-r border-black">TOTAIS:</TableCell>
+                    <TableCell className="text-center border-r border-black">{participatedMonths}</TableCell>
                     <TableCell className="text-center border-r border-black">{totalStudies}</TableCell>
-                    <TableCell className="border-r border-black"></TableCell>
+                    <TableCell className="text-center border-r border-black">{auxPioneerMonths}</TableCell>
                     <TableCell className="text-center border-r border-black">{totalHours}</TableCell>
-                    <TableCell></TableCell>
+                    <TableCell className="text-[10px] font-normal">
+                      {totalCredits > 0 ? `Inclui ${totalCredits}h de crédito` : ""}
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </div>
+
+            <p className="text-[9px] text-slate-500 leading-tight">
+              Participou: mês com participação no ministério, mesmo sem horas informadas.
+              P. Aux: mês servido como pioneiro auxiliar. Totais, na ordem: meses de participação,
+              estudos, meses de pioneiro auxiliar e horas do ano de serviço.
+            </p>
 
             <div className="mt-4 text-[10px] text-slate-400 italic text-right">
               Gerado em {format(new Date(), "dd/MM/yyyy HH:mm")}

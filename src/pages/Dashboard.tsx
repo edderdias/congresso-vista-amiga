@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
-import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock, BarChart3 } from "lucide-react";
+import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock, BarChart3, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -24,12 +26,29 @@ export default function Dashboard() {
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [prevMonthName, setPrevMonthName] = useState("");
 
+  const currentServiceYearStart = (() => {
+    const now = new Date();
+    let s = now.getFullYear();
+    if (now.getMonth() < 8) s--;
+    return s;
+  })();
+
+  const [filterServiceYear, setFilterServiceYear] = useState<string>(currentServiceYearStart.toString());
+
+  const serviceYearOptions = Array.from({ length: 6 }, (_, i) => {
+    const s = currentServiceYearStart - i;
+    return { v: s.toString(), l: `${s}/${s + 1}` };
+  });
+
   useEffect(() => {
     loadStats();
-    loadTheocraticData();
     loadPreviousMonthReports();
-    loadAttendanceData();
   }, []);
+
+  useEffect(() => {
+    loadTheocraticData();
+    loadAttendanceData();
+  }, [filterServiceYear]);
 
   const loadStats = async () => {
     const { count: totalPubs } = await supabase
@@ -98,9 +117,7 @@ export default function Dashboard() {
   };
 
   const loadTheocraticData = async () => {
-    const now = new Date();
-    let startYear = now.getFullYear();
-    if (now.getMonth() < 8) startYear--; // Ciclo começa em Setembro (mês 8 no JS)
+    const startYear = parseInt(filterServiceYear);
 
     const { data } = await supabase
       .from("preaching_reports")
@@ -139,9 +156,7 @@ export default function Dashboard() {
   };
 
   const loadAttendanceData = async () => {
-    const now = new Date();
-    let startYear = now.getFullYear();
-    if (now.getMonth() < 8) startYear--;
+    const startYear = parseInt(filterServiceYear);
 
     const { data } = await supabase
       .from("attendance")
@@ -210,9 +225,26 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral da congregação (Ciclo Setembro - Agosto)</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral da congregação (Ciclo Setembro - Agosto)</p>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border">
+          <Label className="text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+            <Calendar className="h-3 w-3" /> Ano letivo:
+          </Label>
+          <Select value={filterServiceYear} onValueChange={setFilterServiceYear}>
+            <SelectTrigger className="w-[120px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {serviceYearOptions.map(y => (
+                <SelectItem key={y.v} value={y.v}>{y.l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

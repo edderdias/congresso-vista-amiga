@@ -48,6 +48,24 @@ export default function Publishers() {
   const [selectedPubForCard, setSelectedPubForCard] = useState<any>(null);
   const [pubReports, setPubReports] = useState<any[]>([]);
 
+  // Ano letivo perguntado antes de abrir o cartão
+  const currentServiceYearStart = (() => {
+    const now = new Date();
+    let s = now.getFullYear();
+    if (now.getMonth() < 8) s--; // Antes de Setembro o ano de serviço começou no ano anterior
+    return s;
+  })();
+
+  const serviceYearOptions = Array.from({ length: 6 }, (_, i) => {
+    const s = currentServiceYearStart - i;
+    return { v: s.toString(), l: `${s}/${s + 1}` };
+  });
+
+  const [yearPromptOpen, setYearPromptOpen] = useState(false);
+  const [pubForYearPrompt, setPubForYearPrompt] = useState<any>(null);
+  const [cardServiceYear, setCardServiceYear] = useState(currentServiceYearStart.toString());
+  const [loadingCard, setLoadingCard] = useState(false);
+
   const [formData, setFormData] = useState({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
     privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none",
@@ -63,16 +81,29 @@ export default function Publishers() {
     setPublishers(pubsData?.map(p => ({...p, group_number: groupsData?.find(g => g.id === p.group_id)?.group_number})) || []);
   };
 
-  const handleViewCard = async (pub: any) => {
-    setSelectedPubForCard(pub);
+  // Clicar no cartão pergunta primeiro qual ano letivo deve ser exibido
+  const handleViewCard = (pub: any) => {
+    setPubForYearPrompt(pub);
+    setCardServiceYear(currentServiceYearStart.toString());
+    setYearPromptOpen(true);
+  };
+
+  const handleConfirmViewCard = async () => {
+    const pub = pubForYearPrompt;
+    if (!pub) return;
+
+    setLoadingCard(true);
     const { data } = await supabase
       .from("preaching_reports")
       .select("*")
       .eq("publisher_id", pub.id)
       .order("year", { ascending: false })
       .order("month", { ascending: false });
-    
+    setLoadingCard(false);
+
     setPubReports(data || []);
+    setSelectedPubForCard(pub);
+    setYearPromptOpen(false);
     setCardOpen(true);
   };
 
@@ -338,7 +369,45 @@ export default function Publishers() {
         </CardContent>
       </Card>
 
-      <PublisherCard publisher={selectedPubForCard} reports={pubReports} open={cardOpen} onOpenChange={setCardOpen} />
+      <Dialog open={yearPromptOpen} onOpenChange={setYearPromptOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cartão de Registro de Publicador</DialogTitle>
+            <DialogDescription>
+              Selecione o ano letivo do cartão de {pubForYearPrompt?.full_name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label>Ano letivo (Setembro a Agosto)</Label>
+            <Select value={cardServiceYear} onValueChange={setCardServiceYear}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceYearOptions.map(y => (
+                  <SelectItem key={y.v} value={y.v}>{y.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setYearPromptOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmViewCard} disabled={loadingCard}>
+              {loadingCard ? "Carregando..." : "Exibir cartão"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <PublisherCard
+        publisher={selectedPubForCard}
+        reports={pubReports}
+        serviceYearStart={parseInt(cardServiceYear)}
+        open={cardOpen}
+        onOpenChange={setCardOpen}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
