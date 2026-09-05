@@ -1,12 +1,41 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend, ComposedChart } from "recharts";
 import { Users, MapPin, LayoutGrid, TrendingUp, FileText, Star, Clock, BarChart3, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { isAuxPioneerInMonth, type AuxPioneerInfo } from "@/lib/pioneiro";
+
+/**
+ * Reta de tendência por mínimos quadrados (regressão linear).
+ * Recebe os pontos observados {x, y} e devolve a função da reta (x -> y),
+ * ou null quando não há pelo menos 2 pontos com x diferentes.
+ */
+const linearTrend = (points: { x: number; y: number }[]): ((x: number) => number) | null => {
+  const n = points.length;
+  if (n < 2) return null;
+
+  const sumX = points.reduce((s, p) => s + p.x, 0);
+  const sumY = points.reduce((s, p) => s + p.y, 0);
+  const sumXY = points.reduce((s, p) => s + p.x * p.y, 0);
+  const sumXX = points.reduce((s, p) => s + p.x * p.x, 0);
+
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) return null;
+
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / n;
+  return (x: number) => intercept + slope * x;
+};
+
+/** Índice ano*12 + mês do mês atual: tudo antes disso é "mês fechado". */
+const currentMonthIndex = () => {
+  const now = new Date();
+  return now.getFullYear() * 12 + (now.getMonth() + 1);
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -92,8 +121,25 @@ export default function Dashboard() {
       .eq("year", year);
 
     if (data) {
+      // Só conta como pioneiro auxiliar quem estava habilitado para esse mês.
+      const publisherIds = [...new Set(data.map(r => r.publisher_id).filter(Boolean))];
+      const pubById = new Map<string, AuxPioneerInfo>();
+      if (publisherIds.length) {
+        const { data: pubs } = await supabase
+          .from("publishers")
+          .select("id, privileges, aux_pioneer_mode, aux_pioneer_start_month, aux_pioneer_end_month")
+          .in("id", publisherIds);
+        for (const p of (pubs || []) as unknown as (AuxPioneerInfo & { id: string })[]) {
+          pubById.set(p.id, p);
+        }
+      }
+
       const aggregated = data.reduce((acc, curr) => {
-        const status = curr.pioneer_status;
+        let status = curr.pioneer_status;
+        if (status === 'pioneiro_auxiliar') {
+          const pub = pubById.get(curr.publisher_id);
+          if (pub && !isAuxPioneerInMonth(pub, year, month)) status = 'publicador';
+        }
         if (status === 'publicador') {
           acc.pub.count++;
           acc.pub.studies += curr.bible_studies || 0;
@@ -141,13 +187,33 @@ export default function Dashboard() {
         return acc;
       }, {});
 
-      const formatted = monthsOrder.map(m => {
+      const nowYm = currentMonthIndex();
+
+      const base = monthsOrder.map((m, i) => {
         const targetYear = m >= 9 ? startYear : startYear + 1;
         const entry = Object.values(grouped).find((item: any) => item.month === m && item.year === targetYear);
         return {
           name: monthNames[m],
+          x: i,
+          ym: targetYear * 12 + m,
           horas: entry ? (entry as any).hours : 0,
           estudos: entry ? (entry as any).studies : 0,
+        };
+      });
+
+      // Tendência calculada só com meses fechados (até o mês anterior) que têm dados.
+      const fitPoints = base.filter(d => d.ym < nowYm && (d.horas > 0 || d.estudos > 0));
+      const horasTrend = linearTrend(fitPoints.map(d => ({ x: d.x, y: d.horas })));
+      const estudosTrend = linearTrend(fitPoints.map(d => ({ x: d.x, y: d.estudos })));
+
+      const formatted = base.map(d => {
+        const closed = d.ym < nowYm;
+        return {
+          name: d.name,
+          horas: d.horas,
+          estudos: d.estudos,
+          horasTrend: closed && horasTrend ? Math.max(0, Math.round(horasTrend(d.x))) : null,
+          estudosTrend: closed && estudosTrend ? Math.max(0, Math.round(estudosTrend(d.x))) : null,
         };
       });
 
@@ -197,18 +263,53 @@ export default function Dashboard() {
         }
       });
 
-      const formatted = monthsOrder.map(m => {
+      const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+      const nowYm = currentMonthIndex();
+
+      const base = monthsOrder.map((m, i) => {
         const targetYear = m >= 9 ? startYear : startYear + 1;
         const key = `${m}-${targetYear}`;
         const entry = grouped[key];
-        const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-        
+        const midIn = avg(entry?.mid_in || []);
+        const midZoom = avg(entry?.mid_zoom || []);
+        const endIn = avg(entry?.end_in || []);
+        const endZoom = avg(entry?.end_zoom || []);
         return {
           name: monthNames[m],
-          midIn: avg(entry?.mid_in || []),
-          midZoom: avg(entry?.mid_zoom || []),
-          endIn: avg(entry?.end_in || []),
-          endZoom: avg(entry?.end_zoom || []),
+          x: i,
+          ym: targetYear * 12 + m,
+          midIn, midZoom, midTotal: midIn + midZoom,
+          endIn, endZoom, endTotal: endIn + endZoom,
+        };
+      });
+
+      // Só meses fechados (até o mês anterior) e com assistência registrada entram no cálculo.
+      const midFit = base.filter(d => d.ym < nowYm && d.midTotal > 0);
+      const endFit = base.filter(d => d.ym < nowYm && d.endTotal > 0);
+      const trend = {
+        midIn: linearTrend(midFit.map(d => ({ x: d.x, y: d.midIn }))),
+        midZoom: linearTrend(midFit.map(d => ({ x: d.x, y: d.midZoom }))),
+        midTotal: linearTrend(midFit.map(d => ({ x: d.x, y: d.midTotal }))),
+        endIn: linearTrend(endFit.map(d => ({ x: d.x, y: d.endIn }))),
+        endZoom: linearTrend(endFit.map(d => ({ x: d.x, y: d.endZoom }))),
+        endTotal: linearTrend(endFit.map(d => ({ x: d.x, y: d.endTotal }))),
+      };
+
+      const at = (fn: ((x: number) => number) | null, closed: boolean, x: number) =>
+        closed && fn ? Math.max(0, Math.round(fn(x))) : null;
+
+      const formatted = base.map(d => {
+        const closed = d.ym < nowYm;
+        return {
+          name: d.name,
+          midIn: d.midIn, midZoom: d.midZoom,
+          endIn: d.endIn, endZoom: d.endZoom,
+          midInTrend: at(trend.midIn, closed, d.x),
+          midZoomTrend: at(trend.midZoom, closed, d.x),
+          midTotalTrend: at(trend.midTotal, closed, d.x),
+          endInTrend: at(trend.endIn, closed, d.x),
+          endZoomTrend: at(trend.endZoom, closed, d.x),
+          endTotalTrend: at(trend.endTotal, closed, d.x),
         };
       });
 
@@ -341,19 +442,22 @@ export default function Dashboard() {
               <BarChart3 className="h-5 w-5 text-blue-600" />
               Média Assistência: Meio de Semana
             </CardTitle>
-            <CardDescription>Média mensal presencial vs zoom</CardDescription>
+            <CardDescription>Média mensal presencial vs zoom · tendência até o mês anterior</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={attendanceData}>
+              <ComposedChart data={attendanceData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar name="Presencial" dataKey="midIn" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar name="Zoom" dataKey="midZoom" fill="#93c5fd" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Line name="Tendência Geral" type="linear" dataKey="midTotalTrend" stroke="#dc2626" strokeWidth={3} strokeDasharray="7 4" dot={false} activeDot={false} legendType="plainline" />
+                <Line name="Tendência Presencial" type="linear" dataKey="midInTrend" stroke="#ea580c" strokeWidth={2.5} dot={false} activeDot={false} legendType="plainline" />
+                <Line name="Tendência Zoom" type="linear" dataKey="midZoomTrend" stroke="#0891b2" strokeWidth={2.5} dot={false} activeDot={false} legendType="plainline" />
+              </ComposedChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -364,19 +468,22 @@ export default function Dashboard() {
               <BarChart3 className="h-5 w-5 text-purple-600" />
               Média Assistência: Fim de Semana
             </CardTitle>
-            <CardDescription>Média mensal presencial vs zoom</CardDescription>
+            <CardDescription>Média mensal presencial vs zoom · tendência até o mês anterior</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={attendanceData}>
+              <ComposedChart data={attendanceData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar name="Presencial" dataKey="endIn" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
                 <Bar name="Zoom" dataKey="endZoom" fill="#c4b5fd" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Line name="Tendência Geral" type="linear" dataKey="endTotalTrend" stroke="#dc2626" strokeWidth={3} strokeDasharray="7 4" dot={false} activeDot={false} legendType="plainline" />
+                <Line name="Tendência Presencial" type="linear" dataKey="endInTrend" stroke="#ea580c" strokeWidth={2.5} dot={false} activeDot={false} legendType="plainline" />
+                <Line name="Tendência Zoom" type="linear" dataKey="endZoomTrend" stroke="#0891b2" strokeWidth={2.5} dot={false} activeDot={false} legendType="plainline" />
+              </ComposedChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -386,18 +493,19 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Estudos Bíblicos</CardTitle>
-            <CardDescription>Quantidade de estudos por mês (Set - Ago)</CardDescription>
+            <CardDescription>Quantidade de estudos por mês (Set - Ago) · tendência até o mês anterior</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={theocraticData}>
+              <ComposedChart data={theocraticData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar name="Estudos" dataKey="estudos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Line name="Tendência" type="linear" dataKey="estudosTrend" stroke="#dc2626" strokeWidth={3} strokeDasharray="7 4" dot={false} activeDot={false} legendType="plainline" />
+              </ComposedChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -405,7 +513,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Horas de Pregação</CardTitle>
-            <CardDescription>Total de horas reportadas (Set - Ago)</CardDescription>
+            <CardDescription>Total de horas reportadas (Set - Ago) · tendência até o mês anterior</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -414,8 +522,9 @@ export default function Dashboard() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line name="Horas" type="monotone" dataKey="horas" stroke="hsl(var(--secondary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line name="Tendência" type="linear" dataKey="horasTrend" stroke="#dc2626" strokeWidth={3} strokeDasharray="7 4" dot={false} activeDot={false} legendType="plainline" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>

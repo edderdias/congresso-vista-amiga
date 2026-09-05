@@ -7,6 +7,7 @@ import { format, parseISO } from "date-fns";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { dedupeReports, reportTotalHours } from "@/lib/reports";
+import { isAuxPioneerInMonth } from "@/lib/pioneiro";
 
 interface PublisherCardProps {
   publisher: any;
@@ -57,19 +58,12 @@ export function PublisherCard({ publisher, reports, serviceYearStart, open, onOp
    * Pioneiro auxiliar é mês a mês: normalmente vem do próprio relatório, pois
    * pode ser auxiliar em um mês e não no outro. Quando o relatório é antigo e
    * não tem pioneer_status, usa o período cadastrado no publicador (tempo
-   * indeterminado ou até o mês final).
+   * indeterminado, um único mês ou intervalo de meses).
    */
   const isAuxPioneer = (report: any, month: number, year: number) => {
     if (!report) return false;
     if (report.pioneer_status) return report.pioneer_status === "pioneiro_auxiliar";
-
-    if (!publisher.privileges?.includes("Pioneiro Auxiliar")) return false;
-    if (publisher.aux_pioneer_mode === "mes_final" && publisher.aux_pioneer_end_month) {
-      const [endYear, endMonth] = publisher.aux_pioneer_end_month.split("-").map(Number);
-      if (!endYear || !endMonth) return true;
-      return year * 12 + month <= endYear * 12 + endMonth;
-    }
-    return true;
+    return isAuxPioneerInMonth(publisher, year, month);
   };
 
   // Um lançamento por mês, igual à página de Pioneiros

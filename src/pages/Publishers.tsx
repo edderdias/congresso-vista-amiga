@@ -19,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { PublisherCard } from "@/components/PublisherCard";
 import { differenceInYears, parseISO, isValid } from "date-fns";
+import { isAuxPioneerInMonth, normalizeAuxPioneerMode, type AuxPioneerMode } from "@/lib/pioneiro";
 
 const SECTIONS = {
   privileges: ["Ancião", "Servo Ministerial", "Pioneiro Regular", "Pioneiro Auxiliar", "Publicador Batizado", "Publicador não Batizado"],
@@ -66,11 +67,14 @@ export default function Publishers() {
   const [cardServiceYear, setCardServiceYear] = useState(currentServiceYearStart.toString());
   const [loadingCard, setLoadingCard] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const createEmptyForm = () => ({
     full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "" as any,
     privileges: [] as string[], hope: "" as any, status: "active" as any, group_id: "none",
-    aux_pioneer_mode: "indeterminado" as "indeterminado" | "mes_final", aux_pioneer_end_month: ""
+    aux_pioneer_mode: "indeterminado" as AuxPioneerMode,
+    aux_pioneer_start_month: "", aux_pioneer_end_month: ""
   });
+
+  const [formData, setFormData] = useState(createEmptyForm);
 
   useEffect(() => { loadData(); }, []);
 
@@ -109,7 +113,9 @@ export default function Publishers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { 
+    const isAux = formData.privileges.includes("Pioneiro Auxiliar");
+    const mode = formData.aux_pioneer_mode;
+    const payload = {
       full_name: formData.full_name,
       phone: formData.phone || null,
       birth_date: formData.birth_date || null,
@@ -119,8 +125,11 @@ export default function Publishers() {
       privileges: formData.privileges || [],
       status: formData.status,
       group_id: formData.group_id === "none" ? null : formData.group_id,
-      aux_pioneer_mode: formData.privileges.includes("Pioneiro Auxiliar") ? formData.aux_pioneer_mode : null,
-      aux_pioneer_end_month: formData.privileges.includes("Pioneiro Auxiliar") && formData.aux_pioneer_mode === "mes_final"
+      aux_pioneer_mode: isAux ? mode : null,
+      aux_pioneer_start_month: isAux && (mode === "mes_unico" || mode === "periodo")
+        ? (formData.aux_pioneer_start_month || null)
+        : null,
+      aux_pioneer_end_month: isAux && mode === "periodo"
         ? (formData.aux_pioneer_end_month || null)
         : null
     };
@@ -163,10 +172,11 @@ export default function Publishers() {
 
   const paginated = filtered.slice((currentPage - 1) * 10, currentPage * 10);
 
+  const now = new Date();
   const stats = {
     total: publishers.filter(p => !['mudou', 'removido'].includes(p.status)).length,
     regPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Regular") && !['mudou', 'removido'].includes(p.status)).length,
-    auxPioneers: publishers.filter(p => p.privileges?.includes("Pioneiro Auxiliar") && !['mudou', 'removido'].includes(p.status)).length,
+    auxPioneers: publishers.filter(p => !['mudou', 'removido'].includes(p.status) && isAuxPioneerInMonth(p, now.getFullYear(), now.getMonth() + 1)).length,
     inactive: publishers.filter(p => p.status === 'inactive').length
   };
 
@@ -193,7 +203,7 @@ export default function Publishers() {
           <h1 className="text-3xl font-bold text-foreground">Publicadores</h1>
           <p className="text-muted-foreground">Gerencie o cadastro de todos os membros</p>
         </div>
-        <Button onClick={() => { setEditingId(null); setFormData({full_name: "", phone: "", birth_date: "", baptism_date: "", gender: "", privileges: [], hope: "", status: "active", group_id: "none", aux_pioneer_mode: "indeterminado", aux_pioneer_end_month: ""}); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => { setEditingId(null); setFormData(createEmptyForm()); setOpen(true); }} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="h-4 w-4 mr-2" /> Novo Publicador
         </Button>
       </div>
@@ -349,7 +359,8 @@ export default function Publishers() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setFormData({
                           full_name: p.full_name, phone: p.phone || "", birth_date: p.birth_date || "", baptism_date: p.baptism_date || "",
                           gender: p.gender || "", privileges: p.privileges || [], hope: p.hope || "", status: p.status || "active", group_id: p.group_id || "none",
-                          aux_pioneer_mode: p.aux_pioneer_mode || "indeterminado", aux_pioneer_end_month: p.aux_pioneer_end_month || ""
+                          aux_pioneer_mode: normalizeAuxPioneerMode(p.aux_pioneer_mode),
+                          aux_pioneer_start_month: p.aux_pioneer_start_month || "", aux_pioneer_end_month: p.aux_pioneer_end_month || ""
                         }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
@@ -519,27 +530,55 @@ export default function Publishers() {
                   <Label className="text-green-800 font-bold text-sm">Período do Pioneiro Auxiliar</Label>
                   <RadioGroup
                     value={formData.aux_pioneer_mode}
-                    onValueChange={v => setFormData({ ...formData, aux_pioneer_mode: v as "indeterminado" | "mes_final" })}
-                    className="flex flex-col gap-2 sm:flex-row sm:gap-6"
+                    onValueChange={v => setFormData({ ...formData, aux_pioneer_mode: v as AuxPioneerMode })}
+                    className="flex flex-col gap-2"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="indeterminado" id="aux-indeterminado" className="text-green-600 border-green-300" />
                       <Label htmlFor="aux-indeterminado" className="cursor-pointer text-sm">Tempo indeterminado</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="mes_final" id="aux-mes-final" className="text-green-600 border-green-300" />
-                      <Label htmlFor="aux-mes-final" className="cursor-pointer text-sm">Mês final</Label>
+                      <RadioGroupItem value="mes_unico" id="aux-mes-unico" className="text-green-600 border-green-300" />
+                      <Label htmlFor="aux-mes-unico" className="cursor-pointer text-sm">Um único mês</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="periodo" id="aux-periodo" className="text-green-600 border-green-300" />
+                      <Label htmlFor="aux-periodo" className="cursor-pointer text-sm">Mais de um mês</Label>
                     </div>
                   </RadioGroup>
-                  {formData.aux_pioneer_mode === "mes_final" && (
+
+                  {formData.aux_pioneer_mode === "mes_unico" && (
                     <div className="space-y-1">
-                      <Label className="text-green-800 font-bold text-sm">Último mês de serviço</Label>
+                      <Label className="text-green-800 font-bold text-sm">Mês em que servirá como pioneiro auxiliar</Label>
                       <Input
                         type="month"
-                        value={formData.aux_pioneer_end_month}
-                        onChange={e => setFormData({ ...formData, aux_pioneer_end_month: e.target.value })}
+                        value={formData.aux_pioneer_start_month}
+                        onChange={e => setFormData({ ...formData, aux_pioneer_start_month: e.target.value })}
                         className="border-green-200 w-full sm:w-56"
                       />
+                    </div>
+                  )}
+
+                  {formData.aux_pioneer_mode === "periodo" && (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+                      <div className="space-y-1">
+                        <Label className="text-green-800 font-bold text-sm">Mês de início</Label>
+                        <Input
+                          type="month"
+                          value={formData.aux_pioneer_start_month}
+                          onChange={e => setFormData({ ...formData, aux_pioneer_start_month: e.target.value })}
+                          className="border-green-200 w-full sm:w-56"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-green-800 font-bold text-sm">Mês de fim</Label>
+                        <Input
+                          type="month"
+                          value={formData.aux_pioneer_end_month}
+                          onChange={e => setFormData({ ...formData, aux_pioneer_end_month: e.target.value })}
+                          className="border-green-200 w-full sm:w-56"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

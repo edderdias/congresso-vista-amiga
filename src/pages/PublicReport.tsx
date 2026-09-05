@@ -13,11 +13,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolvePioneerStatus } from "@/lib/pioneiro";
 
 export default function PublicReport() {
   const { groupNumber } = useParams();
   const [groups, setGroups] = useState<{ id: string; group_number: number }[]>([]);
-  const [publishers, setPublishers] = useState<{ id: string; full_name: string; privileges: string[] }[]>([]);
+  const [publishers, setPublishers] = useState<{
+    id: string;
+    full_name: string;
+    privileges: string[];
+    aux_pioneer_mode: string | null;
+    aux_pioneer_start_month: string | null;
+    aux_pioneer_end_month: string | null;
+  }[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [selectedPublisherId, setSelectedPublisherId] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
@@ -94,7 +102,7 @@ export default function PublicReport() {
   const loadPublishers = async (groupId: string) => {
     const { data } = await supabase
       .from("publishers")
-      .select("id, full_name, privileges")
+      .select("id, full_name, privileges, aux_pioneer_mode, aux_pioneer_start_month, aux_pioneer_end_month")
       .eq("group_id", groupId)
       .not("status", "in", '("mudou","removido")')
       .order("full_name");
@@ -148,9 +156,8 @@ export default function PublicReport() {
       return;
     }
 
-    let pioneerStatus: "publicador" | "pioneiro_auxiliar" | "pioneiro_regular" = "publicador";
-    if (publisher.privileges.includes("Pioneiro Regular")) pioneerStatus = "pioneiro_regular";
-    else if (publisher.privileges.includes("Pioneiro Auxiliar")) pioneerStatus = "pioneiro_auxiliar";
+    // Auxiliar vale só no mês/período cadastrado; fora dele o relatório conta como publicador.
+    const pioneerStatus = resolvePioneerStatus(publisher, formData.year, parseInt(formData.month));
 
     const { error } = await supabase.from("preaching_reports").insert([{
       publisher_id: publisher.id,

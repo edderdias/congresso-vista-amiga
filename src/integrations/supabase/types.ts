@@ -57,7 +57,8 @@ export type Database = {
           hope: 'anointed' | 'other_sheep' | null
           status: 'active' | 'inactive' | 'repreendido' | 'removido' | 'mudou'
           group_id: string | null
-          aux_pioneer_mode: 'indeterminado' | 'mes_final' | null
+          aux_pioneer_mode: 'indeterminado' | 'mes_unico' | 'periodo' | null
+          aux_pioneer_start_month: string | null
           aux_pioneer_end_month: string | null
           created_at: string | null
           updated_at: string | null
@@ -73,7 +74,8 @@ export type Database = {
           hope?: 'anointed' | 'other_sheep' | null
           status?: 'active' | 'inactive' | 'repreendido' | 'removido' | 'mudou'
           group_id?: string | null
-          aux_pioneer_mode?: 'indeterminado' | 'mes_final' | null
+          aux_pioneer_mode?: 'indeterminado' | 'mes_unico' | 'periodo' | null
+          aux_pioneer_start_month?: string | null
           aux_pioneer_end_month?: string | null
           created_at?: string | null
           updated_at?: string | null
@@ -89,7 +91,8 @@ export type Database = {
           hope?: 'anointed' | 'other_sheep' | null
           status?: 'active' | 'inactive' | 'repreendido' | 'removido' | 'mudou'
           group_id?: string | null
-          aux_pioneer_mode?: 'indeterminado' | 'mes_final' | null
+          aux_pioneer_mode?: 'indeterminado' | 'mes_unico' | 'periodo' | null
+          aux_pioneer_start_month?: string | null
           aux_pioneer_end_month?: string | null
           created_at?: string | null
           updated_at?: string | null

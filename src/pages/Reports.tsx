@@ -18,6 +18,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { resolvePioneerStatus } from "@/lib/pioneiro";
 
 interface Report {
   id: string;
@@ -171,12 +172,21 @@ export default function Reports() {
 
   const handlePublisherChange = (pubId: string) => {
     const pub = publishers.find(p => p.id === pubId);
-    let status = "publicador";
-    if (pub?.privileges?.includes("Pioneiro Regular")) status = "pioneiro_regular";
-    else if (pub?.privileges?.includes("Pioneiro Auxiliar")) status = "pioneiro_auxiliar";
-    
+    const status = pub
+      ? resolvePioneerStatus(pub, formData.year, parseInt(formData.month))
+      : "publicador";
+
     setFormData({ ...formData, publisher_id: pubId, pioneer_status: status });
   };
+
+  // Auxiliar depende do mês: ao trocar mês/ano de um lançamento novo, recalcula o status padrão.
+  useEffect(() => {
+    if (editingReportId || !formData.publisher_id) return;
+    const pub = publishers.find(p => p.id === formData.publisher_id);
+    if (!pub) return;
+    const status = resolvePioneerStatus(pub, formData.year, parseInt(formData.month));
+    setFormData(f => (f.pioneer_status === status ? f : { ...f, pioneer_status: status }));
+  }, [formData.month, formData.year, formData.publisher_id, editingReportId, publishers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
